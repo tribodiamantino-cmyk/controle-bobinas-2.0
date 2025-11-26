@@ -55,7 +55,6 @@
                 <table class="table" id="table-cores">
                     <thead>
                         <tr>
-                            <th>Cor</th>
                             <th>Nome</th>
                             <th>Status</th>
                             <th>Data de Criação</th>
@@ -126,16 +125,7 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="cor-nome">Nome da Cor *</label>
-                    <input type="text" class="form-control" id="cor-nome" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="cor-codigo">Código Hexadecimal</label>
-                    <div class="flex gap-1">
-                        <input type="color" id="cor-codigo" value="#CCCCCC" style="width: 60px; height: 45px; border: 2px solid var(--border-color); border-radius: 8px;">
-                        <input type="text" class="form-control" id="cor-codigo-text" value="#CCCCCC" pattern="^#[0-9A-Fa-f]{6}$">
-                    </div>
-                    <small style="color: #666;">Exemplo: #FF5733</small>
+                    <input type="text" class="form-control" id="cor-nome" placeholder="Ex: Azul, Verde, Amarelo..." required>
                 </div>
 
                 <div class="form-group">

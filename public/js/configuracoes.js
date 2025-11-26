@@ -51,10 +51,6 @@ async function carregarCores() {
             table.style.display = 'table';
             tbody.innerHTML = cores.map(cor => `
                 <tr>
-                    <td>
-                        <span class="color-preview" style="background-color: ${cor.codigo_hex}"></span>
-                        ${cor.codigo_hex}
-                    </td>
                     <td><strong>${cor.nome_cor}</strong></td>
                     <td>
                         ${cor.ativo ? 
@@ -97,8 +93,6 @@ function abrirModalCor(cor = null) {
         title.textContent = 'Editar Cor';
         document.getElementById('cor-id').value = cor.id;
         document.getElementById('cor-nome').value = cor.nome_cor;
-        document.getElementById('cor-codigo').value = cor.codigo_hex;
-        document.getElementById('cor-codigo-text').value = cor.codigo_hex;
         document.getElementById('cor-ativo').checked = cor.ativo;
     } else {
         title.textContent = 'Nova Cor';
@@ -113,23 +107,7 @@ function fecharModalCor() {
     document.getElementById('modal-cor').classList.remove('active');
 }
 
-// Sincronizar color picker com input text
-document.addEventListener('DOMContentLoaded', () => {
-    const colorPicker = document.getElementById('cor-codigo');
-    const colorText = document.getElementById('cor-codigo-text');
-    
-    if (colorPicker && colorText) {
-        colorPicker.addEventListener('input', (e) => {
-            colorText.value = e.target.value.toUpperCase();
-        });
-        
-        colorText.addEventListener('input', (e) => {
-            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                colorPicker.value = e.target.value;
-            }
-        });
-    }
-});
+// Sincronizar color picker com input text - REMOVIDO (não é mais necessário)
 
 // Salvar cor
 async function salvarCor(event) {
@@ -138,7 +116,6 @@ async function salvarCor(event) {
     const id = document.getElementById('cor-id').value;
     const cor = {
         nome_cor: document.getElementById('cor-nome').value,
-        codigo_hex: document.getElementById('cor-codigo-text').value,
         ativo: document.getElementById('cor-ativo').checked
     };
     

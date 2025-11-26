@@ -16,15 +16,15 @@ exports.listarCores = async (req, res) => {
 // Criar nova cor
 exports.criarCor = async (req, res) => {
     try {
-        const { nome_cor, codigo_hex } = req.body;
+        const { nome_cor } = req.body;
         
         if (!nome_cor) {
             return res.status(400).json({ error: 'Nome da cor é obrigatório' });
         }
         
         const [result] = await db.query(
-            'INSERT INTO configuracoes_cores (nome_cor, codigo_hex) VALUES (?, ?)',
-            [nome_cor, codigo_hex || '#CCCCCC']
+            'INSERT INTO configuracoes_cores (nome_cor) VALUES (?)',
+            [nome_cor]
         );
         
         res.status(201).json({
@@ -44,11 +44,11 @@ exports.criarCor = async (req, res) => {
 exports.atualizarCor = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nome_cor, codigo_hex, ativo } = req.body;
+        const { nome_cor, ativo } = req.body;
         
         const [result] = await db.query(
-            'UPDATE configuracoes_cores SET nome_cor = ?, codigo_hex = ?, ativo = ? WHERE id = ?',
-            [nome_cor, codigo_hex, ativo, id]
+            'UPDATE configuracoes_cores SET nome_cor = ?, ativo = ? WHERE id = ?',
+            [nome_cor, ativo, id]
         );
         
         if (result.affectedRows === 0) {
