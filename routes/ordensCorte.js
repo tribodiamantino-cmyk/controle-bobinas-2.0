@@ -29,4 +29,10 @@ router.delete('/:id', ordensController.excluirPlano);
 // Listar origens disponíveis para um corte
 router.get('/origens/disponiveis', ordensController.listarOrigensDisponiveis);
 
+// Adicionar itens a um plano existente (edição)
+router.post('/:id/itens', ordensController.adicionarItensPlano);
+
+// Remover um item do plano (edição)
+router.delete('/item/:itemId', ordensController.removerItemPlano);
+
 module.exports = router;

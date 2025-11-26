@@ -797,3 +797,121 @@ exports.listarOrigensDisponiveis = async (req, res) => {
         });
     }
 };
+
+// Adicionar novos itens a um plano existente
+exports.adicionarItensPlano = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { itens } = req.body;
+        
+        if (!itens || itens.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Informe os itens a adicionar' 
+            });
+        }
+        
+        // Verificar se plano existe e está em planejamento
+        const [planos] = await db.query(
+            `SELECT status FROM planos_corte WHERE id = ?`,
+            [id]
+        );
+        
+        if (planos.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Plano não encontrado' 
+            });
+        }
+        
+        if (planos[0].status !== 'planejamento') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Apenas planos em planejamento podem ser editados' 
+            });
+        }
+        
+        // Buscar maior ordem atual
+        const [maxOrdem] = await db.query(
+            `SELECT MAX(ordem) as max_ordem FROM itens_plano_corte WHERE plano_corte_id = ?`,
+            [id]
+        );
+        
+        let ordem = (maxOrdem[0].max_ordem || 0) + 1;
+        
+        // Inserir novos itens
+        for (const item of itens) {
+            await db.query(
+                `INSERT INTO itens_plano_corte (plano_corte_id, produto_id, metragem, observacoes, ordem) 
+                 VALUES (?, ?, ?, ?, ?)`,
+                [id, item.produto_id, item.metragem, item.observacoes || null, ordem]
+            );
+            ordem++;
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `${itens.length} item(ns) adicionado(s) ao plano` 
+        });
+        
+    } catch (error) {
+        console.error('Erro ao adicionar itens:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
+// Remover um item do plano
+exports.removerItemPlano = async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        
+        // Buscar item e verificar status do plano
+        const [itens] = await db.query(
+            `SELECT ipc.*, pc.status 
+             FROM itens_plano_corte ipc
+             JOIN planos_corte pc ON pc.id = ipc.plano_corte_id
+             WHERE ipc.id = ?`,
+            [itemId]
+        );
+        
+        if (itens.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Item não encontrado' 
+            });
+        }
+        
+        if (itens[0].status !== 'planejamento') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Apenas itens de planos em planejamento podem ser removidos' 
+            });
+        }
+        
+        // Verificar se tem alocação
+        const [alocacoes] = await db.query(
+            `SELECT id FROM alocacoes_corte WHERE item_plano_corte_id = ?`,
+            [itemId]
+        );
+        
+        // Se tem alocação, excluir primeiro (CASCADE vai fazer isso automaticamente)
+        
+        // Excluir item
+        await db.query(`DELETE FROM itens_plano_corte WHERE id = ?`, [itemId]);
+        
+        res.json({ 
+            success: true, 
+            message: 'Item removido do plano' 
+        });
+        
+    } catch (error) {
+        console.error('Erro ao remover item:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};

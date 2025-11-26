@@ -166,9 +166,8 @@ function abrirModalNovoPlano() {
     // Limpar lista de cortes
     renderizarListaCortes();
     
-    // Desabilitar botão de adicionar corte
-    document.getElementById('btnAdicionarCorte').disabled = true;
-    document.getElementById('formCorteRapido').style.display = 'none';
+    // Esconder área de input
+    document.getElementById('areaInputCortes').style.display = 'none';
 }
 
 function fecharModalNovoPlano() {
@@ -185,42 +184,50 @@ function popularSelectProdutos() {
     select.innerHTML = `<option value="">Selecione um produto...</option>${optionsProdutos}`;
 }
 
-function habilitarAdicionarCorte() {
+function selecionarProduto() {
     const selectProduto = document.getElementById('produtoSelecionado');
     const produtoId = selectProduto.value;
-    const btnAdicionar = document.getElementById('btnAdicionarCorte');
-    const formRapido = document.getElementById('formCorteRapido');
+    const areaInput = document.getElementById('areaInputCortes');
     
     if (produtoId) {
-        btnAdicionar.disabled = false;
         produtoAtualSelecionado = parseInt(produtoId);
+        areaInput.style.display = 'block';
+        
+        // Limpar campos
+        document.getElementById('inputMetragem').value = '';
+        document.getElementById('inputObservacoes').value = '';
+        
+        // Focar no campo de metragem
+        setTimeout(() => {
+            document.getElementById('inputMetragem').focus();
+        }, 100);
     } else {
-        btnAdicionar.disabled = true;
-        formRapido.style.display = 'none';
+        areaInput.style.display = 'none';
         produtoAtualSelecionado = null;
     }
 }
 
-function adicionarCorteRapido() {
-    const formRapido = document.getElementById('formCorteRapido');
-    formRapido.style.display = 'block';
-    
-    // Limpar campos
-    document.getElementById('metragemCorteRapido').value = '';
-    document.getElementById('obsCorteRapido').value = '';
-    
-    // Focar no campo de metragem
-    setTimeout(() => {
-        document.getElementById('metragemCorteRapido').focus();
-    }, 100);
+function handleEnterMetragem(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        document.getElementById('inputObservacoes').focus();
+    }
 }
 
-function confirmarCorteRapido() {
-    const metragem = parseFloat(document.getElementById('metragemCorteRapido').value);
-    const observacoes = document.getElementById('obsCorteRapido').value.trim();
+function handleEnterObservacoes(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        adicionarCorteAtual();
+    }
+}
+
+function adicionarCorteAtual() {
+    const metragem = parseFloat(document.getElementById('inputMetragem').value);
+    const observacoes = document.getElementById('inputObservacoes').value.trim();
     
     if (!metragem || metragem <= 0) {
         showNotification('Informe uma metragem válida', 'warning');
+        document.getElementById('inputMetragem').focus();
         return;
     }
     
@@ -240,22 +247,14 @@ function confirmarCorteRapido() {
     });
     
     // Limpar campos
-    document.getElementById('metragemCorteRapido').value = '';
-    document.getElementById('obsCorteRapido').value = '';
+    document.getElementById('inputMetragem').value = '';
+    document.getElementById('inputObservacoes').value = '';
     
     // Renderizar lista atualizada
     renderizarListaCortes();
     
-    // Focar novamente no campo de metragem para adicionar mais cortes rapidamente
-    document.getElementById('metragemCorteRapido').focus();
-    
-    showNotification('Corte adicionado! Adicione mais ou selecione outro produto.', 'success');
-}
-
-function cancelarCorteRapido() {
-    document.getElementById('formCorteRapido').style.display = 'none';
-    document.getElementById('metragemCorteRapido').value = '';
-    document.getElementById('obsCorteRapido').value = '';
+    // Focar novamente no campo de metragem
+    document.getElementById('inputMetragem').focus();
 }
 
 function renderizarListaCortes() {
@@ -456,7 +455,20 @@ function renderizarDetalhesPlano(plano) {
     document.getElementById('infoDetalhes').textContent = 
         `${plano.cliente} • ${plano.aviario} • ${new Date(plano.data_criacao).toLocaleDateString('pt-BR')}`;
     
+    // Mostrar botão de edição se estiver em planejamento
+    let botoesAdicionais = '';
+    if (plano.status === 'planejamento') {
+        botoesAdicionais = `
+            <button class="btn btn-primary" onclick="ativarModoEdicao()" style="margin-right: auto;">
+                ✏️ Editar Plano
+            </button>
+        `;
+    }
+    
     let conteudoHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            ${botoesAdicionais}
+        </div>
         <table class="tabela-itens">
             <thead>
                 <tr>
@@ -516,10 +528,270 @@ function renderizarDetalhesPlano(plano) {
     `;
     
     document.getElementById('conteudoDetalhes').innerHTML = conteudoHTML;
+    document.getElementById('modoVisualizacao').style.display = 'block';
+    document.getElementById('modoEdicao').style.display = 'none';
 }
 
 function fecharModalDetalhes() {
     document.getElementById('modalDetalhesPlano').style.display = 'none';
+}
+
+// ========== MODO DE EDIÇÃO ==========
+let cortesEdicao = {};
+let produtoEdicaoSelecionado = null;
+
+function ativarModoEdicao() {
+    if (!planoAtual) return;
+    
+    // Carregar cortes atuais para edição
+    cortesEdicao = {};
+    
+    planoAtual.itens.forEach(item => {
+        if (!cortesEdicao[item.produto_id]) {
+            cortesEdicao[item.produto_id] = [];
+        }
+        cortesEdicao[item.produto_id].push({
+            id: item.id, // ID do item para poder excluir no backend
+            metragem: parseFloat(item.metragem),
+            observacoes: item.observacoes,
+            existente: true // Marca como item já existente
+        });
+    });
+    
+    // Popular select de produtos para adicionar novos
+    const select = document.getElementById('produtoSelecionadoEdicao');
+    const optionsProdutos = produtos.map(p => 
+        `<option value="${p.id}">${p.codigo} - ${p.nome_cor} - ${p.gramatura}g - ${p.tipo_tecido}</option>`
+    ).join('');
+    select.innerHTML = `<option value="">Selecione um produto para adicionar...</option>${optionsProdutos}`;
+    
+    // Renderizar lista de cortes em modo edição
+    renderizarListaCortesEdicao();
+    
+    // Alternar para modo edição
+    document.getElementById('modoVisualizacao').style.display = 'none';
+    document.getElementById('modoEdicao').style.display = 'block';
+    document.getElementById('areaInputCortesEdicao').style.display = 'none';
+}
+
+function selecionarProdutoEdicao() {
+    const selectProduto = document.getElementById('produtoSelecionadoEdicao');
+    const produtoId = selectProduto.value;
+    const areaInput = document.getElementById('areaInputCortesEdicao');
+    
+    if (produtoId) {
+        produtoEdicaoSelecionado = parseInt(produtoId);
+        areaInput.style.display = 'block';
+        
+        document.getElementById('inputMetragemEdicao').value = '';
+        document.getElementById('inputObservacoesEdicao').value = '';
+        
+        setTimeout(() => {
+            document.getElementById('inputMetragemEdicao').focus();
+        }, 100);
+    } else {
+        areaInput.style.display = 'none';
+        produtoEdicaoSelecionado = null;
+    }
+}
+
+function handleEnterMetragemEdicao(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        document.getElementById('inputObservacoesEdicao').focus();
+    }
+}
+
+function handleEnterObservacoesEdicao(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        adicionarCorteEdicao();
+    }
+}
+
+function adicionarCorteEdicao() {
+    const metragem = parseFloat(document.getElementById('inputMetragemEdicao').value);
+    const observacoes = document.getElementById('inputObservacoesEdicao').value.trim();
+    
+    if (!metragem || metragem <= 0) {
+        showNotification('Informe uma metragem válida', 'warning');
+        document.getElementById('inputMetragemEdicao').focus();
+        return;
+    }
+    
+    if (!produtoEdicaoSelecionado) {
+        showNotification('Selecione um produto primeiro', 'warning');
+        return;
+    }
+    
+    if (!cortesEdicao[produtoEdicaoSelecionado]) {
+        cortesEdicao[produtoEdicaoSelecionado] = [];
+    }
+    
+    cortesEdicao[produtoEdicaoSelecionado].push({
+        metragem: metragem,
+        observacoes: observacoes || null,
+        existente: false // Novo corte
+    });
+    
+    document.getElementById('inputMetragemEdicao').value = '';
+    document.getElementById('inputObservacoesEdicao').value = '';
+    
+    renderizarListaCortesEdicao();
+    
+    document.getElementById('inputMetragemEdicao').focus();
+}
+
+function renderizarListaCortesEdicao() {
+    const container = document.getElementById('listaCortesEdicao');
+    
+    const totalCortes = Object.values(cortesEdicao).reduce((sum, cortes) => sum + cortes.length, 0);
+    
+    if (totalCortes === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #999;">
+                Nenhum corte no plano
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    for (const produtoId in cortesEdicao) {
+        const produto = produtos.find(p => p.id == produtoId);
+        if (!produto) continue;
+        
+        const cortes = cortesEdicao[produtoId];
+        if (cortes.length === 0) continue;
+        
+        const metragemTotal = cortes.reduce((sum, c) => sum + c.metragem, 0);
+        
+        html += `
+            <div class="grupo-produto">
+                <div class="grupo-produto-header">
+                    <div>
+                        <div class="grupo-produto-titulo">${produto.codigo}</div>
+                        <div class="grupo-produto-info">${produto.nome_cor} • ${produto.gramatura}g • ${produto.tipo_tecido}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="grupo-produto-badge">${cortes.length} corte${cortes.length > 1 ? 's' : ''}</div>
+                        <div style="font-weight: 600; color: #333;">Total: ${metragemTotal.toFixed(2)}m</div>
+                    </div>
+                </div>
+                <div>
+                    ${cortes.map((corte, index) => `
+                        <div class="corte-mini-item">
+                            <div class="corte-mini-info">
+                                <div class="corte-mini-metragem">
+                                    📏 ${corte.metragem.toFixed(2)}m
+                                    ${corte.existente ? '<span class="badge-prioridade media" style="font-size: 0.7rem; margin-left: 8px;">EXISTENTE</span>' : '<span class="badge-prioridade alta" style="font-size: 0.7rem; margin-left: 8px;">NOVO</span>'}
+                                </div>
+                                ${corte.observacoes ? `<div class="corte-mini-obs">💬 ${corte.observacoes}</div>` : ''}
+                            </div>
+                            <button type="button" class="btn-remover-mini" onclick="removerCorteEdicao(${produtoId}, ${index})" title="Remover este corte">
+                                ✕
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function removerCorteEdicao(produtoId, corteIndex) {
+    if (!cortesEdicao[produtoId]) return;
+    
+    const corte = cortesEdicao[produtoId][corteIndex];
+    
+    if (corte.existente) {
+        if (!confirm('Este corte já existe no plano. Deseja realmente removê-lo?')) {
+            return;
+        }
+    }
+    
+    cortesEdicao[produtoId].splice(corteIndex, 1);
+    
+    if (cortesEdicao[produtoId].length === 0) {
+        delete cortesEdicao[produtoId];
+    }
+    
+    renderizarListaCortesEdicao();
+}
+
+function cancelarEdicao() {
+    if (!confirm('Descartar todas as alterações?')) {
+        return;
+    }
+    
+    renderizarDetalhesPlano(planoAtual);
+}
+
+async function salvarEdicao() {
+    if (!confirm('Salvar as alterações no plano?')) {
+        return;
+    }
+    
+    // Preparar dados: itens para excluir e itens para adicionar
+    const itensExcluir = [];
+    const itensAdicionar = [];
+    
+    // Verificar quais itens existentes foram removidos
+    planoAtual.itens.forEach(item => {
+        const produtoCortes = cortesEdicao[item.produto_id] || [];
+        const aindaExiste = produtoCortes.find(c => c.id === item.id);
+        
+        if (!aindaExiste) {
+            itensExcluir.push(item.id);
+        }
+    });
+    
+    // Coletar novos itens
+    for (const produtoId in cortesEdicao) {
+        const cortes = cortesEdicao[produtoId];
+        cortes.forEach(corte => {
+            if (!corte.existente) {
+                itensAdicionar.push({
+                    produto_id: parseInt(produtoId),
+                    metragem: corte.metragem,
+                    observacoes: corte.observacoes
+                });
+            }
+        });
+    }
+    
+    try {
+        // Excluir itens removidos
+        for (const itemId of itensExcluir) {
+            await fetch(`${API_BASE}/ordens-corte/item/${itemId}`, {
+                method: 'DELETE'
+            });
+        }
+        
+        // Adicionar novos itens
+        if (itensAdicionar.length > 0) {
+            await fetch(`${API_BASE}/ordens-corte/${planoAtual.id}/itens`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itens: itensAdicionar })
+            });
+        }
+        
+        showNotification('Plano atualizado com sucesso!', 'success');
+        
+        // Recarregar plano
+        await abrirDetalhesPlano(planoAtual.id);
+        
+        // Recarregar lista do Kanban
+        carregarPlanos();
+        
+    } catch (error) {
+        console.error('Erro ao salvar edição:', error);
+        showNotification('Erro ao salvar alterações', 'error');
+    }
 }
 
 // ========== MODAL: ALOCAÇÃO ==========

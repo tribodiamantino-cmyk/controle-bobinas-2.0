@@ -93,36 +93,39 @@
 
             <!-- Seletor de Produto -->
             <div class="produto-selector-container">
-                <div class="form-row">
-                    <div class="form-group" style="flex: 1;">
-                        <label>Selecione o Produto *</label>
-                        <select id="produtoSelecionado" class="form-control" onchange="habilitarAdicionarCorte()">
-                            <option value="">Selecione um produto...</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="flex: 0 0 200px;">
-                        <label>&nbsp;</label>
-                        <button type="button" class="btn btn-primary" id="btnAdicionarCorte" onclick="adicionarCorteRapido()" disabled style="width: 100%;">
-                            ➕ Adicionar Corte
-                        </button>
-                    </div>
+                <div class="form-group">
+                    <label>Selecione o Produto *</label>
+                    <select id="produtoSelecionado" class="form-control" onchange="selecionarProduto()">
+                        <option value="">Selecione um produto...</option>
+                    </select>
                 </div>
 
-                <!-- Mini-form para adicionar corte rápido -->
-                <div id="formCorteRapido" style="display: none; background: #f0f8ff; padding: 15px; border-radius: 8px; margin-top: 10px;">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Metragem (m) *</label>
-                            <input type="number" id="metragemCorteRapido" class="form-control" step="0.01" min="0.01" placeholder="Ex: 15.50" onkeypress="if(event.key === 'Enter') { event.preventDefault(); document.getElementById('obsCorteRapido').focus(); }">
+                <!-- Área de input de cortes (mostra quando produto selecionado) -->
+                <div id="areaInputCortes" style="display: none; margin-top: 15px;">
+                    <div style="background: #f0f8ff; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                        <div class="corte-input-linha" id="linhaCorteAtual">
+                            <div style="display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center;">
+                                <div>
+                                    <input type="number" 
+                                           id="inputMetragem" 
+                                           class="form-control" 
+                                           step="0.01" 
+                                           min="0.01" 
+                                           placeholder="Metragem"
+                                           onkeypress="handleEnterMetragem(event)">
+                                </div>
+                                <div>
+                                    <input type="text" 
+                                           id="inputObservacoes" 
+                                           class="form-control" 
+                                           placeholder="Observações (opcional)"
+                                           onkeypress="handleEnterObservacoes(event)">
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group" style="flex: 2;">
-                            <label>Observações</label>
-                            <input type="text" id="obsCorteRapido" class="form-control" placeholder="Ex: Aviário 1 - Cortina lateral" onkeypress="if(event.key === 'Enter') { event.preventDefault(); confirmarCorteRapido(); }">
-                        </div>
-                        <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: flex-end; gap: 8px;">
-                            <button type="button" class="btn btn-success" onclick="confirmarCorteRapido()">✅ Adicionar</button>
-                            <button type="button" class="btn btn-secondary" onclick="cancelarCorteRapido()">✕</button>
-                        </div>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 0.85rem; color: #666;">
+                        💡 Dica: Pressione <strong>Enter</strong> para adicionar e criar nova linha automaticamente
                     </div>
                 </div>
             </div>
@@ -152,8 +155,61 @@
                 <button class="btn-close" onclick="fecharModalDetalhes()">✕</button>
             </div>
             <div class="modal-body">
-                <div id="conteudoDetalhes">
-                    <!-- Conteúdo será inserido dinamicamente -->
+                <!-- Modo Visualização -->
+                <div id="modoVisualizacao">
+                    <div id="conteudoDetalhes">
+                        <!-- Conteúdo será inserido dinamicamente -->
+                    </div>
+                </div>
+
+                <!-- Modo Edição (só aparece em planejamento) -->
+                <div id="modoEdicao" style="display: none;">
+                    <div class="alert alert-info">
+                        ℹ️ Você está editando o plano. Adicione, remova ou modifique os cortes abaixo.
+                    </div>
+                    
+                    <!-- Seletor de produto para adicionar novos cortes -->
+                    <div class="produto-selector-container">
+                        <div class="form-group">
+                            <label>Adicionar cortes de outro produto</label>
+                            <select id="produtoSelecionadoEdicao" class="form-control" onchange="selecionarProdutoEdicao()">
+                                <option value="">Selecione um produto...</option>
+                            </select>
+                        </div>
+
+                        <div id="areaInputCortesEdicao" style="display: none; margin-top: 15px;">
+                            <div style="background: #f0f8ff; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                                <div class="corte-input-linha">
+                                    <div style="display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center;">
+                                        <input type="number" 
+                                               id="inputMetragemEdicao" 
+                                               class="form-control" 
+                                               step="0.01" 
+                                               min="0.01" 
+                                               placeholder="Metragem"
+                                               onkeypress="handleEnterMetragemEdicao(event)">
+                                        <input type="text" 
+                                               id="inputObservacoesEdicao" 
+                                               class="form-control" 
+                                               placeholder="Observações (opcional)"
+                                               onkeypress="handleEnterObservacoesEdicao(event)">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Lista de cortes para edição -->
+                    <div id="listaCortesEdicao" class="cortes-list-agrupada">
+                        <!-- Será preenchido dinamicamente -->
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="cancelarEdicao()">Cancelar</button>
+                        <button class="btn btn-success" onclick="salvarEdicao()">💾 Salvar Alterações</button>
+                    </div>
                 </div>
             </div>
         </div>
