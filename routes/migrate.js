@@ -266,4 +266,64 @@ router.get('/check-bobinas-table', async (req, res) => {
     }
 });
 
+// Endpoint para adicionar colunas faltantes em bobinas
+router.post('/fix-bobinas-complete', async (req, res) => {
+    try {
+        const operations = [];
+        
+        // Verificar e adicionar nota_fiscal
+        const [notaFiscalExists] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'bobinas' 
+            AND COLUMN_NAME = 'nota_fiscal'
+        `);
+        
+        if (notaFiscalExists.length === 0) {
+            await db.query(`
+                ALTER TABLE bobinas 
+                ADD COLUMN nota_fiscal VARCHAR(50) NOT NULL AFTER codigo_interno
+            `);
+            operations.push('Adicionada coluna nota_fiscal');
+        }
+        
+        // Verificar e adicionar loja
+        const [lojaExists] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'bobinas' 
+            AND COLUMN_NAME = 'loja'
+        `);
+        
+        if (lojaExists.length === 0) {
+            await db.query(`
+                ALTER TABLE bobinas 
+                ADD COLUMN loja ENUM('Cortinave', 'BN') NOT NULL AFTER nota_fiscal
+            `);
+            operations.push('Adicionada coluna loja');
+        }
+        
+        if (operations.length > 0) {
+            res.json({ 
+                success: true, 
+                message: 'Colunas adicionadas com sucesso!',
+                operations: operations
+            });
+        } else {
+            res.json({ 
+                success: true, 
+                message: 'Todas as colunas já existem'
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao adicionar colunas:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;
