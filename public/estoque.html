@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estoque de Bobinas - Controle de Bobinas 2.0</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">📦 Controle de Bobinas 2.0</div>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/configuracoes.html">Configurações</a>
+            <a href="/produtos.html">Produtos</a>
+            <a href="/estoque.html" class="active">Estoque</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>📦 Estoque de Bobinas</h1>
+        
+        <div id="alerta-container"></div>
+
+        <!-- Formulário de Entrada de Bobina -->
+        <div class="card mb-4">
+            <h2>➕ Entrada de Nova Bobina</h2>
+            <form id="form-bobina">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="nota_fiscal">Nota Fiscal *</label>
+                        <input type="text" class="form-control" id="nota_fiscal" required placeholder="Ex: 12345">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="loja">Loja *</label>
+                        <select class="form-control" id="loja" required onchange="resetarBusca()">
+                            <option value="">Selecione...</option>
+                            <option value="Cortinave">Cortinave</option>
+                            <option value="BN">BN</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="fabricante">Fabricante *</label>
+                        <select class="form-control" id="fabricante" required onchange="resetarBusca()">
+                            <option value="">Selecione...</option>
+                            <option value="Propex">Propex</option>
+                            <option value="Textiloeste">Textiloeste</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="codigo">Código do Produto *</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" class="form-control" id="codigo" required placeholder="Ex: BR-001" onchange="buscarProduto()">
+                            <button type="button" class="btn btn-secondary" onclick="buscarProduto()" title="Buscar produto">🔍</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card de Produto Encontrado -->
+                <div id="produto-encontrado" class="alert alert-success" style="display: none; margin-top: 15px;">
+                    <h3 style="margin-top: 0;">✅ Produto Encontrado!</h3>
+                    <div id="produto-dados"></div>
+                </div>
+
+                <!-- Alerta de Produto Não Encontrado -->
+                <div id="produto-nao-encontrado" class="alert alert-warning" style="display: none; margin-top: 15px;">
+                    <h3 style="margin-top: 0;">⚠️ Produto não encontrado!</h3>
+                    <p>Este código não existe no cadastro. <a href="/produtos.html" target="_blank">Clique aqui para cadastrar o produto primeiro</a>.</p>
+                </div>
+
+                <div class="form-row" style="margin-top: 15px;">
+                    <div class="form-group">
+                        <label class="form-label" for="metragem_inicial">Metragem Linear (m) *</label>
+                        <input type="number" class="form-control" id="metragem_inicial" step="0.01" min="0.01" required placeholder="Ex: 500.00">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="observacoes">Observações</label>
+                        <input type="text" class="form-control" id="observacoes" placeholder="Informações adicionais (opcional)">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="limparFormulario()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-salvar" disabled>✅ Registrar Entrada</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Lista de Produtos com Bobinas (Acordeão) -->
+        <div class="card">
+            <h2>📊 Estoque Atual</h2>
+            
+            <div class="search-box mb-3">
+                <input type="text" class="form-control" id="search-estoque" placeholder="🔍 Buscar por código, cor, loja..." onkeyup="filtrarEstoque()">
+            </div>
+
+            <div id="lista-produtos-estoque">
+                <div class="text-center" style="padding: 40px;">
+                    Carregando estoque...
+                </div>
+            </div>
+
+            <div id="empty-estoque" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📦</div>
+                <h3>Nenhuma bobina em estoque</h3>
+                <p>Registre a primeira entrada acima</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Sucesso -->
+    <div id="modal-sucesso" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>✅ Bobina Registrada com Sucesso!</h2>
+            <div id="dados-bobina-criada"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
+                <button class="btn btn-primary" onclick="imprimirEtiqueta()">🖨️ Imprimir Etiqueta</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/estoque.js"></script>
+</body>
+</html>

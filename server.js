@@ -29,6 +29,7 @@ app.get('/api/health', (req, res) => {
 const coresRoutes = require('./routes/cores');
 const gramaturasRoutes = require('./routes/gramaturas');
 const produtosRoutes = require('./routes/produtos');
+const bobinasRoutes = require('./routes/bobinas');
 const setupRoutes = require('./routes/setup');
 const migrateRoutes = require('./routes/migrate');
 
@@ -36,6 +37,7 @@ const migrateRoutes = require('./routes/migrate');
 app.use('/api/cores', coresRoutes);
 app.use('/api/gramaturas', gramaturasRoutes);
 app.use('/api/produtos', produtosRoutes);
+app.use('/api/bobinas', bobinasRoutes);
 app.use('/api/database', setupRoutes);
 app.use('/api/database', migrateRoutes);
 

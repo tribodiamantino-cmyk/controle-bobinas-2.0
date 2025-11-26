@@ -573,3 +573,180 @@ body {
     color: white;
 }
 
+.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* ESTOQUE - PRODUTO CARDS (ACORDEÃO) */
+.produto-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.produto-card:hover {
+    box-shadow: var(--shadow);
+}
+
+.produto-header {
+    padding: 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s;
+}
+
+.produto-header:hover {
+    background: #e9ecef;
+}
+
+.produto-info {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.codigo-produto {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--dark-color);
+}
+
+.produto-specs {
+    padding: 10px 15px;
+    font-size: 0.95rem;
+    color: #666;
+}
+
+.produto-resumo {
+    padding: 10px 15px;
+    font-weight: 600;
+    color: var(--primary-color);
+    border-top: 1px solid #f0f0f0;
+}
+
+.btn-expand {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px 10px;
+    transition: transform 0.3s;
+}
+
+.produto-card:hover .btn-expand {
+    transform: scale(1.1);
+}
+
+/* BOBINAS LISTA */
+.bobinas-lista {
+    padding: 15px;
+    background: #fafafa;
+    border-top: 2px solid var(--primary-color);
+}
+
+.bobinas-header {
+    margin-bottom: 15px;
+}
+
+.bobinas-header h4 {
+    color: var(--dark-color);
+    font-size: 1rem;
+}
+
+.bobina-item {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.bobina-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateX(5px);
+}
+
+.bobina-info {
+    flex: 1;
+}
+
+.bobina-codigo {
+    font-size: 1rem;
+    margin-bottom: 5px;
+}
+
+.bobina-metragem {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 3px;
+}
+
+.bobina-data {
+    font-size: 0.85rem;
+    color: #999;
+}
+
+.bobina-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 0.85rem;
+}
+
+/* MODAL */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 90%;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #999;
+}
+
+.badge-info {
+    background-color: var(--info-color);
+    color: white;
+}
+
