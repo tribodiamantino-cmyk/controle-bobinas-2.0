@@ -110,4 +110,81 @@ router.get('/check-produtos-table', async (req, res) => {
     }
 });
 
+// Endpoint para adicionar colunas faltantes para Bando Y
+router.post('/fix-produtos-columns', async (req, res) => {
+    try {
+        const operations = [];
+        
+        // Verificar e adicionar tipo_tecido
+        const [tipoTecidoExists] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'produtos' 
+            AND COLUMN_NAME = 'tipo_tecido'
+        `);
+        
+        if (tipoTecidoExists.length === 0) {
+            await db.query(`
+                ALTER TABLE produtos 
+                ADD COLUMN tipo_tecido ENUM('Normal', 'Bando Y') DEFAULT 'Normal' AFTER fabricante
+            `);
+            operations.push('Adicionada coluna tipo_tecido');
+        }
+        
+        // Verificar e adicionar largura_maior
+        const [larguraMaiorExists] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'produtos' 
+            AND COLUMN_NAME = 'largura_maior'
+        `);
+        
+        if (larguraMaiorExists.length === 0) {
+            await db.query(`
+                ALTER TABLE produtos 
+                ADD COLUMN largura_maior DECIMAL(10,2) NULL AFTER largura_final
+            `);
+            operations.push('Adicionada coluna largura_maior');
+        }
+        
+        // Verificar e adicionar largura_y
+        const [larguraYExists] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'produtos' 
+            AND COLUMN_NAME = 'largura_y'
+        `);
+        
+        if (larguraYExists.length === 0) {
+            await db.query(`
+                ALTER TABLE produtos 
+                ADD COLUMN largura_y DECIMAL(10,2) NULL AFTER largura_maior
+            `);
+            operations.push('Adicionada coluna largura_y');
+        }
+        
+        if (operations.length > 0) {
+            res.json({ 
+                success: true, 
+                message: 'Colunas adicionadas com sucesso!',
+                operations: operations
+            });
+        } else {
+            res.json({ 
+                success: true, 
+                message: 'Todas as colunas já existem (migração já foi executada)'
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao adicionar colunas:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;
