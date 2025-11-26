@@ -122,6 +122,9 @@ exports.listarPlanos = async (req, res) => {
         if (status) {
             query += ` WHERE pc.status = ?`;
             params.push(status);
+        } else {
+            // Por padrão, não mostrar planos arquivados
+            query += ` WHERE pc.status != 'arquivado'`;
         }
         
         query += ` GROUP BY pc.id ORDER BY pc.data_criacao DESC`;
@@ -540,6 +543,76 @@ exports.enviarParaProducao = async (req, res) => {
     }
 };
 
+// Voltar plano para planejamento (liberar reservas)
+exports.voltarParaPlanejamento = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Verificar se plano existe
+        const [planos] = await db.query(`
+            SELECT * FROM planos_corte WHERE id = ?
+        `, [id]);
+        
+        if (planos.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Plano de corte não encontrado' 
+            });
+        }
+        
+        const plano = planos[0];
+        
+        if (plano.status !== 'em_producao') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Apenas planos em produção podem voltar para planejamento' 
+            });
+        }
+        
+        // Buscar alocações
+        const [alocacoes] = await db.query(`
+            SELECT ac.*
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
+            WHERE ipc.plano_corte_id = ?
+        `, [id]);
+        
+        // Liberar reservas
+        for (const alocacao of alocacoes) {
+            if (alocacao.tipo_origem === 'bobina') {
+                await db.query(`
+                    UPDATE bobinas 
+                    SET metragem_reservada = metragem_reservada - ?
+                    WHERE id = ?
+                `, [alocacao.metragem_alocada, alocacao.bobina_id]);
+            } else {
+                await db.query(`
+                    UPDATE retalhos 
+                    SET metragem_reservada = metragem_reservada - ?
+                    WHERE id = ?
+                `, [alocacao.metragem_alocada, alocacao.retalho_id]);
+            }
+        }
+        
+        // Atualizar status do plano
+        await db.query(`
+            UPDATE planos_corte SET status = 'planejamento' WHERE id = ?
+        `, [id]);
+        
+        res.json({ 
+            success: true, 
+            message: 'Plano voltou para planejamento. Reservas liberadas!' 
+        });
+        
+    } catch (error) {
+        console.error('Erro ao voltar para planejamento:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
 // Finalizar plano de corte (dar baixa definitiva)
 exports.finalizarPlano = async (req, res) => {
     try {
@@ -909,6 +982,52 @@ exports.removerItemPlano = async (req, res) => {
         
     } catch (error) {
         console.error('Erro ao remover item:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
+// Arquivar plano finalizado
+exports.arquivarPlano = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Verificar se plano existe e está finalizado
+        const [planos] = await db.query(`
+            SELECT * FROM planos_corte WHERE id = ?
+        `, [id]);
+        
+        if (planos.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Plano de corte não encontrado' 
+            });
+        }
+        
+        if (planos[0].status !== 'finalizado') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Apenas planos finalizados podem ser arquivados' 
+            });
+        }
+        
+        // Adicionar campo arquivado (se não existir, usar soft delete ou apenas marcar)
+        // Por enquanto vamos apenas mudar o status para um valor especial
+        await db.query(`
+            UPDATE planos_corte 
+            SET status = 'arquivado'
+            WHERE id = ?
+        `, [id]);
+        
+        res.json({ 
+            success: true, 
+            message: 'Plano arquivado com sucesso!' 
+        });
+        
+    } catch (error) {
+        console.error('Erro ao arquivar plano:', error);
         res.status(500).json({ 
             success: false, 
             error: error.message 

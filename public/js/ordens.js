@@ -94,17 +94,26 @@ function criarCardPlano(plano) {
     
     if (plano.status === 'planejamento') {
         acoes = `
-            <button class="btn-icon btn-primary-icon" onclick="enviarParaProducao(${plano.id})" title="Enviar para Produção">
-                ⚙️
+            <button class="btn-icon btn-success-icon" onclick="event.stopPropagation(); enviarParaProducao(${plano.id})" title="Enviar para Produção">
+                ▶️
             </button>
-            <button class="btn-icon btn-danger-icon" onclick="excluirPlano(${plano.id})" title="Excluir">
+            <button class="btn-icon btn-danger-icon" onclick="event.stopPropagation(); excluirPlano(${plano.id})" title="Excluir">
                 🗑️
             </button>
         `;
     } else if (plano.status === 'em_producao') {
         acoes = `
-            <button class="btn-icon btn-success-icon" onclick="abrirModalFinalizacao(${plano.id})" title="Finalizar">
+            <button class="btn-icon btn-warning-icon" onclick="event.stopPropagation(); voltarParaPlanejamento(${plano.id})" title="Voltar para Planejamento">
+                ◀️
+            </button>
+            <button class="btn-icon btn-success-icon" onclick="event.stopPropagation(); abrirModalFinalizacao(${plano.id})" title="Finalizar">
                 ✅
+            </button>
+        `;
+    } else if (plano.status === 'finalizado') {
+        acoes = `
+            <button class="btn-icon btn-info-icon" onclick="event.stopPropagation(); arquivarPlano(${plano.id})" title="Arquivar">
+                📦
             </button>
         `;
     }
@@ -1080,6 +1089,58 @@ async function excluirPlano(planoId) {
     } catch (error) {
         console.error('Erro ao excluir plano:', error);
         showNotification('Erro ao excluir plano', 'error');
+    }
+}
+
+// ========== VOLTAR PARA PLANEJAMENTO ==========
+async function voltarParaPlanejamento(planoId) {
+    if (!confirm('Deseja voltar este plano para a fase de planejamento? As reservas de metragem serão liberadas.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/ordens-corte/${planoId}/voltar-planejamento`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification(data.message, 'success');
+            carregarPlanos();
+        } else {
+            showNotification(data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao voltar para planejamento:', error);
+        showNotification('Erro ao voltar para planejamento', 'error');
+    }
+}
+
+// ========== ARQUIVAR PLANO ==========
+async function arquivarPlano(planoId) {
+    if (!confirm('Deseja arquivar este plano finalizado? Ele será removido da visualização.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/ordens-corte/${planoId}/arquivar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification(data.message, 'success');
+            carregarPlanos();
+        } else {
+            showNotification(data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao arquivar plano:', error);
+        showNotification('Erro ao arquivar plano', 'error');
     }
 }
 

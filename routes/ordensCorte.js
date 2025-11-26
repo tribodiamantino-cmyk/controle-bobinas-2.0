@@ -35,4 +35,10 @@ router.post('/:id/itens', ordensController.adicionarItensPlano);
 // Remover um item do plano (edição)
 router.delete('/item/:itemId', ordensController.removerItemPlano);
 
+// Voltar plano para planejamento (libera reservas)
+router.post('/:id/voltar-planejamento', ordensController.voltarParaPlanejamento);
+
+// Arquivar plano finalizado
+router.post('/:id/arquivar', ordensController.arquivarPlano);
+
 module.exports = router;

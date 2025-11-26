@@ -1322,8 +1322,18 @@ body {
     color: white;
 }
 
+.btn-icon.btn-warning-icon:hover {
+    background: var(--warning-color);
+    color: white;
+}
+
 .btn-icon.btn-danger-icon:hover {
     background: var(--danger-color);
+    color: white;
+}
+
+.btn-icon.btn-info-icon:hover {
+    background: var(--info-color);
     color: white;
 }
 
