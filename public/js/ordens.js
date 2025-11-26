@@ -94,26 +94,31 @@ function criarCardPlano(plano) {
     
     if (plano.status === 'planejamento') {
         acoes = `
-            <button class="btn-icon btn-success-icon" onclick="event.stopPropagation(); enviarParaProducao(${plano.id})" title="Enviar para Produção">
-                ▶️
+            <button class="btn-kanban btn-kanban-success" onclick="event.stopPropagation(); enviarParaProducao(${plano.id})">
+                <span class="btn-kanban-icon">▶</span>
+                <span class="btn-kanban-text">Produzir</span>
             </button>
-            <button class="btn-icon btn-danger-icon" onclick="event.stopPropagation(); excluirPlano(${plano.id})" title="Excluir">
-                🗑️
+            <button class="btn-kanban btn-kanban-danger" onclick="event.stopPropagation(); excluirPlano(${plano.id})">
+                <span class="btn-kanban-icon">🗑</span>
+                <span class="btn-kanban-text">Excluir</span>
             </button>
         `;
     } else if (plano.status === 'em_producao') {
         acoes = `
-            <button class="btn-icon btn-warning-icon" onclick="event.stopPropagation(); voltarParaPlanejamento(${plano.id})" title="Voltar para Planejamento">
-                ◀️
+            <button class="btn-kanban btn-kanban-warning" onclick="event.stopPropagation(); voltarParaPlanejamento(${plano.id})">
+                <span class="btn-kanban-icon">◀</span>
+                <span class="btn-kanban-text">Voltar</span>
             </button>
-            <button class="btn-icon btn-success-icon" onclick="event.stopPropagation(); abrirModalFinalizacao(${plano.id})" title="Finalizar">
-                ✅
+            <button class="btn-kanban btn-kanban-success" onclick="event.stopPropagation(); abrirModalFinalizacao(${plano.id})">
+                <span class="btn-kanban-icon">✓</span>
+                <span class="btn-kanban-text">Finalizar</span>
             </button>
         `;
     } else if (plano.status === 'finalizado') {
         acoes = `
-            <button class="btn-icon btn-info-icon" onclick="event.stopPropagation(); arquivarPlano(${plano.id})" title="Arquivar">
-                📦
+            <button class="btn-kanban btn-kanban-info" onclick="event.stopPropagation(); arquivarPlano(${plano.id})">
+                <span class="btn-kanban-icon">📦</span>
+                <span class="btn-kanban-text">Arquivar</span>
             </button>
         `;
     }

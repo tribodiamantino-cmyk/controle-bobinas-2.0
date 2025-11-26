@@ -1337,6 +1337,78 @@ body {
     color: white;
 }
 
+/* Botões Kanban com texto */
+.btn-kanban {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    white-space: nowrap;
+}
+
+.btn-kanban:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+}
+
+.btn-kanban:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.btn-kanban-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.btn-kanban-text {
+    line-height: 1;
+    font-weight: 600;
+}
+
+.btn-kanban-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-kanban-success:hover {
+    background-color: #218838;
+}
+
+.btn-kanban-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-kanban-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-kanban-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-kanban-warning:hover {
+    background-color: #e0a800;
+}
+
+.btn-kanban-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-kanban-info:hover {
+    background-color: #138496;
+}
+
 /* Badge de Prioridade */
 .badge-prioridade {
     padding: 4px 10px;
