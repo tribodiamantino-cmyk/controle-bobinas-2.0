@@ -316,4 +316,103 @@ router.post('/recreate-bobinas-table', async (req, res) => {
     }
 });
 
+// Endpoint para popular banco com dados de teste
+router.post('/seed-database', async (req, res) => {
+    try {
+        const fabricantes = ['Propex', 'Textiloeste'];
+        const lojas = ['Cortinave', 'BN'];
+        const tiposTecido = ['Normal', 'Bando Y'];
+        const tiposBainha = ['Sem Bainha', 'Cano/Cano', 'Cano/Arame', 'Arame/Arame'];
+        
+        const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const randomChoice = (array) => array[randomInt(0, array.length - 1)];
+        
+        // Buscar cores e gramaturas
+        const [coresDb] = await db.query('SELECT id, nome_cor FROM configuracoes_cores WHERE ativo = 1');
+        const [gramaturasDb] = await db.query('SELECT id, gramatura FROM configuracoes_gramaturas WHERE ativo = 1');
+        
+        if (coresDb.length === 0 || gramaturasDb.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Não há cores ou gramaturas cadastradas!' 
+            });
+        }
+        
+        const produtosCriados = [];
+        
+        // Criar 10 produtos
+        for (let i = 0; i < 10; i++) {
+            const loja = i < 5 ? 'Cortinave' : 'BN';
+            const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+            const codigo = `${prefixo}-${String(i + 1).padStart(3, '0')}`;
+            const fabricante = randomChoice(fabricantes);
+            const tipoTecido = randomChoice(tiposTecido);
+            const cor = randomChoice(coresDb);
+            const gramatura = randomChoice(gramaturasDb);
+            
+            let larguraSemCostura = null, tipoBainha = null, larguraFinal = null;
+            let larguraMaior = null, larguraY = null;
+            
+            if (tipoTecido === 'Bando Y') {
+                larguraMaior = randomInt(300, 400);
+                larguraY = randomInt(150, 250);
+            } else {
+                larguraSemCostura = randomInt(250, 350);
+                tipoBainha = randomChoice(tiposBainha);
+                larguraFinal = larguraSemCostura - randomInt(1, 5);
+            }
+            
+            const [result] = await db.query(
+                `INSERT INTO produtos 
+                (loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido, 
+                 largura_sem_costura, tipo_bainha, largura_final, largura_maior, largura_y, ativo) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+                [loja, codigo, cor.id, gramatura.id, fabricante, tipoTecido,
+                 larguraSemCostura, tipoBainha, larguraFinal, larguraMaior, larguraY]
+            );
+            
+            produtosCriados.push({ id: result.insertId, loja, codigo });
+        }
+        
+        // Criar 5 bobinas para cada produto
+        let totalBobinas = 0;
+        const ano = new Date().getFullYear();
+        
+        for (const produto of produtosCriados) {
+            for (let j = 0; j < 5; j++) {
+                const prefixo = produto.loja === 'Cortinave' ? 'CTV' : 'BN';
+                const sequencial = totalBobinas + 1;
+                const codigoInterno = `${prefixo}-${ano}-${String(sequencial).padStart(5, '0')}`;
+                const notaFiscal = `NF-${randomInt(10000, 99999)}`;
+                const metragem = randomInt(300, 600);
+                const status = randomChoice(['Disponível', 'Disponível', 'Disponível', 'Em uso']);
+                
+                await db.query(
+                    `INSERT INTO bobinas 
+                    (codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_atual, status, observacoes) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [codigoInterno, notaFiscal, produto.loja, produto.id, metragem, metragem, status,
+                     'Bobina de teste gerada automaticamente']
+                );
+                
+                totalBobinas++;
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            message: 'Dados de teste criados com sucesso!',
+            produtos: produtosCriados.length,
+            bobinas: totalBobinas
+        });
+        
+    } catch (error) {
+        console.error('Erro ao popular banco:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;
