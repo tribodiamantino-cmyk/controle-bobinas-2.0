@@ -30,7 +30,6 @@ function toggleCamposTecido() {
         // Adicionar required aos campos Bando Y
         document.getElementById('largura_maior').setAttribute('required', 'required');
         document.getElementById('largura_y').setAttribute('required', 'required');
-        document.getElementById('largura_total').setAttribute('required', 'required');
     } else {
         camposNormal.style.display = 'grid';
         camposBandoY.style.display = 'none';
@@ -43,7 +42,6 @@ function toggleCamposTecido() {
         // Remover required dos campos Bando Y
         document.getElementById('largura_maior').removeAttribute('required');
         document.getElementById('largura_y').removeAttribute('required');
-        document.getElementById('largura_total').removeAttribute('required');
     }
 }
 
@@ -133,7 +131,7 @@ function renderizarProdutos(listaProdutos) {
         // Montar informações de medidas conforme o tipo
         let medidas = '';
         if (produto.tipo_tecido === 'Bando Y') {
-            medidas = `Maior: ${produto.largura_maior || '-'} cm<br>Y: ${produto.largura_y || '-'} cm<br>Total: ${produto.largura_total || '-'} cm`;
+            medidas = `Maior: ${produto.largura_maior || '-'} cm<br>Y: ${produto.largura_y || '-'} cm`;
         } else {
             medidas = `S/Costura: ${produto.largura_sem_costura || '-'} cm<br>${produto.tipo_bainha || '-'}<br>Final: ${produto.largura_final || '-'} cm`;
         }
@@ -178,7 +176,6 @@ async function cadastrarProduto(e) {
     if (tipoTecido === 'Bando Y') {
         produto.largura_maior = parseFloat(document.getElementById('largura_maior').value);
         produto.largura_y = parseFloat(document.getElementById('largura_y').value);
-        produto.largura_total = parseFloat(document.getElementById('largura_total').value);
     } else {
         produto.largura_sem_costura = parseFloat(document.getElementById('largura_sem_costura').value);
         produto.tipo_bainha = document.getElementById('tipo_bainha').value;

@@ -33,8 +33,7 @@ exports.criarProduto = async (req, res) => {
         tipo_bainha, 
         largura_final,
         largura_maior,
-        largura_y,
-        largura_total
+        largura_y
     } = req.body;
 
     if (!loja || !codigo || !cor_id || !gramatura_id || !fabricante) {
@@ -43,8 +42,8 @@ exports.criarProduto = async (req, res) => {
 
     // Validar campos específicos do tipo de tecido
     if (tipo_tecido === 'Bando Y') {
-        if (!largura_maior || !largura_y || !largura_total) {
-            return res.status(400).json({ success: false, error: 'Para Bando Y é necessário informar: Largura Maior, Largura Y e Largura Total' });
+        if (!largura_maior || !largura_y) {
+            return res.status(400).json({ success: false, error: 'Para Bando Y é necessário informar: Largura Maior e Largura Y' });
         }
     } else {
         if (!largura_sem_costura || !tipo_bainha || !largura_final) {
@@ -67,12 +66,12 @@ exports.criarProduto = async (req, res) => {
             `INSERT INTO produtos (
                 loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido,
                 largura_sem_costura, tipo_bainha, largura_final,
-                largura_maior, largura_y, largura_total
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                largura_maior, largura_y
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido || 'Normal',
                 largura_sem_costura || null, tipo_bainha || null, largura_final || null,
-                largura_maior || null, largura_y || null, largura_total || null
+                largura_maior || null, largura_y || null
             ]
         );
 
@@ -98,7 +97,6 @@ exports.atualizarProduto = async (req, res) => {
         largura_final,
         largura_maior,
         largura_y,
-        largura_total,
         ativo 
     } = req.body;
 
@@ -117,12 +115,12 @@ exports.atualizarProduto = async (req, res) => {
             `UPDATE produtos 
              SET loja = ?, codigo = ?, cor_id = ?, gramatura_id = ?, fabricante = ?, tipo_tecido = ?,
                  largura_sem_costura = ?, tipo_bainha = ?, largura_final = ?,
-                 largura_maior = ?, largura_y = ?, largura_total = ?, ativo = ?
+                 largura_maior = ?, largura_y = ?, ativo = ?
              WHERE id = ?`,
             [
                 loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido || 'Normal',
                 largura_sem_costura || null, tipo_bainha || null, largura_final || null,
-                largura_maior || null, largura_y || null, largura_total || null,
+                largura_maior || null, largura_y || null,
                 ativo !== undefined ? ativo : 1, id
             ]
         );
