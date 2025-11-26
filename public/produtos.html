@@ -151,42 +151,152 @@
                     </tr>
                     <tr class="filter-row">
                         <th>
-                            <select class="form-control form-control-sm" id="filtro-loja" onchange="aplicarFiltros()">
-                                <option value="">Todas</option>
-                            </select>
+                            <div class="multi-select-dropdown">
+                                <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-loja')">
+                                    <span id="filtro-loja-label">Todas</span> ▼
+                                </button>
+                                <div class="dropdown-content" id="filtro-loja-dropdown">
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" id="filtro-loja-todas" value="" onchange="toggleSelectAll('filtro-loja')"> 
+                                        <label for="filtro-loja-todas">Todas</label>
+                                    </div>
+                                    <div id="filtro-loja-opcoes"></div>
+                                </div>
+                            </div>
                         </th>
                         <th>
                             <input type="text" class="form-control form-control-sm" id="filtro-codigo" placeholder="Código..." onkeyup="aplicarFiltros()">
                         </th>
                         <th>
-                            <select class="form-control form-control-sm" id="filtro-cor" onchange="aplicarFiltros()">
-                                <option value="">Todas</option>
-                            </select>
+                            <div class="multi-select-dropdown">
+                                <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-cor')">
+                                    <span id="filtro-cor-label">Todas</span> ▼
+                                </button>
+                                <div class="dropdown-content" id="filtro-cor-dropdown">
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" id="filtro-cor-todas" value="" onchange="toggleSelectAll('filtro-cor')"> 
+                                        <label for="filtro-cor-todas">Todas</label>
+                                    </div>
+                                    <div id="filtro-cor-opcoes"></div>
+                                </div>
+                            </div>
                         </th>
                         <th>
-                            <select class="form-control form-control-sm" id="filtro-gramatura" onchange="aplicarFiltros()">
-                                <option value="">Todas</option>
-                            </select>
+                            <div class="multi-select-dropdown">
+                                <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-gramatura')">
+                                    <span id="filtro-gramatura-label">Todas</span> ▼
+                                </button>
+                                <div class="dropdown-content" id="filtro-gramatura-dropdown">
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" id="filtro-gramatura-todas" value="" onchange="toggleSelectAll('filtro-gramatura')"> 
+                                        <label for="filtro-gramatura-todas">Todas</label>
+                                    </div>
+                                    <div id="filtro-gramatura-opcoes"></div>
+                                </div>
+                            </div>
                         </th>
                         <th>
-                            <select class="form-control form-control-sm" id="filtro-fabricante" onchange="aplicarFiltros()">
-                                <option value="">Todos</option>
-                            </select>
+                            <div class="multi-select-dropdown">
+                                <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-fabricante')">
+                                    <span id="filtro-fabricante-label">Todos</span> ▼
+                                </button>
+                                <div class="dropdown-content" id="filtro-fabricante-dropdown">
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" id="filtro-fabricante-todas" value="" onchange="toggleSelectAll('filtro-fabricante')"> 
+                                        <label for="filtro-fabricante-todas">Todos</label>
+                                    </div>
+                                    <div id="filtro-fabricante-opcoes"></div>
+                                </div>
+                            </div>
                         </th>
                         <th>
-                            <select class="form-control form-control-sm" id="filtro-tipo" onchange="aplicarFiltros()">
-                                <option value="">Todos</option>
-                                <option value="Normal">Normal</option>
-                                <option value="Bando Y">Bando Y</option>
-                            </select>
+                            <div class="multi-select-dropdown">
+                                <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-tipo')">
+                                    <span id="filtro-tipo-label">Todos</span> ▼
+                                </button>
+                                <div class="dropdown-content" id="filtro-tipo-dropdown">
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" id="filtro-tipo-todas" value="" onchange="toggleSelectAll('filtro-tipo')"> 
+                                        <label for="filtro-tipo-todas">Todos</label>
+                                    </div>
+                                    <div id="filtro-tipo-opcoes">
+                                        <div class="dropdown-item">
+                                            <input type="checkbox" class="filtro-tipo-checkbox" value="Normal" onchange="aplicarFiltrosMultiplos('filtro-tipo')"> 
+                                            <label>Normal</label>
+                                        </div>
+                                        <div class="dropdown-item">
+                                            <input type="checkbox" class="filtro-tipo-checkbox" value="Bando Y" onchange="aplicarFiltrosMultiplos('filtro-tipo')"> 
+                                            <label>Bando Y</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </th>
-                        <th colspan="5"></th>
                         <th>
-                            <select class="form-control form-control-sm" id="filtro-status" onchange="aplicarFiltros()">
-                                <option value="">Todos</option>
-                                <option value="1">Ativo</option>
-                                <option value="0">Inativo</option>
-                            </select>
+                            <input type="text" class="form-control form-control-sm" id="filtro-larg-sem-costura" placeholder="cm..." onkeyup="aplicarFiltros()">
+                        </th>
+                        <th>
+                            <div class="multi-select-dropdown">
+                                <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-bainha')">
+                                    <span id="filtro-bainha-label">Todas</span> ▼
+                                </button>
+                                <div class="dropdown-content" id="filtro-bainha-dropdown">
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" id="filtro-bainha-todas" value="" onchange="toggleSelectAll('filtro-bainha')"> 
+                                        <label for="filtro-bainha-todas">Todas</label>
+                                    </div>
+                                    <div id="filtro-bainha-opcoes">
+                                        <div class="dropdown-item">
+                                            <input type="checkbox" class="filtro-bainha-checkbox" value="Sem Bainha" onchange="aplicarFiltrosMultiplos('filtro-bainha')"> 
+                                            <label>Sem Bainha</label>
+                                        </div>
+                                        <div class="dropdown-item">
+                                            <input type="checkbox" class="filtro-bainha-checkbox" value="Cano/Cano" onchange="aplicarFiltrosMultiplos('filtro-bainha')"> 
+                                            <label>Cano/Cano</label>
+                                        </div>
+                                        <div class="dropdown-item">
+                                            <input type="checkbox" class="filtro-bainha-checkbox" value="Cano/Arame" onchange="aplicarFiltrosMultiplos('filtro-bainha')"> 
+                                            <label>Cano/Arame</label>
+                                        </div>
+                                        <div class="dropdown-item">
+                                            <input type="checkbox" class="filtro-bainha-checkbox" value="Arame/Arame" onchange="aplicarFiltrosMultiplos('filtro-bainha')"> 
+                                            <label>Arame/Arame</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" id="filtro-larg-final" placeholder="cm..." onkeyup="aplicarFiltros()">
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" id="filtro-larg-maior" placeholder="cm..." onkeyup="aplicarFiltros()">
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" id="filtro-larg-y" placeholder="cm..." onkeyup="aplicarFiltros()">
+                        </th>
+                        <th>
+                            <div class="multi-select-dropdown">
+                                <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-status')">
+                                    <span id="filtro-status-label">Todos</span> ▼
+                                </button>
+                                <div class="dropdown-content" id="filtro-status-dropdown">
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" id="filtro-status-todas" value="" onchange="toggleSelectAll('filtro-status')"> 
+                                        <label for="filtro-status-todas">Todos</label>
+                                    </div>
+                                    <div id="filtro-status-opcoes">
+                                        <div class="dropdown-item">
+                                            <input type="checkbox" class="filtro-status-checkbox" value="1" onchange="aplicarFiltrosMultiplos('filtro-status')"> 
+                                            <label>Ativo</label>
+                                        </div>
+                                        <div class="dropdown-item">
+                                            <input type="checkbox" class="filtro-status-checkbox" value="0" onchange="aplicarFiltrosMultiplos('filtro-status')"> 
+                                            <label>Inativo</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </th>
                         <th></th>
                     </tr>
@@ -214,6 +324,70 @@
         .filter-row .form-control-sm {
             font-size: 0.875rem;
             height: calc(1.5em + 0.5rem + 2px);
+        }
+        
+        /* Multi-select dropdown styles */
+        .multi-select-dropdown {
+            position: relative;
+            width: 100%;
+        }
+        
+        .btn-multi-select {
+            width: 100%;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            background-color: white;
+            border: 1px solid #ced4da;
+            border-radius: 0.2rem;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn-multi-select:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            max-height: 250px;
+            overflow-y: auto;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1000;
+            border: 1px solid #ced4da;
+            border-radius: 0.2rem;
+        }
+        
+        .dropdown-content.show {
+            display: block;
+        }
+        
+        .dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+        
+        .dropdown-item label {
+            cursor: pointer;
+            margin: 0;
+            flex: 1;
+            user-select: none;
         }
     </style>
 

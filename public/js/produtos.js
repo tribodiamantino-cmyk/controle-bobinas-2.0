@@ -10,6 +10,15 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarProdutos();
     
     document.getElementById('form-produto').addEventListener('submit', cadastrarProduto);
+    
+    // Fechar dropdowns ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.multi-select-dropdown')) {
+            document.querySelectorAll('.dropdown-content').forEach(dropdown => {
+                dropdown.classList.remove('show');
+            });
+        }
+    });
 });
 
 // Validar largura final
@@ -138,99 +147,171 @@ function popularFiltros() {
     const gramaturasUnicas = [...new Set(produtos.map(p => p.gramatura))].sort();
     const fabricantes = [...new Set(produtos.map(p => p.fabricante))].sort();
     
-    // Popular select de lojas
-    const filtroLoja = document.getElementById('filtro-loja');
-    filtroLoja.innerHTML = '<option value="">Todas</option>' +
-        lojas.map(loja => `<option value="${loja}">${loja}</option>`).join('');
+    // Popular filtro de lojas
+    popularFiltroMultiplo('filtro-loja', lojas);
     
-    // Popular select de cores
-    const filtroCor = document.getElementById('filtro-cor');
-    filtroCor.innerHTML = '<option value="">Todas</option>' +
-        coresUnicas.map(cor => `<option value="${cor}">${cor}</option>`).join('');
+    // Popular filtro de cores
+    popularFiltroMultiplo('filtro-cor', coresUnicas);
     
-    // Popular select de gramaturas
-    const filtroGramatura = document.getElementById('filtro-gramatura');
-    filtroGramatura.innerHTML = '<option value="">Todas</option>' +
-        gramaturasUnicas.map(g => `<option value="${g}">${g}</option>`).join('');
+    // Popular filtro de gramaturas
+    popularFiltroMultiplo('filtro-gramatura', gramaturasUnicas);
     
-    // Popular select de fabricantes
-    const filtroFabricante = document.getElementById('filtro-fabricante');
-    filtroFabricante.innerHTML = '<option value="">Todos</option>' +
-        fabricantes.map(f => `<option value="${f}">${f}</option>`).join('');
+    // Popular filtro de fabricantes
+    popularFiltroMultiplo('filtro-fabricante', fabricantes);
+}
+
+// Popular um filtro multi-select
+function popularFiltroMultiplo(filtroId, opcoes) {
+    const container = document.getElementById(`${filtroId}-opcoes`);
+    if (!container) return;
+    
+    container.innerHTML = opcoes.map((opcao, index) => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="${filtroId}-checkbox" id="${filtroId}-${index}" value="${opcao}" onchange="aplicarFiltrosMultiplos('${filtroId}')"> 
+            <label for="${filtroId}-${index}">${opcao}</label>
+        </div>
+    `).join('');
+}
+
+// Toggle dropdown de filtro
+function toggleDropdown(filtroId) {
+    event.stopPropagation();
+    const dropdown = document.getElementById(`${filtroId}-dropdown`);
+    
+    // Fechar outros dropdowns
+    document.querySelectorAll('.dropdown-content').forEach(d => {
+        if (d.id !== `${filtroId}-dropdown`) {
+            d.classList.remove('show');
+        }
+    });
+    
+    // Toggle atual
+    dropdown.classList.toggle('show');
+}
+
+// Toggle "Selecionar todas"
+function toggleSelectAll(filtroId) {
+    const todasCheckbox = document.getElementById(`${filtroId}-todas`);
+    const checkboxes = document.querySelectorAll(`.${filtroId}-checkbox`);
+    
+    if (todasCheckbox.checked) {
+        checkboxes.forEach(cb => {
+            cb.checked = false;
+        });
+    }
+    
+    aplicarFiltrosMultiplos(filtroId);
+}
+
+// Aplicar filtros com seleção múltipla
+function aplicarFiltrosMultiplos(filtroId) {
+    const todasCheckbox = document.getElementById(`${filtroId}-todas`);
+    const checkboxes = document.querySelectorAll(`.${filtroId}-checkbox`);
+    const checkedValues = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    
+    // Atualizar label do botão
+    const label = document.getElementById(`${filtroId}-label`);
+    if (checkedValues.length === 0) {
+        todasCheckbox.checked = true;
+        label.textContent = filtroId.includes('fabricante') || filtroId.includes('status') || filtroId.includes('tipo') ? 'Todos' : 'Todas';
+    } else {
+        todasCheckbox.checked = false;
+        label.textContent = checkedValues.length === 1 ? checkedValues[0] : `${checkedValues.length} selecionados`;
+    }
+    
+    aplicarFiltros();
 }
 
 // Aplicar filtros em cascata
 function aplicarFiltros() {
-    const filtroLoja = document.getElementById('filtro-loja').value.toLowerCase();
+    // Filtros de texto
     const filtroCodigo = document.getElementById('filtro-codigo').value.toLowerCase();
-    const filtroCor = document.getElementById('filtro-cor').value.toLowerCase();
-    const filtroGramatura = document.getElementById('filtro-gramatura').value.toLowerCase();
-    const filtroFabricante = document.getElementById('filtro-fabricante').value.toLowerCase();
-    const filtroTipo = document.getElementById('filtro-tipo').value;
-    const filtroStatus = document.getElementById('filtro-status').value;
+    const filtroLargSemCostura = document.getElementById('filtro-larg-sem-costura').value.toLowerCase();
+    const filtroLargFinal = document.getElementById('filtro-larg-final').value.toLowerCase();
+    const filtroLargMaior = document.getElementById('filtro-larg-maior').value.toLowerCase();
+    const filtroLargY = document.getElementById('filtro-larg-y').value.toLowerCase();
+    
+    // Filtros multi-select
+    const lojasCheckboxes = document.querySelectorAll('.filtro-loja-checkbox:checked');
+    const lojaSelecionadas = Array.from(lojasCheckboxes).map(cb => cb.value.toLowerCase());
+    
+    const coresCheckboxes = document.querySelectorAll('.filtro-cor-checkbox:checked');
+    const coresSelecionadas = Array.from(coresCheckboxes).map(cb => cb.value.toLowerCase());
+    
+    const gramaturasCheckboxes = document.querySelectorAll('.filtro-gramatura-checkbox:checked');
+    const gramaturasSelecionadas = Array.from(gramaturasCheckboxes).map(cb => cb.value.toLowerCase());
+    
+    const fabricantesCheckboxes = document.querySelectorAll('.filtro-fabricante-checkbox:checked');
+    const fabricantesSelecionados = Array.from(fabricantesCheckboxes).map(cb => cb.value.toLowerCase());
+    
+    const tiposCheckboxes = document.querySelectorAll('.filtro-tipo-checkbox:checked');
+    const tiposSelecionados = Array.from(tiposCheckboxes).map(cb => cb.value);
+    
+    const bainhasCheckboxes = document.querySelectorAll('.filtro-bainha-checkbox:checked');
+    const bainhasSelecionadas = Array.from(bainhasCheckboxes).map(cb => cb.value.toLowerCase());
+    
+    const statusCheckboxes = document.querySelectorAll('.filtro-status-checkbox:checked');
+    const statusSelecionados = Array.from(statusCheckboxes).map(cb => cb.value);
     
     let produtosFiltrados = produtos.filter(produto => {
-        // Filtro de loja
-        if (filtroLoja && produto.loja.toLowerCase() !== filtroLoja) return false;
+        // Filtro de loja (multi-select)
+        if (lojaSelecionadas.length > 0 && !lojaSelecionadas.includes(produto.loja.toLowerCase())) return false;
         
-        // Filtro de código
+        // Filtro de código (texto)
         if (filtroCodigo && !produto.codigo.toLowerCase().includes(filtroCodigo)) return false;
         
-        // Filtro de cor
-        if (filtroCor && produto.nome_cor.toLowerCase() !== filtroCor) return false;
+        // Filtro de cor (multi-select)
+        if (coresSelecionadas.length > 0 && !coresSelecionadas.includes(produto.nome_cor.toLowerCase())) return false;
         
-        // Filtro de gramatura
-        if (filtroGramatura && produto.gramatura.toLowerCase() !== filtroGramatura) return false;
+        // Filtro de gramatura (multi-select)
+        if (gramaturasSelecionadas.length > 0 && !gramaturasSelecionadas.includes(produto.gramatura.toLowerCase())) return false;
         
-        // Filtro de fabricante
-        if (filtroFabricante && produto.fabricante.toLowerCase() !== filtroFabricante) return false;
+        // Filtro de fabricante (multi-select)
+        if (fabricantesSelecionados.length > 0 && !fabricantesSelecionados.includes(produto.fabricante.toLowerCase())) return false;
         
-        // Filtro de tipo
-        if (filtroTipo && produto.tipo_tecido !== filtroTipo) return false;
+        // Filtro de tipo (multi-select)
+        if (tiposSelecionados.length > 0 && !tiposSelecionados.includes(produto.tipo_tecido)) return false;
         
-        // Filtro de status
-        if (filtroStatus !== '' && produto.ativo !== parseInt(filtroStatus)) return false;
+        // Filtro de largura sem costura (texto)
+        if (filtroLargSemCostura && produto.largura_sem_costura) {
+            if (!produto.largura_sem_costura.toString().includes(filtroLargSemCostura)) return false;
+        }
+        
+        // Filtro de tipo bainha (multi-select)
+        if (bainhasSelecionadas.length > 0 && produto.tipo_bainha) {
+            if (!bainhasSelecionadas.includes(produto.tipo_bainha.toLowerCase())) return false;
+        }
+        
+        // Filtro de largura final (texto)
+        if (filtroLargFinal && produto.largura_final) {
+            if (!produto.largura_final.toString().includes(filtroLargFinal)) return false;
+        }
+        
+        // Filtro de largura maior (texto)
+        if (filtroLargMaior && produto.largura_maior) {
+            if (!produto.largura_maior.toString().includes(filtroLargMaior)) return false;
+        }
+        
+        // Filtro de largura Y (texto)
+        if (filtroLargY && produto.largura_y) {
+            if (!produto.largura_y.toString().includes(filtroLargY)) return false;
+        }
+        
+        // Filtro de status (multi-select)
+        if (statusSelecionados.length > 0 && !statusSelecionados.includes(produto.ativo.toString())) return false;
         
         return true;
     });
     
     renderizarProdutos(produtosFiltrados);
-    
-    // Atualizar opções em cascata
-    atualizarFiltrosCascata(produtosFiltrados);
 }
 
-// Atualizar opções dos filtros baseado nos produtos filtrados
+// Atualizar opções dos filtros baseado nos produtos filtrados (removido - não precisa mais em cascata)
 function atualizarFiltrosCascata(produtosFiltrados) {
-    const filtroLojaAtual = document.getElementById('filtro-loja').value;
-    const filtroCorAtual = document.getElementById('filtro-cor').value;
-    const filtroGramaturaAtual = document.getElementById('filtro-gramatura').value;
-    const filtroFabricanteAtual = document.getElementById('filtro-fabricante').value;
-    
-    // Se houver loja selecionada, atualizar outras opções
-    if (filtroLojaAtual) {
-        const coresDisponiveis = [...new Set(produtosFiltrados.map(p => p.nome_cor))].sort();
-        const gramaturasDisponiveis = [...new Set(produtosFiltrados.map(p => p.gramatura))].sort();
-        const fabricantesDisponiveis = [...new Set(produtosFiltrados.map(p => p.fabricante))].sort();
-        
-        // Atualizar cores
-        const filtroCor = document.getElementById('filtro-cor');
-        const corSelecionada = filtroCor.value;
-        filtroCor.innerHTML = '<option value="">Todas</option>' +
-            coresDisponiveis.map(cor => `<option value="${cor}" ${cor === corSelecionada ? 'selected' : ''}>${cor}</option>`).join('');
-        
-        // Atualizar gramaturas
-        const filtroGramatura = document.getElementById('filtro-gramatura');
-        const gramaturaSelecionada = filtroGramatura.value;
-        filtroGramatura.innerHTML = '<option value="">Todas</option>' +
-            gramaturasDisponiveis.map(g => `<option value="${g}" ${g === gramaturaSelecionada ? 'selected' : ''}>${g}</option>`).join('');
-        
-        // Atualizar fabricantes
-        const filtroFabricante = document.getElementById('filtro-fabricante');
-        const fabricanteSelecionado = filtroFabricante.value;
-        filtroFabricante.innerHTML = '<option value="">Todos</option>' +
-            fabricantesDisponiveis.map(f => `<option value="${f}" ${f === fabricanteSelecionado ? 'selected' : ''}>${f}</option>`).join('');
-    }
+    // Função mantida para compatibilidade, mas não faz nada
+    // Os filtros agora são independentes
 }
 
 // Renderizar tabela de produtos
