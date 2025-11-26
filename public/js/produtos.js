@@ -193,8 +193,15 @@ async function cadastrarProduto(e) {
         
         if (response.ok) {
             mostrarAlerta('Produto cadastrado com sucesso!', 'success');
+            
+            // Limpar formulário completamente
             document.getElementById('form-produto').reset();
-            toggleCamposTecido(); // Reset campos dinâmicos
+            
+            // Resetar tipo de tecido para Normal e mostrar campos corretos
+            document.getElementById('tipo_tecido').value = 'Normal';
+            toggleCamposTecido();
+            
+            // Recarregar lista de produtos
             carregarProdutos();
         } else {
             mostrarAlerta(data.error || 'Erro ao cadastrar produto', 'danger');
