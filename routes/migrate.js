@@ -36,4 +36,22 @@ router.post('/migrate-bando-y', async (req, res) => {
     }
 });
 
+// Endpoint para remover coluna largura_total
+router.post('/remove-largura-total', async (req, res) => {
+    try {
+        await db.query('ALTER TABLE produtos DROP COLUMN IF EXISTS largura_total');
+        
+        res.json({ 
+            success: true, 
+            message: 'Coluna largura_total removida com sucesso!' 
+        });
+    } catch (error) {
+        console.error('Erro ao remover coluna:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;
