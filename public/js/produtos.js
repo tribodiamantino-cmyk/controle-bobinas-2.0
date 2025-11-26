@@ -15,14 +15,17 @@ document.addEventListener('DOMContentLoaded', () => {
 // Mostrar alertas
 function mostrarAlerta(mensagem, tipo = 'success') {
     const container = document.getElementById('alerta-container');
-    const alerta = document.createElement('div');
-    alerta.className = `alert alert-${tipo}`;
-    alerta.textContent = mensagem;
+    const tipoClass = tipo === 'danger' ? 'error' : tipo;
     
-    container.innerHTML = '';
-    container.appendChild(alerta);
+    container.innerHTML = `
+        <div class="alert alert-${tipoClass}">
+            ${mensagem}
+        </div>
+    `;
     
-    setTimeout(() => alerta.remove(), 5000);
+    setTimeout(() => {
+        container.innerHTML = '';
+    }, 5000);
 }
 
 // Carregar cores para o select
@@ -79,11 +82,17 @@ async function carregarProdutos() {
 // Renderizar tabela de produtos
 function renderizarProdutos(listaProdutos) {
     const tbody = document.getElementById('lista-produtos');
+    const emptyState = document.getElementById('empty-produtos');
+    const table = document.getElementById('tabela-produtos');
     
     if (listaProdutos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center">Nenhum produto encontrado</td></tr>';
+        table.style.display = 'none';
+        emptyState.style.display = 'block';
         return;
     }
+    
+    table.style.display = 'table';
+    emptyState.style.display = 'none';
     
     tbody.innerHTML = listaProdutos.map(produto => `
         <tr>

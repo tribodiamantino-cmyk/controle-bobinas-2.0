@@ -3,126 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Produtos - Controle de Bobinas</title>
+    <title>Produtos - Controle de Bobinas 2.0</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Produtos</h1>
-            <nav>
-                <a href="/">Dashboard</a>
-                <a href="/configuracoes.html">Configurações</a>
-                <a href="/produtos.html" class="active">Produtos</a>
-            </nav>
-        </header>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">🎯 Controle de Bobinas 2.0</a>
+        <ul class="navbar-menu">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/produtos.html" class="active">Produtos</a></li>
+            <li><a href="/bobinas.html">Bobinas</a></li>
+            <li><a href="/estoque.html">Estoque</a></li>
+            <li><a href="/ordens.html">Ordens de Corte</a></li>
+            <li><a href="/configuracoes.html">Configurações</a></li>
+        </ul>
+    </nav>
 
-        <main>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">📦 Gerenciar Produtos</h1>
+            </div>
+
             <!-- Alertas -->
             <div id="alerta-container"></div>
 
             <!-- Formulário de Cadastro -->
-            <section class="form-section">
+            <div class="flex flex-between mb-3">
                 <h2>Cadastrar Novo Produto</h2>
-                <form id="form-produto">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="loja">Loja *</label>
-                            <select id="loja" required>
-                                <option value="">Selecione...</option>
-                                <option value="Cortinave">Cortinave</option>
-                                <option value="BN">BN</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="codigo">Código *</label>
-                            <input type="text" id="codigo" placeholder="Ex: PROD001" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="cor_id">Cor *</label>
-                            <select id="cor_id" required>
-                                <option value="">Carregando...</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="gramatura_id">Gramatura *</label>
-                            <select id="gramatura_id" required>
-                                <option value="">Carregando...</option>
-                            </select>
-                        </div>
+            </div>
+            <form id="form-produto" class="mb-3">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="loja">Loja *</label>
+                        <select class="form-control" id="loja" required>
+                            <option value="">Selecione...</option>
+                            <option value="Cortinave">Cortinave</option>
+                            <option value="BN">BN</option>
+                        </select>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="fabricante">Fabricante *</label>
-                            <select id="fabricante" required>
-                                <option value="">Selecione...</option>
-                                <option value="Propex">Propex</option>
-                                <option value="Textiloeste">Textiloeste</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="largura_sem_costura">Largura sem costura (cm) *</label>
-                            <input type="number" id="largura_sem_costura" step="0.01" min="0" placeholder="Ex: 300" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="tipo_bainha">Tipo de Bainha *</label>
-                            <select id="tipo_bainha" required>
-                                <option value="">Selecione...</option>
-                                <option value="Cano/Cano">Cano/Cano</option>
-                                <option value="Cano/Arame">Cano/Arame</option>
-                                <option value="Arame/Arame">Arame/Arame</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="largura_final">Largura Final (cm) *</label>
-                            <input type="number" id="largura_final" step="0.01" min="0" placeholder="Ex: 298.5" required>
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label" for="codigo">Código *</label>
+                        <input type="text" class="form-control" id="codigo" placeholder="Ex: PROD001" required>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">Cadastrar Produto</button>
-                </form>
-            </section>
+                    <div class="form-group">
+                        <label class="form-label" for="cor_id">Cor *</label>
+                        <select class="form-control" id="cor_id" required>
+                            <option value="">Carregando...</option>
+                        </select>
+                    </div>
 
+                    <div class="form-group">
+                        <label class="form-label" for="gramatura_id">Gramatura *</label>
+                        <select class="form-control" id="gramatura_id" required>
+                            <option value="">Carregando...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="fabricante">Fabricante *</label>
+                        <select class="form-control" id="fabricante" required>
+                            <option value="">Selecione...</option>
+                            <option value="Propex">Propex</option>
+                            <option value="Textiloeste">Textiloeste</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="largura_sem_costura">Largura sem costura (cm) *</label>
+                        <input type="number" class="form-control" id="largura_sem_costura" step="0.01" min="0" placeholder="Ex: 300" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="tipo_bainha">Tipo de Bainha *</label>
+                        <select class="form-control" id="tipo_bainha" required>
+                            <option value="">Selecione...</option>
+                            <option value="Cano/Cano">Cano/Cano</option>
+                            <option value="Cano/Arame">Cano/Arame</option>
+                            <option value="Arame/Arame">Arame/Arame</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="largura_final">Largura Final (cm) *</label>
+                        <input type="number" class="form-control" id="largura_final" step="0.01" min="0" placeholder="Ex: 298.5" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">➕ Cadastrar Produto</button>
+            </form>
             <!-- Tabela de Produtos -->
-            <section class="table-section">
+            <div class="flex flex-between mb-3">
                 <h2>Produtos Cadastrados</h2>
-                
-                <div class="search-box">
-                    <input type="text" id="search-produtos" placeholder="🔍 Buscar por código, cor, loja..." onkeyup="filtrarProdutos()">
-                </div>
+            </div>
+            
+            <div class="search-box mb-3">
+                <input type="text" class="form-control" id="search-produtos" placeholder="🔍 Buscar por código, cor, loja..." onkeyup="filtrarProdutos()">
+            </div>
 
-                <div class="table-responsive">
-                    <table id="tabela-produtos">
-                        <thead>
-                            <tr>
-                                <th>Loja</th>
-                                <th>Código</th>
-                                <th>Cor</th>
-                                <th>Gramatura</th>
-                                <th>Fabricante</th>
-                                <th>Larg. S/Costura</th>
-                                <th>Tipo Bainha</th>
-                                <th>Larg. Final</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lista-produtos">
-                            <tr>
-                                <td colspan="10" class="text-center">Carregando produtos...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </main>
+            <table class="table" id="tabela-produtos">
+                <thead>
+                    <tr>
+                        <th>Loja</th>
+                        <th>Código</th>
+                        <th>Cor</th>
+                        <th>Gramatura</th>
+                        <th>Fabricante</th>
+                        <th>Larg. S/Costura</th>
+                        <th>Tipo Bainha</th>
+                        <th>Larg. Final</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-produtos">
+                    <tr>
+                        <td colspan="10" class="text-center">Carregando produtos...</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div id="empty-produtos" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📦</div>
+                <h3>Nenhum produto cadastrado</h3>
+                <p>Preencha o formulário acima para começar</p>
+            </div>
+        </div>
     </div>
 
     <script src="/js/produtos.js"></script>
