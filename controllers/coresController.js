@@ -4,12 +4,12 @@ const db = require('../config/database');
 exports.listarCores = async (req, res) => {
     try {
         const [cores] = await db.query(
-            'SELECT * FROM configuracoes_cores ORDER BY nome_cor ASC'
+            'SELECT * FROM configuracoes_cores WHERE ativo = 1 ORDER BY nome_cor ASC'
         );
-        res.json(cores);
+        res.json({ success: true, data: cores });
     } catch (error) {
         console.error('Erro ao listar cores:', error);
-        res.status(500).json({ error: 'Erro ao listar cores' });
+        res.status(500).json({ success: false, error: 'Erro ao listar cores' });
     }
 };
 
@@ -19,7 +19,7 @@ exports.criarCor = async (req, res) => {
         const { nome_cor } = req.body;
         
         if (!nome_cor) {
-            return res.status(400).json({ error: 'Nome da cor é obrigatório' });
+            return res.status(400).json({ success: false, error: 'Nome da cor é obrigatório' });
         }
         
         const [result] = await db.query(
@@ -28,15 +28,16 @@ exports.criarCor = async (req, res) => {
         );
         
         res.status(201).json({
+            success: true,
             message: 'Cor criada com sucesso',
             id: result.insertId
         });
     } catch (error) {
         console.error('Erro ao criar cor:', error);
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: 'Cor já existe' });
+            return res.status(400).json({ success: false, error: 'Cor já existe' });
         }
-        res.status(500).json({ error: 'Erro ao criar cor' });
+        res.status(500).json({ success: false, error: 'Erro ao criar cor' });
     }
 };
 
@@ -52,13 +53,13 @@ exports.atualizarCor = async (req, res) => {
         );
         
         if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Cor não encontrada' });
+            return res.status(404).json({ success: false, error: 'Cor não encontrada' });
         }
         
-        res.json({ message: 'Cor atualizada com sucesso' });
+        res.json({ success: true, message: 'Cor atualizada com sucesso' });
     } catch (error) {
         console.error('Erro ao atualizar cor:', error);
-        res.status(500).json({ error: 'Erro ao atualizar cor' });
+        res.status(500).json({ success: false, error: 'Erro ao atualizar cor' });
     }
 };
 
@@ -75,6 +76,7 @@ exports.desativarCor = async (req, res) => {
         
         if (produtos[0].total > 0) {
             return res.status(400).json({
+                success: false,
                 error: 'Não é possível desativar esta cor pois ela está em uso em produtos ativos'
             });
         }
@@ -85,12 +87,12 @@ exports.desativarCor = async (req, res) => {
         );
         
         if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Cor não encontrada' });
+            return res.status(404).json({ success: false, error: 'Cor não encontrada' });
         }
         
-        res.json({ message: 'Cor desativada com sucesso' });
+        res.json({ success: true, message: 'Cor desativada com sucesso' });
     } catch (error) {
         console.error('Erro ao desativar cor:', error);
-        res.status(500).json({ error: 'Erro ao desativar cor' });
+        res.status(500).json({ success: false, error: 'Erro ao desativar cor' });
     }
 };

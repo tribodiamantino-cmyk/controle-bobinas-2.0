@@ -4,12 +4,12 @@ const db = require('../config/database');
 exports.listarGramaturas = async (req, res) => {
     try {
         const [gramaturas] = await db.query(
-            'SELECT * FROM configuracoes_gramaturas ORDER BY gramatura ASC'
+            'SELECT * FROM configuracoes_gramaturas WHERE ativo = 1 ORDER BY CAST(SUBSTRING_INDEX(gramatura, " ", 1) AS UNSIGNED) ASC'
         );
-        res.json(gramaturas);
+        res.json({ success: true, data: gramaturas });
     } catch (error) {
         console.error('Erro ao listar gramaturas:', error);
-        res.status(500).json({ error: 'Erro ao listar gramaturas' });
+        res.status(500).json({ success: false, error: 'Erro ao listar gramaturas' });
     }
 };
 
@@ -19,7 +19,7 @@ exports.criarGramatura = async (req, res) => {
         const { gramatura } = req.body;
         
         if (!gramatura) {
-            return res.status(400).json({ error: 'Gramatura é obrigatória' });
+            return res.status(400).json({ success: false, error: 'Gramatura é obrigatória' });
         }
         
         const [result] = await db.query(
@@ -28,15 +28,16 @@ exports.criarGramatura = async (req, res) => {
         );
         
         res.status(201).json({
+            success: true,
             message: 'Gramatura criada com sucesso',
             id: result.insertId
         });
     } catch (error) {
         console.error('Erro ao criar gramatura:', error);
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: 'Gramatura já existe' });
+            return res.status(400).json({ success: false, error: 'Gramatura já existe' });
         }
-        res.status(500).json({ error: 'Erro ao criar gramatura' });
+        res.status(500).json({ success: false, error: 'Erro ao criar gramatura' });
     }
 };
 
@@ -52,13 +53,13 @@ exports.atualizarGramatura = async (req, res) => {
         );
         
         if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Gramatura não encontrada' });
+            return res.status(404).json({ success: false, error: 'Gramatura não encontrada' });
         }
         
-        res.json({ message: 'Gramatura atualizada com sucesso' });
+        res.json({ success: true, message: 'Gramatura atualizada com sucesso' });
     } catch (error) {
         console.error('Erro ao atualizar gramatura:', error);
-        res.status(500).json({ error: 'Erro ao atualizar gramatura' });
+        res.status(500).json({ success: false, error: 'Erro ao atualizar gramatura' });
     }
 };
 
@@ -75,6 +76,7 @@ exports.desativarGramatura = async (req, res) => {
         
         if (produtos[0].total > 0) {
             return res.status(400).json({
+                success: false,
                 error: 'Não é possível desativar esta gramatura pois ela está em uso em produtos ativos'
             });
         }
@@ -85,12 +87,12 @@ exports.desativarGramatura = async (req, res) => {
         );
         
         if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Gramatura não encontrada' });
+            return res.status(404).json({ success: false, error: 'Gramatura não encontrada' });
         }
         
-        res.json({ message: 'Gramatura desativada com sucesso' });
+        res.json({ success: true, message: 'Gramatura desativada com sucesso' });
     } catch (error) {
         console.error('Erro ao desativar gramatura:', error);
-        res.status(500).json({ error: 'Erro ao desativar gramatura' });
+        res.status(500).json({ success: false, error: 'Erro ao desativar gramatura' });
     }
 };
