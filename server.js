@@ -28,10 +28,12 @@ app.get('/api/health', (req, res) => {
 // Importar rotas
 const coresRoutes = require('./routes/cores');
 const gramaturasRoutes = require('./routes/gramaturas');
+const setupRoutes = require('./routes/setup');
 
 // Usar rotas
 app.use('/api/cores', coresRoutes);
 app.use('/api/gramaturas', gramaturasRoutes);
+app.use('/api/database', setupRoutes);
 
 // Tratamento de erro 404
 app.use((req, res) => {

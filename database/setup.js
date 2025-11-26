@@ -9,14 +9,15 @@ async function executarSchema() {
     
     try {
         // Ler arquivo SQL
-        const sqlPath = path.join(__dirname, '../database/schema.sql');
+        const sqlPath = path.join(__dirname, 'setup-railway.sql');
         const sql = fs.readFileSync(sqlPath, 'utf8');
         
-        // Dividir em statements individuais (remover comentários e linhas vazias)
+        // Dividir em statements individuais
         const statements = sql
+            .replace(/--.*$/gm, '') // Remover comentários
             .split(';')
             .map(s => s.trim())
-            .filter(s => s.length > 0 && !s.startsWith('--'));
+            .filter(s => s.length > 0);
         
         console.log(`📊 Executando ${statements.length} comandos SQL...`);
         
@@ -24,8 +25,15 @@ async function executarSchema() {
         for (let i = 0; i < statements.length; i++) {
             const statement = statements[i];
             if (statement) {
-                await db.query(statement);
-                console.log(`✅ Comando ${i + 1}/${statements.length} executado`);
+                try {
+                    await db.query(statement);
+                    console.log(`✅ Comando ${i + 1}/${statements.length} executado`);
+                } catch (err) {
+                    // Ignorar erros de "já existe" 
+                    if (!err.message.includes('already exists') && !err.code === 'ER_TABLE_EXISTS_ERROR') {
+                        console.log(`⚠️ Aviso no comando ${i + 1}: ${err.message}`);
+                    }
+                }
             }
         }
         
