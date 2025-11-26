@@ -55,10 +55,10 @@
                 <table class="table" id="table-cores">
                     <thead>
                         <tr>
-                            <th>Nome</th>
-                            <th>Status</th>
-                            <th>Data de Criação</th>
-                            <th>Ações</th>
+                            <th style="width: 50%;">Nome</th>
+                            <th style="width: 20%;">Status</th>
+                            <th style="width: 20%;">Data de Criação</th>
+                            <th style="width: 10%;">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-cores">
@@ -92,10 +92,10 @@
                 <table class="table" id="table-gramaturas">
                     <thead>
                         <tr>
-                            <th>Gramatura</th>
-                            <th>Status</th>
-                            <th>Data de Criação</th>
-                            <th>Ações</th>
+                            <th style="width: 50%;">Gramatura</th>
+                            <th style="width: 20%;">Status</th>
+                            <th style="width: 20%;">Data de Criação</th>
+                            <th style="width: 10%;">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-gramaturas">
@@ -159,9 +159,12 @@
                 <input type="hidden" id="gramatura-id">
                 
                 <div class="form-group">
-                    <label class="form-label" for="gramatura-valor">Gramatura *</label>
-                    <input type="text" class="form-control" id="gramatura-valor" placeholder="Ex: 180 g/m²" required>
-                    <small style="color: #666;">Exemplo: 180 g/m², 200 g/m², etc.</small>
+                    <label class="form-label" for="gramatura-valor">Gramatura (apenas o número) *</label>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="number" class="form-control" id="gramatura-valor" placeholder="Ex: 180, 200, 220" required min="1" step="1" style="flex: 1;">
+                        <span style="font-weight: bold; color: #666;">g/m²</span>
+                    </div>
+                    <small style="color: #666;">Digite apenas o número. A unidade g/m² será adicionada automaticamente.</small>
                 </div>
 
                 <div class="form-group">

@@ -51,26 +51,26 @@ async function carregarCores() {
             table.style.display = 'table';
             tbody.innerHTML = cores.map(cor => `
                 <tr>
-                    <td><strong>${cor.nome_cor}</strong></td>
                     <td>
-                        ${cor.ativo ? 
-                            '<span class="badge badge-success">Ativo</span>' : 
-                            '<span class="badge badge-danger">Inativo</span>'
-                        }
+                        <input type="text" 
+                               value="${cor.nome_cor}" 
+                               id="cor-nome-${cor.id}"
+                               style="border: 1px solid #ddd; padding: 0.5rem; border-radius: 5px; width: 100%;"
+                               onchange="atualizarCorInline(${cor.id})">
+                    </td>
+                    <td>
+                        <select id="cor-ativo-${cor.id}" 
+                                style="border: 1px solid #ddd; padding: 0.5rem; border-radius: 5px;"
+                                onchange="atualizarCorInline(${cor.id})">
+                            <option value="1" ${cor.ativo ? 'selected' : ''}>Ativo</option>
+                            <option value="0" ${!cor.ativo ? 'selected' : ''}>Inativo</option>
+                        </select>
                     </td>
                     <td>${formatarData(cor.data_criacao)}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick='editarCor(${JSON.stringify(cor)})'>
-                            ✏️ Editar
+                        <button class="btn btn-sm btn-danger" onclick="excluirCor(${cor.id})">
+                            🗑️ Excluir
                         </button>
-                        ${cor.ativo ? 
-                            `<button class="btn btn-sm btn-warning" onclick="desativarCor(${cor.id})">
-                                🚫 Desativar
-                            </button>` :
-                            `<button class="btn btn-sm btn-success" onclick="ativarCor(${cor.id})">
-                                ✅ Ativar
-                            </button>`
-                        }
                     </td>
                 </tr>
             `).join('');
@@ -143,14 +143,35 @@ async function salvarCor(event) {
     }
 }
 
-// Editar cor
-function editarCor(cor) {
-    abrirModalCor(cor);
+// Atualizar cor inline
+async function atualizarCorInline(id) {
+    const nome_cor = document.getElementById(`cor-nome-${id}`).value;
+    const ativo = document.getElementById(`cor-ativo-${id}`).value === '1';
+    
+    try {
+        const response = await fetch(`/api/cores/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome_cor, ativo })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            mostrarAlerta('cores', 'Cor atualizada com sucesso!', 'success');
+        } else {
+            mostrarAlerta('cores', data.error || 'Erro ao atualizar cor', 'danger');
+            carregarCores(); // Recarregar em caso de erro
+        }
+    } catch (error) {
+        mostrarAlerta('cores', 'Erro ao atualizar cor: ' + error.message, 'danger');
+        carregarCores();
+    }
 }
 
-// Desativar cor
-async function desativarCor(id) {
-    if (!confirm('Deseja realmente desativar esta cor?')) return;
+// Excluir cor
+async function excluirCor(id) {
+    if (!confirm('Deseja realmente excluir esta cor?')) return;
     
     try {
         const response = await fetch(`/api/cores/${id}`, {
@@ -160,33 +181,13 @@ async function desativarCor(id) {
         const data = await response.json();
         
         if (response.ok) {
-            mostrarAlerta('cores', 'Cor desativada com sucesso!', 'success');
+            mostrarAlerta('cores', 'Cor excluída com sucesso!', 'success');
             carregarCores();
         } else {
-            mostrarAlerta('cores', data.error || 'Erro ao desativar cor', 'danger');
+            mostrarAlerta('cores', data.error || 'Erro ao excluir cor', 'danger');
         }
     } catch (error) {
-        mostrarAlerta('cores', 'Erro ao desativar cor: ' + error.message, 'danger');
-    }
-}
-
-// Ativar cor
-async function ativarCor(id) {
-    try {
-        const response = await fetch(`/api/cores/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ativo: true })
-        });
-        
-        if (response.ok) {
-            mostrarAlerta('cores', 'Cor ativada com sucesso!', 'success');
-            carregarCores();
-        } else {
-            mostrarAlerta('cores', 'Erro ao ativar cor', 'danger');
-        }
-    } catch (error) {
-        mostrarAlerta('cores', 'Erro ao ativar cor: ' + error.message, 'danger');
+        mostrarAlerta('cores', 'Erro ao excluir cor: ' + error.message, 'danger');
     }
 }
 
@@ -215,31 +216,39 @@ async function carregarGramaturas() {
             empty.style.display = 'block';
         } else {
             table.style.display = 'table';
-            tbody.innerHTML = gramaturas.map(gramatura => `
+            tbody.innerHTML = gramaturas.map(gramatura => {
+                // Extrair apenas o número da gramatura
+                const numero = gramatura.gramatura.replace(/[^\d]/g, '');
+                
+                return `
                 <tr>
-                    <td><strong>${gramatura.gramatura}</strong></td>
                     <td>
-                        ${gramatura.ativo ? 
-                            '<span class="badge badge-success">Ativo</span>' : 
-                            '<span class="badge badge-danger">Inativo</span>'
-                        }
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="number" 
+                                   value="${numero}" 
+                                   id="gramatura-numero-${gramatura.id}"
+                                   style="border: 1px solid #ddd; padding: 0.5rem; border-radius: 5px; width: 120px;"
+                                   min="1"
+                                   onchange="atualizarGramaturaInline(${gramatura.id})">
+                            <span style="font-weight: bold; color: #666;">g/m²</span>
+                        </div>
+                    </td>
+                    <td>
+                        <select id="gramatura-ativo-${gramatura.id}" 
+                                style="border: 1px solid #ddd; padding: 0.5rem; border-radius: 5px;"
+                                onchange="atualizarGramaturaInline(${gramatura.id})">
+                            <option value="1" ${gramatura.ativo ? 'selected' : ''}>Ativo</option>
+                            <option value="0" ${!gramatura.ativo ? 'selected' : ''}>Inativo</option>
+                        </select>
                     </td>
                     <td>${formatarData(gramatura.data_criacao)}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick='editarGramatura(${JSON.stringify(gramatura)})'>
-                            ✏️ Editar
+                        <button class="btn btn-sm btn-danger" onclick="excluirGramatura(${gramatura.id})">
+                            🗑️ Excluir
                         </button>
-                        ${gramatura.ativo ? 
-                            `<button class="btn btn-sm btn-warning" onclick="desativarGramatura(${gramatura.id})">
-                                🚫 Desativar
-                            </button>` :
-                            `<button class="btn btn-sm btn-success" onclick="ativarGramatura(${gramatura.id})">
-                                ✅ Ativar
-                            </button>`
-                        }
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
     } catch (error) {
         loading.style.display = 'none';
@@ -258,7 +267,9 @@ function abrirModalGramatura(gramatura = null) {
     if (gramatura) {
         title.textContent = 'Editar Gramatura';
         document.getElementById('gramatura-id').value = gramatura.id;
-        document.getElementById('gramatura-valor').value = gramatura.gramatura;
+        // Extrair apenas o número
+        const numero = gramatura.gramatura.replace(/[^\d]/g, '');
+        document.getElementById('gramatura-valor').value = numero;
         document.getElementById('gramatura-ativo').checked = gramatura.ativo;
     } else {
         title.textContent = 'Nova Gramatura';
@@ -278,8 +289,9 @@ async function salvarGramatura(event) {
     event.preventDefault();
     
     const id = document.getElementById('gramatura-id').value;
+    const numero = document.getElementById('gramatura-valor').value;
     const gramatura = {
-        gramatura: document.getElementById('gramatura-valor').value,
+        gramatura: numero + ' g/m²', // Adicionar unidade automaticamente
         ativo: document.getElementById('gramatura-ativo').checked
     };
     
@@ -307,14 +319,36 @@ async function salvarGramatura(event) {
     }
 }
 
-// Editar gramatura
-function editarGramatura(gramatura) {
-    abrirModalGramatura(gramatura);
+// Atualizar gramatura inline
+async function atualizarGramaturaInline(id) {
+    const numero = document.getElementById(`gramatura-numero-${id}`).value;
+    const gramatura = numero + ' g/m²';
+    const ativo = document.getElementById(`gramatura-ativo-${id}`).value === '1';
+    
+    try {
+        const response = await fetch(`/api/gramaturas/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gramatura, ativo })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            mostrarAlerta('gramaturas', 'Gramatura atualizada com sucesso!', 'success');
+        } else {
+            mostrarAlerta('gramaturas', data.error || 'Erro ao atualizar gramatura', 'danger');
+            carregarGramaturas(); // Recarregar em caso de erro
+        }
+    } catch (error) {
+        mostrarAlerta('gramaturas', 'Erro ao atualizar gramatura: ' + error.message, 'danger');
+        carregarGramaturas();
+    }
 }
 
-// Desativar gramatura
-async function desativarGramatura(id) {
-    if (!confirm('Deseja realmente desativar esta gramatura?')) return;
+// Excluir gramatura
+async function excluirGramatura(id) {
+    if (!confirm('Deseja realmente excluir esta gramatura?')) return;
     
     try {
         const response = await fetch(`/api/gramaturas/${id}`, {
@@ -324,33 +358,13 @@ async function desativarGramatura(id) {
         const data = await response.json();
         
         if (response.ok) {
-            mostrarAlerta('gramaturas', 'Gramatura desativada com sucesso!', 'success');
+            mostrarAlerta('gramaturas', 'Gramatura excluída com sucesso!', 'success');
             carregarGramaturas();
         } else {
-            mostrarAlerta('gramaturas', data.error || 'Erro ao desativar gramatura', 'danger');
+            mostrarAlerta('gramaturas', data.error || 'Erro ao excluir gramatura', 'danger');
         }
     } catch (error) {
-        mostrarAlerta('gramaturas', 'Erro ao desativar gramatura: ' + error.message, 'danger');
-    }
-}
-
-// Ativar gramatura
-async function ativarGramatura(id) {
-    try {
-        const response = await fetch(`/api/gramaturas/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ativo: true })
-        });
-        
-        if (response.ok) {
-            mostrarAlerta('gramaturas', 'Gramatura ativada com sucesso!', 'success');
-            carregarGramaturas();
-        } else {
-            mostrarAlerta('gramaturas', 'Erro ao ativar gramatura', 'danger');
-        }
-    } catch (error) {
-        mostrarAlerta('gramaturas', 'Erro ao ativar gramatura: ' + error.message, 'danger');
+        mostrarAlerta('gramaturas', 'Erro ao excluir gramatura: ' + error.message, 'danger');
     }
 }
 
