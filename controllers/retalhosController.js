@@ -385,13 +385,3 @@ exports.excluirRetalho = async (req, res) => {
         });
     }
 };
-
-module.exports = {
-    criarRetalho,
-    converterBobinaEmRetalho,
-    listarRetalhosPorProduto,
-    buscarRetalhoPorCodigo,
-    atualizarRetalho,
-    obterHistoricoLocalizacao,
-    excluirRetalho
-};
