@@ -246,4 +246,24 @@ router.post('/fix-bobinas-codigo-interno', async (req, res) => {
     }
 });
 
+// Endpoint para verificar estrutura da tabela bobinas
+router.get('/check-bobinas-table', async (req, res) => {
+    try {
+        const [columns] = await db.query(`
+            SHOW COLUMNS FROM bobinas
+        `);
+        
+        res.json({ 
+            success: true, 
+            columns: columns 
+        });
+    } catch (error) {
+        console.error('Erro ao verificar tabela:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;
