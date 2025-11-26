@@ -187,4 +187,25 @@ router.post('/fix-produtos-columns', async (req, res) => {
     }
 });
 
+// Endpoint para criar tabela de bobinas
+router.post('/create-bobinas-table', async (req, res) => {
+    try {
+        const sqlPath = path.join(__dirname, '..', 'database', 'create-bobinas-table.sql');
+        const sql = await fs.readFile(sqlPath, 'utf8');
+        
+        await db.query(sql);
+        
+        res.json({ 
+            success: true, 
+            message: 'Tabela bobinas criada com sucesso!' 
+        });
+    } catch (error) {
+        console.error('Erro ao criar tabela bobinas:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;
