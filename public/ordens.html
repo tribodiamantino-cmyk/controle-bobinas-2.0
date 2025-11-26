@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordens de Corte - Controle de Bobinas</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-content">
+            <div class="nav-brand">📦 Controle de Bobinas 2.0</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="configuracoes.html">Configurações</a>
+                <a href="produtos.html">Produtos</a>
+                <a href="estoque.html">Estoque</a>
+                <a href="ordens.html" class="active">Ordens de Corte</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📋 Ordens de Corte</h1>
+            <button class="btn btn-primary" onclick="abrirModalNovoPlano()">
+                ➕ Novo Plano de Corte
+            </button>
+        </div>
+
+        <!-- Kanban Board -->
+        <div class="kanban-board">
+            <!-- Coluna 1: Planejamento -->
+            <div class="kanban-column">
+                <div class="kanban-header planejamento">
+                    <h3>📝 Planejamento</h3>
+                    <span class="badge-count" id="count-planejamento">0</span>
+                </div>
+                <div class="kanban-content" id="coluna-planejamento">
+                    <!-- Cards serão inseridos aqui -->
+                </div>
+            </div>
+
+            <!-- Coluna 2: Em Produção -->
+            <div class="kanban-column">
+                <div class="kanban-header em-producao">
+                    <h3>⚙️ Em Produção</h3>
+                    <span class="badge-count" id="count-em-producao">0</span>
+                </div>
+                <div class="kanban-content" id="coluna-em-producao">
+                    <!-- Cards serão inseridos aqui -->
+                </div>
+            </div>
+
+            <!-- Coluna 3: Finalizados -->
+            <div class="kanban-column">
+                <div class="kanban-header finalizado">
+                    <h3>✅ Finalizados</h3>
+                    <span class="badge-count" id="count-finalizado">0</span>
+                </div>
+                <div class="kanban-content" id="coluna-finalizado">
+                    <!-- Cards serão inseridos aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Novo Plano de Corte -->
+    <div id="modalNovoPlano" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>➕ Novo Plano de Corte</h2>
+                <button class="btn-close" onclick="fecharModalNovoPlano()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="formNovoPlano">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Cliente *</label>
+                            <input type="text" id="clientePlano" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Aviário *</label>
+                            <input type="text" id="aviarioPlano" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="section-header">
+                        <h3>Cortes</h3>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="adicionarCorte()">
+                            ➕ Adicionar Corte
+                        </button>
+                    </div>
+
+                    <div id="listaCortesPlano" class="cortes-list">
+                        <!-- Cortes serão inseridos aqui -->
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalNovoPlano()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Criar Plano</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Detalhes do Plano -->
+    <div id="modalDetalhesPlano" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div>
+                    <h2 id="tituloDetalhes">Plano de Corte</h2>
+                    <p class="text-muted" id="infoDetalhes"></p>
+                </div>
+                <button class="btn-close" onclick="fecharModalDetalhes()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="conteudoDetalhes">
+                    <!-- Conteúdo será inserido dinamicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Alocação de Origem -->
+    <div id="modalAlocacao" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🎯 Alocar Origem</h2>
+                <button class="btn-close" onclick="fecharModalAlocacao()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="conteudoAlocacao">
+                    <!-- Conteúdo será inserido dinamicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Finalização -->
+    <div id="modalFinalizacao" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>✅ Finalizar Plano de Corte</h2>
+                <button class="btn-close" onclick="fecharModalFinalizacao()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>⚠️ Atenção!</strong> Ao finalizar, a metragem será definitivamente baixada do estoque. 
+                    Revise as origens antes de confirmar.
+                </div>
+                <div id="conteudoFinalizacao">
+                    <!-- Conteúdo será inserido dinamicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/ordens.js"></script>
+</body>
+</html>
