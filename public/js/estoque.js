@@ -475,16 +475,16 @@ function renderizarEstoque(produtos) {
         if (produto.tipo_tecido === 'Bando Y') {
             medidasHtml = `
                 <div class="produto-medidas">
-                    📏 <strong>Larg. Maior:</strong> ${produto.largura_maior}cm | 
-                    <strong>Larg. Y:</strong> ${produto.largura_y}cm
+                    📏 <strong>Larg. Maior:</strong> ${parseFloat(produto.largura_maior)}cm | 
+                    <strong>Larg. Y:</strong> ${parseFloat(produto.largura_y)}cm
                 </div>
             `;
         } else {
             medidasHtml = `
                 <div class="produto-medidas">
-                    📏 <strong>Larg. S/Costura:</strong> ${produto.largura_sem_costura}cm | 
+                    📏 <strong>Larg. S/Costura:</strong> ${parseFloat(produto.largura_sem_costura)}cm | 
                     <strong>Bainha:</strong> ${produto.tipo_bainha || 'N/A'} | 
-                    <strong>Larg. Final:</strong> ${produto.largura_final}cm
+                    <strong>Larg. Final:</strong> ${parseFloat(produto.largura_final)}cm
                 </div>
             `;
         }
