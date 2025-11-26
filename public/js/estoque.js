@@ -469,27 +469,51 @@ function renderizarEstoque(produtos) {
     
     emptyState.style.display = 'none';
     
-    container.innerHTML = produtos.map(produto => `
-        <div class="produto-card" id="produto-${produto.id}">
-            <div class="produto-header" onclick="toggleProduto(${produto.id})">
-                <div class="produto-info">
-                    <span class="badge badge-info">🏪 ${produto.loja}</span>
-                    <span class="badge badge-secondary">🏭 ${produto.fabricante}</span>
-                    <span class="codigo-produto">🔢 ${produto.codigo}</span>
+    container.innerHTML = produtos.map(produto => {
+        // Preparar informações de medidas conforme o tipo de tecido
+        let medidasHtml = '';
+        if (produto.tipo_tecido === 'Bando Y') {
+            medidasHtml = `
+                <div class="produto-medidas">
+                    📏 <strong>Larg. Maior:</strong> ${produto.largura_maior}cm | 
+                    <strong>Larg. Y:</strong> ${produto.largura_y}cm
                 </div>
-                <button class="btn-expand" id="btn-expand-${produto.id}">▼</button>
+            `;
+        } else {
+            medidasHtml = `
+                <div class="produto-medidas">
+                    📏 <strong>Larg. S/Costura:</strong> ${produto.largura_sem_costura}cm | 
+                    <strong>Bainha:</strong> ${produto.tipo_bainha || 'N/A'} | 
+                    <strong>Larg. Final:</strong> ${produto.largura_final}cm
+                </div>
+            `;
+        }
+        
+        return `
+            <div class="produto-card" id="produto-${produto.id}">
+                <div class="produto-header" onclick="toggleProduto(${produto.id})">
+                    <div class="produto-info">
+                        <span class="badge badge-info">🏪 ${produto.loja}</span>
+                        <span class="badge badge-secondary">🏭 ${produto.fabricante}</span>
+                        <span class="codigo-produto">🔢 ${produto.codigo}</span>
+                    </div>
+                    <button class="btn-expand" id="btn-expand-${produto.id}">▼</button>
+                </div>
+                <div class="produto-specs">
+                    🎨 <strong>${produto.nome_cor}</strong> • 
+                    📊 <strong>${produto.gramatura}</strong> • 
+                    📦 <strong>${produto.tipo_tecido || 'Normal'}</strong>
+                </div>
+                ${medidasHtml}
+                <div class="produto-resumo">
+                    📊 ${produto.total_bobinas} bobina(s) | ${parseFloat(produto.metragem_disponivel || 0).toFixed(2)}m disponível
+                </div>
+                <div class="bobinas-lista" id="bobinas-${produto.id}" style="display: none;">
+                    <div class="loading">Carregando bobinas...</div>
+                </div>
             </div>
-            <div class="produto-specs">
-                ${produto.nome_cor} • ${produto.gramatura} • ${produto.tipo_tecido || 'Normal'}
-            </div>
-            <div class="produto-resumo">
-                📊 ${produto.total_bobinas} bobina(s) | ${parseFloat(produto.metragem_disponivel || 0).toFixed(2)}m disponível
-            </div>
-            <div class="bobinas-lista" id="bobinas-${produto.id}" style="display: none;">
-                <div class="loading">Carregando bobinas...</div>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Toggle expansão do produto (carregar bobinas)

@@ -626,6 +626,20 @@ body {
     color: #666;
 }
 
+.produto-medidas {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+    color: #555;
+    background: #f8f9fa;
+    border-left: 3px solid var(--info-color);
+    margin: 5px 15px;
+    border-radius: 4px;
+}
+
+.produto-medidas strong {
+    color: var(--dark-color);
+}
+
 .produto-resumo {
     padding: 10px 15px;
     font-weight: 600;
