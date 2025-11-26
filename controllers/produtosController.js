@@ -27,14 +27,29 @@ exports.criarProduto = async (req, res) => {
         codigo, 
         cor_id, 
         gramatura_id, 
-        fabricante, 
+        fabricante,
+        tipo_tecido,
         largura_sem_costura, 
         tipo_bainha, 
-        largura_final 
+        largura_final,
+        largura_maior,
+        largura_y,
+        largura_total
     } = req.body;
 
-    if (!loja || !codigo || !cor_id || !gramatura_id || !fabricante || !largura_sem_costura || !tipo_bainha || !largura_final) {
-        return res.status(400).json({ success: false, error: 'Todos os campos são obrigatórios' });
+    if (!loja || !codigo || !cor_id || !gramatura_id || !fabricante) {
+        return res.status(400).json({ success: false, error: 'Campos obrigatórios: loja, código, cor, gramatura e fabricante' });
+    }
+
+    // Validar campos específicos do tipo de tecido
+    if (tipo_tecido === 'Bando Y') {
+        if (!largura_maior || !largura_y || !largura_total) {
+            return res.status(400).json({ success: false, error: 'Para Bando Y é necessário informar: Largura Maior, Largura Y e Largura Total' });
+        }
+    } else {
+        if (!largura_sem_costura || !tipo_bainha || !largura_final) {
+            return res.status(400).json({ success: false, error: 'Para tecido normal é necessário informar: Largura sem costura, Tipo de bainha e Largura final' });
+        }
     }
 
     try {
@@ -49,9 +64,16 @@ exports.criarProduto = async (req, res) => {
         }
 
         const [result] = await db.query(
-            `INSERT INTO produtos (loja, codigo, cor_id, gramatura_id, fabricante, largura_sem_costura, tipo_bainha, largura_final) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [loja, codigo, cor_id, gramatura_id, fabricante, largura_sem_costura, tipo_bainha, largura_final]
+            `INSERT INTO produtos (
+                loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido,
+                largura_sem_costura, tipo_bainha, largura_final,
+                largura_maior, largura_y, largura_total
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido || 'Normal',
+                largura_sem_costura || null, tipo_bainha || null, largura_final || null,
+                largura_maior || null, largura_y || null, largura_total || null
+            ]
         );
 
         res.json({ success: true, message: 'Produto criado com sucesso', id: result.insertId });
@@ -69,10 +91,14 @@ exports.atualizarProduto = async (req, res) => {
         codigo, 
         cor_id, 
         gramatura_id, 
-        fabricante, 
+        fabricante,
+        tipo_tecido,
         largura_sem_costura, 
         tipo_bainha, 
         largura_final,
+        largura_maior,
+        largura_y,
+        largura_total,
         ativo 
     } = req.body;
 
@@ -89,10 +115,16 @@ exports.atualizarProduto = async (req, res) => {
 
         const [result] = await db.query(
             `UPDATE produtos 
-             SET loja = ?, codigo = ?, cor_id = ?, gramatura_id = ?, fabricante = ?, 
-                 largura_sem_costura = ?, tipo_bainha = ?, largura_final = ?, ativo = ?
+             SET loja = ?, codigo = ?, cor_id = ?, gramatura_id = ?, fabricante = ?, tipo_tecido = ?,
+                 largura_sem_costura = ?, tipo_bainha = ?, largura_final = ?,
+                 largura_maior = ?, largura_y = ?, largura_total = ?, ativo = ?
              WHERE id = ?`,
-            [loja, codigo, cor_id, gramatura_id, fabricante, largura_sem_costura, tipo_bainha, largura_final, ativo !== undefined ? ativo : 1, id]
+            [
+                loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido || 'Normal',
+                largura_sem_costura || null, tipo_bainha || null, largura_final || null,
+                largura_maior || null, largura_y || null, largura_total || null,
+                ativo !== undefined ? ativo : 1, id
+            ]
         );
 
         if (result.affectedRows === 0) {

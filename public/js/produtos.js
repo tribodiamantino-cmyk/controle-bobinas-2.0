@@ -12,6 +12,41 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('form-produto').addEventListener('submit', cadastrarProduto);
 });
 
+// Alternar campos conforme tipo de tecido
+function toggleCamposTecido() {
+    const tipoTecido = document.getElementById('tipo_tecido').value;
+    const camposNormal = document.getElementById('campos-normal');
+    const camposBandoY = document.getElementById('campos-bando-y');
+    
+    if (tipoTecido === 'Bando Y') {
+        camposNormal.style.display = 'none';
+        camposBandoY.style.display = 'grid';
+        
+        // Remover required dos campos normais
+        document.getElementById('largura_sem_costura').removeAttribute('required');
+        document.getElementById('tipo_bainha').removeAttribute('required');
+        document.getElementById('largura_final').removeAttribute('required');
+        
+        // Adicionar required aos campos Bando Y
+        document.getElementById('largura_maior').setAttribute('required', 'required');
+        document.getElementById('largura_y').setAttribute('required', 'required');
+        document.getElementById('largura_total').setAttribute('required', 'required');
+    } else {
+        camposNormal.style.display = 'grid';
+        camposBandoY.style.display = 'none';
+        
+        // Adicionar required aos campos normais
+        document.getElementById('largura_sem_costura').setAttribute('required', 'required');
+        document.getElementById('tipo_bainha').setAttribute('required', 'required');
+        document.getElementById('largura_final').setAttribute('required', 'required');
+        
+        // Remover required dos campos Bando Y
+        document.getElementById('largura_maior').removeAttribute('required');
+        document.getElementById('largura_y').removeAttribute('required');
+        document.getElementById('largura_total').removeAttribute('required');
+    }
+}
+
 // Mostrar alertas
 function mostrarAlerta(mensagem, tipo = 'success') {
     const container = document.getElementById('alerta-container');
@@ -94,81 +129,24 @@ function renderizarProdutos(listaProdutos) {
     table.style.display = 'table';
     emptyState.style.display = 'none';
     
-    tbody.innerHTML = listaProdutos.map(produto => `
+    tbody.innerHTML = listaProdutos.map(produto => {
+        // Montar informações de medidas conforme o tipo
+        let medidas = '';
+        if (produto.tipo_tecido === 'Bando Y') {
+            medidas = `Maior: ${produto.largura_maior || '-'} cm<br>Y: ${produto.largura_y || '-'} cm<br>Total: ${produto.largura_total || '-'} cm`;
+        } else {
+            medidas = `S/Costura: ${produto.largura_sem_costura || '-'} cm<br>${produto.tipo_bainha || '-'}<br>Final: ${produto.largura_final || '-'} cm`;
+        }
+        
+        return `
         <tr>
-            <td>
-                <span class="campo-display" id="display-loja-${produto.id}">${produto.loja}</span>
-                <select class="campo-edit" id="edit-loja-${produto.id}" style="display: none;" 
-                        onblur="salvarCampo(${produto.id}, 'loja')"
-                        onkeydown="if(event.key==='Escape') cancelarEdicao(${produto.id}, 'loja')">
-                    <option value="Cortinave" ${produto.loja === 'Cortinave' ? 'selected' : ''}>Cortinave</option>
-                    <option value="BN" ${produto.loja === 'BN' ? 'selected' : ''}>BN</option>
-                </select>
-                <button class="btn-edit" onclick="editarCampo(${produto.id}, 'loja')">✏️</button>
-            </td>
-            <td>
-                <span class="campo-display" id="display-codigo-${produto.id}">${produto.codigo}</span>
-                <input type="text" class="campo-edit" id="edit-codigo-${produto.id}" 
-                       value="${produto.codigo}" style="display: none;"
-                       onblur="salvarCampo(${produto.id}, 'codigo')"
-                       onkeydown="if(event.key==='Enter') salvarCampo(${produto.id}, 'codigo'); if(event.key==='Escape') cancelarEdicao(${produto.id}, 'codigo')">
-                <button class="btn-edit" onclick="editarCampo(${produto.id}, 'codigo')">✏️</button>
-            </td>
-            <td>
-                <span class="campo-display" id="display-cor_id-${produto.id}">${produto.nome_cor}</span>
-                <select class="campo-edit" id="edit-cor_id-${produto.id}" style="display: none;"
-                        onblur="salvarCampo(${produto.id}, 'cor_id')"
-                        onkeydown="if(event.key==='Escape') cancelarEdicao(${produto.id}, 'cor_id')">
-                    ${cores.map(cor => `<option value="${cor.id}" ${produto.cor_id === cor.id ? 'selected' : ''}>${cor.nome_cor}</option>`).join('')}
-                </select>
-                <button class="btn-edit" onclick="editarCampo(${produto.id}, 'cor_id')">✏️</button>
-            </td>
-            <td>
-                <span class="campo-display" id="display-gramatura_id-${produto.id}">${produto.gramatura}</span>
-                <select class="campo-edit" id="edit-gramatura_id-${produto.id}" style="display: none;"
-                        onblur="salvarCampo(${produto.id}, 'gramatura_id')"
-                        onkeydown="if(event.key==='Escape') cancelarEdicao(${produto.id}, 'gramatura_id')">
-                    ${gramaturas.map(g => `<option value="${g.id}" ${produto.gramatura_id === g.id ? 'selected' : ''}>${g.gramatura}</option>`).join('')}
-                </select>
-                <button class="btn-edit" onclick="editarCampo(${produto.id}, 'gramatura_id')">✏️</button>
-            </td>
-            <td>
-                <span class="campo-display" id="display-fabricante-${produto.id}">${produto.fabricante}</span>
-                <select class="campo-edit" id="edit-fabricante-${produto.id}" style="display: none;"
-                        onblur="salvarCampo(${produto.id}, 'fabricante')"
-                        onkeydown="if(event.key==='Escape') cancelarEdicao(${produto.id}, 'fabricante')">
-                    <option value="Propex" ${produto.fabricante === 'Propex' ? 'selected' : ''}>Propex</option>
-                    <option value="Textiloeste" ${produto.fabricante === 'Textiloeste' ? 'selected' : ''}>Textiloeste</option>
-                </select>
-                <button class="btn-edit" onclick="editarCampo(${produto.id}, 'fabricante')">✏️</button>
-            </td>
-            <td>
-                <span class="campo-display" id="display-largura_sem_costura-${produto.id}">${produto.largura_sem_costura} cm</span>
-                <input type="number" class="campo-edit" id="edit-largura_sem_costura-${produto.id}" 
-                       value="${produto.largura_sem_costura}" style="display: none;" step="0.01"
-                       onblur="salvarCampo(${produto.id}, 'largura_sem_costura')"
-                       onkeydown="if(event.key==='Enter') salvarCampo(${produto.id}, 'largura_sem_costura'); if(event.key==='Escape') cancelarEdicao(${produto.id}, 'largura_sem_costura')">
-                <button class="btn-edit" onclick="editarCampo(${produto.id}, 'largura_sem_costura')">✏️</button>
-            </td>
-            <td>
-                <span class="campo-display" id="display-tipo_bainha-${produto.id}">${produto.tipo_bainha}</span>
-                <select class="campo-edit" id="edit-tipo_bainha-${produto.id}" style="display: none;"
-                        onblur="salvarCampo(${produto.id}, 'tipo_bainha')"
-                        onkeydown="if(event.key==='Escape') cancelarEdicao(${produto.id}, 'tipo_bainha')">
-                    <option value="Cano/Cano" ${produto.tipo_bainha === 'Cano/Cano' ? 'selected' : ''}>Cano/Cano</option>
-                    <option value="Cano/Arame" ${produto.tipo_bainha === 'Cano/Arame' ? 'selected' : ''}>Cano/Arame</option>
-                    <option value="Arame/Arame" ${produto.tipo_bainha === 'Arame/Arame' ? 'selected' : ''}>Arame/Arame</option>
-                </select>
-                <button class="btn-edit" onclick="editarCampo(${produto.id}, 'tipo_bainha')">✏️</button>
-            </td>
-            <td>
-                <span class="campo-display" id="display-largura_final-${produto.id}">${produto.largura_final} cm</span>
-                <input type="number" class="campo-edit" id="edit-largura_final-${produto.id}" 
-                       value="${produto.largura_final}" style="display: none;" step="0.01"
-                       onblur="salvarCampo(${produto.id}, 'largura_final')"
-                       onkeydown="if(event.key==='Enter') salvarCampo(${produto.id}, 'largura_final'); if(event.key==='Escape') cancelarEdicao(${produto.id}, 'largura_final')">
-                <button class="btn-edit" onclick="editarCampo(${produto.id}, 'largura_final')">✏️</button>
-            </td>
+            <td>${produto.loja}</td>
+            <td>${produto.codigo}</td>
+            <td>${produto.nome_cor}</td>
+            <td>${produto.gramatura}</td>
+            <td>${produto.fabricante}</td>
+            <td>${produto.tipo_tecido || 'Normal'}</td>
+            <td style="font-size: 0.85rem;">${medidas}</td>
             <td>
                 <span class="badge ${produto.ativo ? 'badge-success' : 'badge-danger'}">
                     ${produto.ativo ? 'Ativo' : 'Inativo'}
@@ -178,12 +156,14 @@ function renderizarProdutos(listaProdutos) {
                 <button class="btn btn-danger btn-sm" onclick="excluirProduto(${produto.id})">🗑️</button>
             </td>
         </tr>
-    `).join('');
+    `}).join('');
 }
 
 // Cadastrar novo produto
 async function cadastrarProduto(e) {
     e.preventDefault();
+    
+    const tipoTecido = document.getElementById('tipo_tecido').value;
     
     const produto = {
         loja: document.getElementById('loja').value,
@@ -191,10 +171,19 @@ async function cadastrarProduto(e) {
         cor_id: parseInt(document.getElementById('cor_id').value),
         gramatura_id: parseInt(document.getElementById('gramatura_id').value),
         fabricante: document.getElementById('fabricante').value,
-        largura_sem_costura: parseFloat(document.getElementById('largura_sem_costura').value),
-        tipo_bainha: document.getElementById('tipo_bainha').value,
-        largura_final: parseFloat(document.getElementById('largura_final').value)
+        tipo_tecido: tipoTecido
     };
+    
+    // Adicionar campos específicos conforme o tipo
+    if (tipoTecido === 'Bando Y') {
+        produto.largura_maior = parseFloat(document.getElementById('largura_maior').value);
+        produto.largura_y = parseFloat(document.getElementById('largura_y').value);
+        produto.largura_total = parseFloat(document.getElementById('largura_total').value);
+    } else {
+        produto.largura_sem_costura = parseFloat(document.getElementById('largura_sem_costura').value);
+        produto.tipo_bainha = document.getElementById('tipo_bainha').value;
+        produto.largura_final = parseFloat(document.getElementById('largura_final').value);
+    }
     
     try {
         const response = await fetch('/api/produtos', {
@@ -208,6 +197,7 @@ async function cadastrarProduto(e) {
         if (response.ok) {
             mostrarAlerta('Produto cadastrado com sucesso!', 'success');
             document.getElementById('form-produto').reset();
+            toggleCamposTecido(); // Reset campos dinâmicos
             carregarProdutos();
         } else {
             mostrarAlerta(data.error || 'Erro ao cadastrar produto', 'danger');

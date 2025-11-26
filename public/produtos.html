@@ -75,13 +75,24 @@
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label" for="tipo_tecido">Tipo de Tecido *</label>
+                        <select class="form-control" id="tipo_tecido" required onchange="toggleCamposTecido()">
+                            <option value="Normal">Normal</option>
+                            <option value="Bando Y">Bando Y</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Campos para Tecido Normal -->
+                <div id="campos-normal" class="form-row">
+                    <div class="form-group">
                         <label class="form-label" for="largura_sem_costura">Largura sem costura (cm) *</label>
-                        <input type="number" class="form-control" id="largura_sem_costura" step="0.01" min="0" placeholder="Ex: 300" required>
+                        <input type="number" class="form-control" id="largura_sem_costura" step="0.01" min="0" placeholder="Ex: 300">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="tipo_bainha">Tipo de Bainha *</label>
-                        <select class="form-control" id="tipo_bainha" required>
+                        <select class="form-control" id="tipo_bainha">
                             <option value="">Selecione...</option>
                             <option value="Cano/Cano">Cano/Cano</option>
                             <option value="Cano/Arame">Cano/Arame</option>
@@ -91,7 +102,25 @@
 
                     <div class="form-group">
                         <label class="form-label" for="largura_final">Largura Final (cm) *</label>
-                        <input type="number" class="form-control" id="largura_final" step="0.01" min="0" placeholder="Ex: 298.5" required>
+                        <input type="number" class="form-control" id="largura_final" step="0.01" min="0" placeholder="Ex: 298.5">
+                    </div>
+                </div>
+
+                <!-- Campos para Bando Y -->
+                <div id="campos-bando-y" class="form-row" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="largura_maior">Largura Maior (cm) *</label>
+                        <input type="number" class="form-control" id="largura_maior" step="0.01" min="0" placeholder="Ex: 350">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="largura_y">Largura Y (cm) *</label>
+                        <input type="number" class="form-control" id="largura_y" step="0.01" min="0" placeholder="Ex: 200">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="largura_total">Largura Total (cm) *</label>
+                        <input type="number" class="form-control" id="largura_total" step="0.01" min="0" placeholder="Ex: 550">
                     </div>
                 </div>
 
@@ -114,16 +143,15 @@
                         <th>Cor</th>
                         <th>Gramatura</th>
                         <th>Fabricante</th>
-                        <th>Larg. S/Costura</th>
-                        <th>Tipo Bainha</th>
-                        <th>Larg. Final</th>
+                        <th>Tipo</th>
+                        <th>Medidas</th>
                         <th>Status</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="lista-produtos">
                     <tr>
-                        <td colspan="10" class="text-center">Carregando produtos...</td>
+                        <td colspan="9" class="text-center">Carregando produtos...</td>
                     </tr>
                 </tbody>
             </table>

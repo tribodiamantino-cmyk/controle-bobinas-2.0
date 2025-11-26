@@ -26,19 +26,23 @@ CREATE TABLE IF NOT EXISTS configuracoes_gramaturas (
 CREATE TABLE IF NOT EXISTS produtos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     loja ENUM('Cortinave', 'BN') NOT NULL,
-    codigo_produto VARCHAR(100) NOT NULL,
+    codigo VARCHAR(100) NOT NULL,
     cor_id INT NOT NULL,
     gramatura_id INT NOT NULL,
     fabricante ENUM('Propex', 'Textiloeste') NOT NULL,
-    largura_sem_costura DECIMAL(10,2) NOT NULL,
-    tipo_bainha ENUM('Cano/Cano', 'Cano/Arame', 'Arame/Arame') NOT NULL,
-    largura_final DECIMAL(10,2) NOT NULL,
+    tipo_tecido ENUM('Normal', 'Bando Y') DEFAULT 'Normal',
+    largura_sem_costura DECIMAL(10,2),
+    tipo_bainha ENUM('Cano/Cano', 'Cano/Arame', 'Arame/Arame'),
+    largura_final DECIMAL(10,2),
+    largura_maior DECIMAL(10,2),
+    largura_y DECIMAL(10,2),
+    largura_total DECIMAL(10,2),
     ativo BOOLEAN DEFAULT TRUE,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (cor_id) REFERENCES configuracoes_cores(id),
     FOREIGN KEY (gramatura_id) REFERENCES configuracoes_gramaturas(id),
-    UNIQUE KEY unique_produto (loja, codigo_produto)
+    UNIQUE KEY unique_produto (loja, codigo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Bobinas
