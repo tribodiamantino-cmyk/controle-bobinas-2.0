@@ -269,6 +269,9 @@ router.get('/check-bobinas-table', async (req, res) => {
 // Endpoint para recriar tabela bobinas completamente
 router.post('/recreate-bobinas-table', async (req, res) => {
     try {
+        // Desabilitar verificação de chaves estrangeiras temporariamente
+        await db.query('SET FOREIGN_KEY_CHECKS = 0');
+        
         // Dropar tabela se existir
         await db.query('DROP TABLE IF EXISTS bobinas');
         
@@ -294,11 +297,17 @@ router.post('/recreate-bobinas-table', async (req, res) => {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tabela de bobinas de lonas'
         `);
         
+        // Reabilitar verificação de chaves estrangeiras
+        await db.query('SET FOREIGN_KEY_CHECKS = 1');
+        
         res.json({ 
             success: true, 
             message: 'Tabela bobinas recriada com sucesso!' 
         });
     } catch (error) {
+        // Reabilitar verificação de chaves estrangeiras em caso de erro
+        await db.query('SET FOREIGN_KEY_CHECKS = 1');
+        
         console.error('Erro ao recriar tabela:', error);
         res.status(500).json({ 
             success: false, 
