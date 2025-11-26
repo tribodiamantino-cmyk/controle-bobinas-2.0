@@ -447,6 +447,7 @@ async function carregarEstoque() {
         if (data.success) {
             produtosEstoque = data.data;
             renderizarEstoque(produtosEstoque);
+            carregarOpcoesFilros(); // Carregar opções dos filtros dinâmicos
         }
         
     } catch (error) {
@@ -612,19 +613,159 @@ async function excluirBobina(id) {
     }
 }
 
-// Filtrar estoque
-function filtrarEstoque() {
+// === SISTEMA DE FILTROS MULTI-SELECT ===
+
+// Toggle dropdown de filtros
+function toggleDropdown(filtroId) {
+    const dropdown = document.getElementById(`${filtroId}-dropdown`);
+    
+    // Fechar outros dropdowns abertos
+    document.querySelectorAll('.dropdown-content').forEach(dd => {
+        if (dd.id !== `${filtroId}-dropdown`) {
+            dd.classList.remove('show');
+        }
+    });
+    
+    dropdown.classList.toggle('show');
+}
+
+// Fechar dropdowns ao clicar fora
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.multi-select-dropdown')) {
+        document.querySelectorAll('.dropdown-content').forEach(dd => {
+            dd.classList.remove('show');
+        });
+    }
+});
+
+// Toggle "Selecionar Todas" em um filtro
+function toggleSelectAll(filtroId) {
+    const todasCheckbox = document.getElementById(`${filtroId}-todas`);
+    const checkboxes = document.querySelectorAll(`.${filtroId}-checkbox`);
+    
+    checkboxes.forEach(cb => {
+        cb.checked = todasCheckbox.checked;
+    });
+    
+    aplicarFiltrosEstoque(filtroId);
+}
+
+// Aplicar filtros de um dropdown específico
+function aplicarFiltrosEstoque(filtroId) {
+    const todasCheckbox = document.getElementById(`${filtroId}-todas`);
+    const checkboxes = document.querySelectorAll(`.${filtroId}-checkbox`);
+    const label = document.getElementById(`${filtroId}-label`);
+    
+    // Verificar quantos itens estão selecionados
+    const selecionados = Array.from(checkboxes).filter(cb => cb.checked);
+    
+    // Atualizar checkbox "todas"
+    if (selecionados.length === checkboxes.length) {
+        todasCheckbox.checked = true;
+    } else {
+        todasCheckbox.checked = false;
+    }
+    
+    // Atualizar label do botão
+    if (selecionados.length === 0 || selecionados.length === checkboxes.length) {
+        const textoTodas = filtroId.includes('loja') || filtroId.includes('cor') || filtroId.includes('gramatura') ? 'Todas' : 'Todos';
+        label.textContent = textoTodas;
+    } else if (selecionados.length === 1) {
+        label.textContent = selecionados[0].nextElementSibling.textContent;
+    } else {
+        label.textContent = `${selecionados.length} selecionados`;
+    }
+    
+    aplicarTodosFiltrosEstoque();
+}
+
+// Aplicar todos os filtros combinados
+function aplicarTodosFiltrosEstoque() {
     const termo = document.getElementById('search-estoque').value.toLowerCase();
     
-    const produtosFiltrados = produtosEstoque.filter(produto =>
-        produto.loja.toLowerCase().includes(termo) ||
-        produto.codigo.toLowerCase().includes(termo) ||
-        produto.nome_cor.toLowerCase().includes(termo) ||
-        produto.gramatura.toLowerCase().includes(termo) ||
-        produto.fabricante.toLowerCase().includes(termo)
-    );
+    // Obter valores selecionados de cada filtro
+    const lojasSelecionadas = getFiltrosSelecionados('filtro-estoque-loja');
+    const statusSelecionados = getFiltrosSelecionados('filtro-estoque-status');
+    const coresSelecionadas = getFiltrosSelecionados('filtro-estoque-cor');
+    const gramaturasSelecionadas = getFiltrosSelecionados('filtro-estoque-gramatura');
+    const fabricantesSelecionados = getFiltrosSelecionados('filtro-estoque-fabricante');
+    const tiposSelecionados = getFiltrosSelecionados('filtro-estoque-tipo');
+    
+    // Filtrar produtos
+    const produtosFiltrados = produtosEstoque.filter(produto => {
+        // Filtro de busca geral
+        const matchBusca = !termo || 
+            produto.loja.toLowerCase().includes(termo) ||
+            produto.codigo.toLowerCase().includes(termo) ||
+            produto.nome_cor.toLowerCase().includes(termo) ||
+            produto.gramatura.toLowerCase().includes(termo) ||
+            produto.fabricante.toLowerCase().includes(termo);
+        
+        // Filtros multi-select
+        const matchLoja = lojasSelecionadas.length === 0 || lojasSelecionadas.includes(produto.loja);
+        const matchCor = coresSelecionadas.length === 0 || coresSelecionadas.includes(produto.nome_cor);
+        const matchGramatura = gramaturasSelecionadas.length === 0 || gramaturasSelecionadas.includes(produto.gramatura);
+        const matchFabricante = fabricantesSelecionados.length === 0 || fabricantesSelecionados.includes(produto.fabricante);
+        const matchTipo = tiposSelecionados.length === 0 || tiposSelecionados.includes(produto.tipo_tecido || 'Normal');
+        
+        // Note: Status filter will be applied at the bobina level, not product level
+        // For now, we'll keep it at product level based on overall stock status
+        
+        return matchBusca && matchLoja && matchCor && matchGramatura && matchFabricante && matchTipo;
+    });
     
     renderizarEstoque(produtosFiltrados);
+}
+
+// Obter valores selecionados de um filtro
+function getFiltrosSelecionados(filtroId) {
+    const checkboxes = document.querySelectorAll(`.${filtroId}-checkbox:checked`);
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// Carregar opções dos filtros dinâmicos
+function carregarOpcoesFilros() {
+    // Extrair valores únicos dos produtos
+    const lojas = [...new Set(produtosEstoque.map(p => p.loja))];
+    const cores = [...new Set(produtosEstoque.map(p => p.nome_cor))].sort();
+    const gramaturas = [...new Set(produtosEstoque.map(p => p.gramatura))].sort();
+    const fabricantes = [...new Set(produtosEstoque.map(p => p.fabricante))].sort();
+    
+    // Popular filtro de loja
+    const lojaOpcoes = document.getElementById('filtro-estoque-loja-opcoes');
+    lojaOpcoes.innerHTML = lojas.map(loja => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="filtro-estoque-loja-checkbox" value="${loja}" onchange="aplicarFiltrosEstoque('filtro-estoque-loja')"> 
+            <label>${loja}</label>
+        </div>
+    `).join('');
+    
+    // Popular filtro de cor
+    const corOpcoes = document.getElementById('filtro-estoque-cor-opcoes');
+    corOpcoes.innerHTML = cores.map(cor => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="filtro-estoque-cor-checkbox" value="${cor}" onchange="aplicarFiltrosEstoque('filtro-estoque-cor')"> 
+            <label>${cor}</label>
+        </div>
+    `).join('');
+    
+    // Popular filtro de gramatura
+    const gramaturaOpcoes = document.getElementById('filtro-estoque-gramatura-opcoes');
+    gramaturaOpcoes.innerHTML = gramaturas.map(gram => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="filtro-estoque-gramatura-checkbox" value="${gram}" onchange="aplicarFiltrosEstoque('filtro-estoque-gramatura')"> 
+            <label>${gram}</label>
+        </div>
+    `).join('');
+    
+    // Popular filtro de fabricante
+    const fabricanteOpcoes = document.getElementById('filtro-estoque-fabricante-opcoes');
+    fabricanteOpcoes.innerHTML = fabricantes.map(fab => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="filtro-estoque-fabricante-checkbox" value="${fab}" onchange="aplicarFiltrosEstoque('filtro-estoque-fabricante')"> 
+            <label>${fab}</label>
+        </div>
+    `).join('');
 }
 
 // Mostrar alertas

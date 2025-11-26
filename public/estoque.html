@@ -7,14 +7,17 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+    <!-- NAVBAR -->
     <nav class="navbar">
-        <div class="nav-brand">📦 Controle de Bobinas 2.0</div>
-        <div class="nav-links">
-            <a href="/">Home</a>
-            <a href="/configuracoes.html">Configurações</a>
-            <a href="/produtos.html">Produtos</a>
-            <a href="/estoque.html" class="active">Estoque</a>
-        </div>
+        <a href="/" class="navbar-brand">🎯 Controle de Bobinas 2.0</a>
+        <ul class="navbar-menu">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/produtos.html">Produtos</a></li>
+            <li><a href="/bobinas.html">Bobinas</a></li>
+            <li><a href="/estoque.html" class="active">Estoque</a></li>
+            <li><a href="/ordens.html">Ordens de Corte</a></li>
+            <li><a href="/configuracoes.html">Configurações</a></li>
+        </ul>
     </nav>
 
     <div class="container">
@@ -97,8 +100,134 @@
         <div class="card">
             <h2>📊 Estoque Atual</h2>
             
-            <div class="search-box mb-3">
-                <input type="text" class="form-control" id="search-estoque" placeholder="🔍 Buscar por código, cor, loja..." onkeyup="filtrarEstoque()">
+            <!-- Filtros Multi-Select -->
+            <div class="filter-container mb-3">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Loja</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-loja')">
+                                <span id="filtro-estoque-loja-label">Todas</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-loja-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-loja-todas" value="" onchange="toggleSelectAll('filtro-estoque-loja')"> 
+                                    <label for="filtro-estoque-loja-todas">Todas</label>
+                                </div>
+                                <div id="filtro-estoque-loja-opcoes"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-status')">
+                                <span id="filtro-estoque-status-label">Todos</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-status-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-status-todas" value="" onchange="toggleSelectAll('filtro-estoque-status')"> 
+                                    <label for="filtro-estoque-status-todas">Todos</label>
+                                </div>
+                                <div id="filtro-estoque-status-opcoes">
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" class="filtro-estoque-status-checkbox" value="Disponível" onchange="aplicarFiltrosEstoque('filtro-estoque-status')"> 
+                                        <label>Disponível</label>
+                                    </div>
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" class="filtro-estoque-status-checkbox" value="Em uso" onchange="aplicarFiltrosEstoque('filtro-estoque-status')"> 
+                                        <label>Em uso</label>
+                                    </div>
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" class="filtro-estoque-status-checkbox" value="Esgotada" onchange="aplicarFiltrosEstoque('filtro-estoque-status')"> 
+                                        <label>Esgotada</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Cor</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-cor')">
+                                <span id="filtro-estoque-cor-label">Todas</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-cor-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-cor-todas" value="" onchange="toggleSelectAll('filtro-estoque-cor')"> 
+                                    <label for="filtro-estoque-cor-todas">Todas</label>
+                                </div>
+                                <div id="filtro-estoque-cor-opcoes"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Gramatura</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-gramatura')">
+                                <span id="filtro-estoque-gramatura-label">Todas</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-gramatura-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-gramatura-todas" value="" onchange="toggleSelectAll('filtro-estoque-gramatura')"> 
+                                    <label for="filtro-estoque-gramatura-todas">Todas</label>
+                                </div>
+                                <div id="filtro-estoque-gramatura-opcoes"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Fabricante</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-fabricante')">
+                                <span id="filtro-estoque-fabricante-label">Todos</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-fabricante-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-fabricante-todas" value="" onchange="toggleSelectAll('filtro-estoque-fabricante')"> 
+                                    <label for="filtro-estoque-fabricante-todas">Todos</label>
+                                </div>
+                                <div id="filtro-estoque-fabricante-opcoes"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Tecido</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-tipo')">
+                                <span id="filtro-estoque-tipo-label">Todos</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-tipo-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-tipo-todas" value="" onchange="toggleSelectAll('filtro-estoque-tipo')"> 
+                                    <label for="filtro-estoque-tipo-todas">Todos</label>
+                                </div>
+                                <div id="filtro-estoque-tipo-opcoes">
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" class="filtro-estoque-tipo-checkbox" value="Normal" onchange="aplicarFiltrosEstoque('filtro-estoque-tipo')"> 
+                                        <label>Normal</label>
+                                    </div>
+                                    <div class="dropdown-item">
+                                        <input type="checkbox" class="filtro-estoque-tipo-checkbox" value="Bando Y" onchange="aplicarFiltrosEstoque('filtro-estoque-tipo')"> 
+                                        <label>Bando Y</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Busca Geral</label>
+                        <input type="text" class="form-control" id="search-estoque" placeholder="🔍 Buscar por código, NF..." onkeyup="aplicarTodosFiltrosEstoque()">
+                    </div>
+                </div>
             </div>
 
             <div id="lista-produtos-estoque">
@@ -114,6 +243,80 @@
             </div>
         </div>
     </div>
+
+    <style>
+        /* Multi-select dropdown styles */
+        .filter-container {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .multi-select-dropdown {
+            position: relative;
+            width: 100%;
+        }
+        
+        .btn-multi-select {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            background-color: white;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn-multi-select:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            max-height: 250px;
+            overflow-y: auto;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1000;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            margin-top: 4px;
+        }
+        
+        .dropdown-content.show {
+            display: block;
+        }
+        
+        .dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+        
+        .dropdown-item label {
+            cursor: pointer;
+            margin: 0;
+            flex: 1;
+            user-select: none;
+        }
+    </style>
 
     <!-- Modal de Sucesso -->
     <div id="modal-sucesso" class="modal" style="display: none;">
