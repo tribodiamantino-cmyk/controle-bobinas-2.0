@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - Controle de Bobinas 2.0</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">🎯 Controle de Bobinas 2.0</a>
+        <ul class="navbar-menu">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/produtos.html">Produtos</a></li>
+            <li><a href="/bobinas.html">Bobinas</a></li>
+            <li><a href="/estoque.html">Estoque</a></li>
+            <li><a href="/ordens.html">Ordens de Corte</a></li>
+            <li><a href="/configuracoes.html" class="active">Configurações</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">⚙️ Configurações do Sistema</h1>
+            </div>
+
+            <!-- TABS -->
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('cores')">
+                    🎨 Cores
+                </button>
+                <button class="tab" onclick="showTab('gramaturas')">
+                    📏 Gramaturas
+                </button>
+            </div>
+
+            <!-- TAB: CORES -->
+            <div id="tab-cores" class="tab-content active">
+                <div class="flex flex-between mb-3">
+                    <h2>Gerenciar Cores</h2>
+                    <button class="btn btn-primary" onclick="abrirModalCor()">
+                        ➕ Nova Cor
+                    </button>
+                </div>
+
+                <div id="loading-cores" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Carregando cores...</p>
+                </div>
+
+                <div id="alert-cores"></div>
+
+                <table class="table" id="table-cores">
+                    <thead>
+                        <tr>
+                            <th>Cor</th>
+                            <th>Nome</th>
+                            <th>Status</th>
+                            <th>Data de Criação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-cores">
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+
+                <div id="empty-cores" class="empty-state" style="display: none;">
+                    <div class="empty-state-icon">🎨</div>
+                    <h3>Nenhuma cor cadastrada</h3>
+                    <p>Clique em "Nova Cor" para começar</p>
+                </div>
+            </div>
+
+            <!-- TAB: GRAMATURAS -->
+            <div id="tab-gramaturas" class="tab-content">
+                <div class="flex flex-between mb-3">
+                    <h2>Gerenciar Gramaturas</h2>
+                    <button class="btn btn-primary" onclick="abrirModalGramatura()">
+                        ➕ Nova Gramatura
+                    </button>
+                </div>
+
+                <div id="loading-gramaturas" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Carregando gramaturas...</p>
+                </div>
+
+                <div id="alert-gramaturas"></div>
+
+                <table class="table" id="table-gramaturas">
+                    <thead>
+                        <tr>
+                            <th>Gramatura</th>
+                            <th>Status</th>
+                            <th>Data de Criação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-gramaturas">
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+
+                <div id="empty-gramaturas" class="empty-state" style="display: none;">
+                    <div class="empty-state-icon">📏</div>
+                    <h3>Nenhuma gramatura cadastrada</h3>
+                    <p>Clique em "Nova Gramatura" para começar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL COR -->
+    <div id="modal-cor" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-cor-title">Nova Cor</h2>
+                <button class="modal-close" onclick="fecharModalCor()">✕</button>
+            </div>
+            
+            <form id="form-cor" onsubmit="salvarCor(event)">
+                <input type="hidden" id="cor-id">
+                
+                <div class="form-group">
+                    <label class="form-label" for="cor-nome">Nome da Cor *</label>
+                    <input type="text" class="form-control" id="cor-nome" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="cor-codigo">Código Hexadecimal</label>
+                    <div class="flex gap-1">
+                        <input type="color" id="cor-codigo" value="#CCCCCC" style="width: 60px; height: 45px; border: 2px solid var(--border-color); border-radius: 8px;">
+                        <input type="text" class="form-control" id="cor-codigo-text" value="#CCCCCC" pattern="^#[0-9A-Fa-f]{6}$">
+                    </div>
+                    <small style="color: #666;">Exemplo: #FF5733</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="cor-ativo" checked>
+                        Ativo
+                    </label>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalCor()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        💾 Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL GRAMATURA -->
+    <div id="modal-gramatura" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-gramatura-title">Nova Gramatura</h2>
+                <button class="modal-close" onclick="fecharModalGramatura()">✕</button>
+            </div>
+            
+            <form id="form-gramatura" onsubmit="salvarGramatura(event)">
+                <input type="hidden" id="gramatura-id">
+                
+                <div class="form-group">
+                    <label class="form-label" for="gramatura-valor">Gramatura *</label>
+                    <input type="text" class="form-control" id="gramatura-valor" placeholder="Ex: 180 g/m²" required>
+                    <small style="color: #666;">Exemplo: 180 g/m², 200 g/m², etc.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="gramatura-ativo" checked>
+                        Ativo
+                    </label>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalGramatura()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        💾 Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/configuracoes.js"></script>
+</body>
+</html>

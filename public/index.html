@@ -3,107 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Bobinas 2.0</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            max-width: 600px;
-            width: 100%;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 2.5em;
-        }
-
-        .status {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #4CAF50;
-            color: white;
-            border-radius: 25px;
-            margin: 20px 0;
-            font-weight: bold;
-        }
-
-        p {
-            color: #666;
-            line-height: 1.6;
-            margin: 15px 0;
-        }
-
-        .emoji {
-            font-size: 4em;
-            margin: 20px 0;
-        }
-
-        .info {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-            text-align: left;
-        }
-
-        .info h3 {
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .info ul {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .info li {
-            padding: 8px 0;
-            color: #555;
-        }
-
-        .info li:before {
-            content: "✓ ";
-            color: #4CAF50;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-    </style>
+    <title>Dashboard - Controle de Bobinas 2.0</title>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">🎯 Controle de Bobinas 2.0</a>
+        <ul class="navbar-menu">
+            <li><a href="/" class="active">Dashboard</a></li>
+            <li><a href="/produtos.html">Produtos</a></li>
+            <li><a href="/bobinas.html">Bobinas</a></li>
+            <li><a href="/estoque.html">Estoque</a></li>
+            <li><a href="/ordens.html">Ordens de Corte</a></li>
+            <li><a href="/configuracoes.html">Configurações</a></li>
+        </ul>
+    </nav>
+
     <div class="container">
-        <div class="emoji">🎯</div>
-        <h1>Controle de Bobinas 2.0</h1>
-        <div class="status" id="status">Carregando...</div>
-        <p>Sistema de gerenciamento de bobinas está pronto para uso!</p>
-        
-        <div class="info">
-            <h3>📋 Recursos Disponíveis:</h3>
-            <ul>
-                <li>API REST completa</li>
-                <li>Banco de dados MySQL</li>
-                <li>Deploy automático no Railway</li>
-                <li>Interface moderna e responsiva</li>
-            </ul>
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">🎯 Bem-vindo ao Controle de Bobinas 2.0</h1>
+            </div>
+
+            <div class="alert alert-info mb-3">
+                <strong>🚀 Sistema em Desenvolvimento - MVP em Progresso!</strong><br>
+                Estamos construindo o sistema completo em tempo recorde. Acompanhe o progresso abaixo!
+            </div>
+
+            <!-- STATUS DO SERVIDOR -->
+            <div class="mb-3" style="text-align: center;">
+                <div class="status badge badge-success" id="status" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                    Carregando...
+                </div>
+            </div>
+
+            <!-- FUNCIONALIDADES DISPONÍVEIS -->
+            <h2 class="mb-2">✅ Funcionalidades Disponíveis</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                
+                <div style="background: #e8f5e9; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #4CAF50;">
+                    <h3 style="color: #2e7d32; margin-bottom: 0.5rem;">⚙️ Configurações</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Gerencie cores e gramaturas do sistema</p>
+                    <a href="/configuracoes.html" class="btn btn-success btn-sm">Acessar</a>
+                </div>
+
+                <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #2196F3;">
+                    <h3 style="color: #1565c0; margin-bottom: 0.5rem;">📦 Produtos</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Em desenvolvimento...</p>
+                    <button class="btn btn-secondary btn-sm" disabled>Em breve</button>
+                </div>
+
+                <div style="background: #fff3e0; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #ff9800;">
+                    <h3 style="color: #e65100; margin-bottom: 0.5rem;">🎯 Bobinas</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Em desenvolvimento...</p>
+                    <button class="btn btn-secondary btn-sm" disabled>Em breve</button>
+                </div>
+
+                <div style="background: #f3e5f5; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #9c27b0;">
+                    <h3 style="color: #6a1b9a; margin-bottom: 0.5rem;">📊 Estoque</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Em desenvolvimento...</p>
+                    <button class="btn btn-secondary btn-sm" disabled>Em breve</button>
+                </div>
+
+                <div style="background: #fce4ec; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #e91e63;">
+                    <h3 style="color: #880e4f; margin-bottom: 0.5rem;">✂️ Ordens de Corte</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Em desenvolvimento...</p>
+                    <button class="btn btn-secondary btn-sm" disabled>Em breve</button>
+                </div>
+
+            </div>
+
+            <!-- ROADMAP -->
+            <h2 class="mb-2">🗺️ Roadmap do Projeto</h2>
+            <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 10px;">
+                <ul style="list-style: none; padding: 0;">
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 1:</strong> Infraestrutura (Node.js + MySQL + Railway) - <span class="badge badge-success">Concluído</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        🔄 <strong>Fase 2:</strong> Configurações (Cores e Gramaturas) - <span class="badge badge-warning">Em Progresso</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ⏳ <strong>Fase 3:</strong> Cadastro de Produtos - <span class="badge badge-info">Próximo</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ⏳ <strong>Fase 4:</strong> Gestão de Bobinas
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ⏳ <strong>Fase 5:</strong> Sistema de Estoque
+                    </li>
+                    <li style="padding: 0.75rem 0;">
+                        ⏳ <strong>Fase 6:</strong> Ordens de Corte
+                    </li>
+                </ul>
+            </div>
+
+            <div class="mt-3" style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+                <h2 style="color: white;">🚀 Meta: MVP em 5 Dias!</h2>
+                <p style="color: #f0f0f0; margin-top: 0.5rem;">Sistema completo para gestão de bobinas de lonas para aviários</p>
+            </div>
         </div>
     </div>
 
@@ -113,10 +112,11 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById('status').textContent = '✅ ' + data.message;
+                document.getElementById('status').className = 'badge badge-success';
             })
             .catch(error => {
                 document.getElementById('status').textContent = '❌ Erro ao conectar';
-                document.getElementById('status').style.background = '#f44336';
+                document.getElementById('status').className = 'badge badge-danger';
             });
     </script>
 </body>

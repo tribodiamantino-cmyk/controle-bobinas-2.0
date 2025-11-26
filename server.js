@@ -25,9 +25,13 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Importar rotas aqui
-// const bobinaRoutes = require('./routes/bobinas');
-// app.use('/api/bobinas', bobinaRoutes);
+// Importar rotas
+const coresRoutes = require('./routes/cores');
+const gramaturasRoutes = require('./routes/gramaturas');
+
+// Usar rotas
+app.use('/api/cores', coresRoutes);
+app.use('/api/gramaturas', gramaturasRoutes);
 
 // Tratamento de erro 404
 app.use((req, res) => {
