@@ -1358,6 +1358,110 @@ body {
     margin-top: 15px;
 }
 
+.cortes-list-agrupada {
+    max-height: 450px;
+    overflow-y: auto;
+    margin-top: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fafafa;
+    padding: 15px;
+}
+
+.produto-selector-container {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    margin-bottom: 15px;
+}
+
+.grupo-produto {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.grupo-produto-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+    margin-bottom: 12px;
+}
+
+.grupo-produto-titulo {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--primary-color);
+}
+
+.grupo-produto-info {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.grupo-produto-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.corte-mini-item {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.corte-mini-item:hover {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.corte-mini-info {
+    flex: 1;
+}
+
+.corte-mini-metragem {
+    font-weight: 700;
+    color: #333;
+    font-size: 1rem;
+}
+
+.corte-mini-obs {
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 2px;
+}
+
+.btn-remover-mini {
+    background: transparent;
+    border: none;
+    color: #f44336;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-remover-mini:hover {
+    background: #ffebee;
+    transform: scale(1.1);
+}
+
 .corte-item {
     background: #f8f9fa;
     border: 1px solid #e0e0e0;

@@ -85,20 +85,54 @@
                         </div>
                     </div>
 
-                    <hr>
+            <hr>
 
-                    <div class="section-header">
-                        <h3>Cortes</h3>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="adicionarCorte()">
+            <div class="section-header">
+                <h3>Cortes</h3>
+            </div>
+
+            <!-- Seletor de Produto -->
+            <div class="produto-selector-container">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Selecione o Produto *</label>
+                        <select id="produtoSelecionado" class="form-control" onchange="habilitarAdicionarCorte()">
+                            <option value="">Selecione um produto...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 0 0 200px;">
+                        <label>&nbsp;</label>
+                        <button type="button" class="btn btn-primary" id="btnAdicionarCorte" onclick="adicionarCorteRapido()" disabled style="width: 100%;">
                             ➕ Adicionar Corte
                         </button>
                     </div>
+                </div>
 
-                    <div id="listaCortesPlano" class="cortes-list">
-                        <!-- Cortes serão inseridos aqui -->
+                <!-- Mini-form para adicionar corte rápido -->
+                <div id="formCorteRapido" style="display: none; background: #f0f8ff; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Metragem (m) *</label>
+                            <input type="number" id="metragemCorteRapido" class="form-control" step="0.01" min="0.01" placeholder="Ex: 15.50" onkeypress="if(event.key === 'Enter') { event.preventDefault(); document.getElementById('obsCorteRapido').focus(); }">
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            <label>Observações</label>
+                            <input type="text" id="obsCorteRapido" class="form-control" placeholder="Ex: Aviário 1 - Cortina lateral" onkeypress="if(event.key === 'Enter') { event.preventDefault(); confirmarCorteRapido(); }">
+                        </div>
+                        <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: flex-end; gap: 8px;">
+                            <button type="button" class="btn btn-success" onclick="confirmarCorteRapido()">✅ Adicionar</button>
+                            <button type="button" class="btn btn-secondary" onclick="cancelarCorteRapido()">✕</button>
+                        </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="modal-footer">
+            <!-- Lista de cortes agrupados por produto -->
+            <div id="listaCortesPlano" class="cortes-list-agrupada">
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    Selecione um produto e adicione cortes acima
+                </div>
+            </div>                    <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" onclick="fecharModalNovoPlano()">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Criar Plano</button>
                     </div>

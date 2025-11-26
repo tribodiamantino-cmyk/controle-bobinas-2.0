@@ -149,65 +149,193 @@ function criarCardPlano(plano) {
 }
 
 // ========== MODAL: NOVO PLANO ==========
+let cortesAgrupados = {}; // { produto_id: [{ metragem, observacoes }, ...] }
+let produtoAtualSelecionado = null;
+
 function abrirModalNovoPlano() {
     document.getElementById('modalNovoPlano').style.display = 'flex';
     document.getElementById('formNovoPlano').reset();
-    document.getElementById('listaCortesPlano').innerHTML = '';
     
-    // Adicionar primeiro corte automaticamente
-    adicionarCorte();
+    // Resetar estado
+    cortesAgrupados = {};
+    produtoAtualSelecionado = null;
+    
+    // Popular select de produtos
+    popularSelectProdutos();
+    
+    // Limpar lista de cortes
+    renderizarListaCortes();
+    
+    // Desabilitar botão de adicionar corte
+    document.getElementById('btnAdicionarCorte').disabled = true;
+    document.getElementById('formCorteRapido').style.display = 'none';
 }
 
 function fecharModalNovoPlano() {
     document.getElementById('modalNovoPlano').style.display = 'none';
 }
 
-let contadorCortes = 0;
-
-function adicionarCorte() {
-    contadorCortes++;
-    const lista = document.getElementById('listaCortesPlano');
+function popularSelectProdutos() {
+    const select = document.getElementById('produtoSelecionado');
     
-    const selectProdutos = produtos.map(p => 
-        `<option value="${p.id}">${p.codigo} - ${p.nome_cor} - ${p.gramatura}g</option>`
+    const optionsProdutos = produtos.map(p => 
+        `<option value="${p.id}">${p.codigo} - ${p.nome_cor} - ${p.gramatura}g - ${p.tipo_tecido}</option>`
     ).join('');
     
-    const corteHTML = `
-        <div class="corte-item" id="corte-${contadorCortes}">
-            <div class="corte-item-header">
-                <span class="corte-numero">Corte #${contadorCortes}</span>
-                <button type="button" class="btn-remover-corte" onclick="removerCorte(${contadorCortes})">
-                    ✕ Remover
-                </button>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Produto *</label>
-                    <select class="form-control corte-produto" required>
-                        <option value="">Selecione...</option>
-                        ${selectProdutos}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Metragem (m) *</label>
-                    <input type="number" step="0.01" min="0.01" class="form-control corte-metragem" required>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Observações</label>
-                <textarea class="form-control corte-observacoes" rows="2"></textarea>
-            </div>
-        </div>
-    `;
-    
-    lista.insertAdjacentHTML('beforeend', corteHTML);
+    select.innerHTML = `<option value="">Selecione um produto...</option>${optionsProdutos}`;
 }
 
-function removerCorte(id) {
-    const elemento = document.getElementById(`corte-${id}`);
-    if (elemento) {
-        elemento.remove();
+function habilitarAdicionarCorte() {
+    const selectProduto = document.getElementById('produtoSelecionado');
+    const produtoId = selectProduto.value;
+    const btnAdicionar = document.getElementById('btnAdicionarCorte');
+    const formRapido = document.getElementById('formCorteRapido');
+    
+    if (produtoId) {
+        btnAdicionar.disabled = false;
+        produtoAtualSelecionado = parseInt(produtoId);
+    } else {
+        btnAdicionar.disabled = true;
+        formRapido.style.display = 'none';
+        produtoAtualSelecionado = null;
     }
+}
+
+function adicionarCorteRapido() {
+    const formRapido = document.getElementById('formCorteRapido');
+    formRapido.style.display = 'block';
+    
+    // Limpar campos
+    document.getElementById('metragemCorteRapido').value = '';
+    document.getElementById('obsCorteRapido').value = '';
+    
+    // Focar no campo de metragem
+    setTimeout(() => {
+        document.getElementById('metragemCorteRapido').focus();
+    }, 100);
+}
+
+function confirmarCorteRapido() {
+    const metragem = parseFloat(document.getElementById('metragemCorteRapido').value);
+    const observacoes = document.getElementById('obsCorteRapido').value.trim();
+    
+    if (!metragem || metragem <= 0) {
+        showNotification('Informe uma metragem válida', 'warning');
+        return;
+    }
+    
+    if (!produtoAtualSelecionado) {
+        showNotification('Selecione um produto primeiro', 'warning');
+        return;
+    }
+    
+    // Adicionar corte ao grupo do produto
+    if (!cortesAgrupados[produtoAtualSelecionado]) {
+        cortesAgrupados[produtoAtualSelecionado] = [];
+    }
+    
+    cortesAgrupados[produtoAtualSelecionado].push({
+        metragem: metragem,
+        observacoes: observacoes || null
+    });
+    
+    // Limpar campos
+    document.getElementById('metragemCorteRapido').value = '';
+    document.getElementById('obsCorteRapido').value = '';
+    
+    // Renderizar lista atualizada
+    renderizarListaCortes();
+    
+    // Focar novamente no campo de metragem para adicionar mais cortes rapidamente
+    document.getElementById('metragemCorteRapido').focus();
+    
+    showNotification('Corte adicionado! Adicione mais ou selecione outro produto.', 'success');
+}
+
+function cancelarCorteRapido() {
+    document.getElementById('formCorteRapido').style.display = 'none';
+    document.getElementById('metragemCorteRapido').value = '';
+    document.getElementById('obsCorteRapido').value = '';
+}
+
+function renderizarListaCortes() {
+    const container = document.getElementById('listaCortesPlano');
+    
+    const totalCortes = Object.values(cortesAgrupados).reduce((sum, cortes) => sum + cortes.length, 0);
+    
+    if (totalCortes === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #999;">
+                Selecione um produto e adicione cortes acima
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    for (const produtoId in cortesAgrupados) {
+        const produto = produtos.find(p => p.id == produtoId);
+        if (!produto) continue;
+        
+        const cortes = cortesAgrupados[produtoId];
+        const metragemTotal = cortes.reduce((sum, c) => sum + c.metragem, 0);
+        
+        html += `
+            <div class="grupo-produto">
+                <div class="grupo-produto-header">
+                    <div>
+                        <div class="grupo-produto-titulo">${produto.codigo}</div>
+                        <div class="grupo-produto-info">${produto.nome_cor} • ${produto.gramatura}g • ${produto.tipo_tecido}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="grupo-produto-badge">${cortes.length} corte${cortes.length > 1 ? 's' : ''}</div>
+                        <div style="font-weight: 600; color: #333;">Total: ${metragemTotal.toFixed(2)}m</div>
+                        <button type="button" class="btn-remover-mini" onclick="removerProduto(${produtoId})" title="Remover todos os cortes deste produto">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    ${cortes.map((corte, index) => `
+                        <div class="corte-mini-item">
+                            <div class="corte-mini-info">
+                                <div class="corte-mini-metragem">📏 ${corte.metragem.toFixed(2)}m</div>
+                                ${corte.observacoes ? `<div class="corte-mini-obs">💬 ${corte.observacoes}</div>` : ''}
+                            </div>
+                            <button type="button" class="btn-remover-mini" onclick="removerCorte(${produtoId}, ${index})" title="Remover este corte">
+                                ✕
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function removerCorte(produtoId, corteIndex) {
+    if (!cortesAgrupados[produtoId]) return;
+    
+    cortesAgrupados[produtoId].splice(corteIndex, 1);
+    
+    // Se não sobrou nenhum corte do produto, remover o produto
+    if (cortesAgrupados[produtoId].length === 0) {
+        delete cortesAgrupados[produtoId];
+    }
+    
+    renderizarListaCortes();
+}
+
+function removerProduto(produtoId) {
+    if (!confirm('Deseja remover TODOS os cortes deste produto?')) {
+        return;
+    }
+    
+    delete cortesAgrupados[produtoId];
+    renderizarListaCortes();
 }
 
 // Submeter formulário de novo plano
@@ -217,23 +345,19 @@ document.getElementById('formNovoPlano').addEventListener('submit', async (e) =>
     const cliente = document.getElementById('clientePlano').value.trim();
     const aviario = document.getElementById('aviarioPlano').value.trim();
     
-    // Coletar cortes
-    const cortesElements = document.querySelectorAll('.corte-item');
+    // Converter cortesAgrupados para array de itens
     const itens = [];
     
-    cortesElements.forEach((corte, index) => {
-        const produto_id = parseInt(corte.querySelector('.corte-produto').value);
-        const metragem = parseFloat(corte.querySelector('.corte-metragem').value);
-        const observacoes = corte.querySelector('.corte-observacoes').value.trim();
-        
-        if (produto_id && metragem > 0) {
+    for (const produtoId in cortesAgrupados) {
+        const cortes = cortesAgrupados[produtoId];
+        cortes.forEach(corte => {
             itens.push({
-                produto_id,
-                metragem,
-                observacoes: observacoes || null
+                produto_id: parseInt(produtoId),
+                metragem: corte.metragem,
+                observacoes: corte.observacoes
             });
-        }
-    });
+        });
+    }
     
     if (itens.length === 0) {
         showNotification('Adicione pelo menos um corte', 'warning');
