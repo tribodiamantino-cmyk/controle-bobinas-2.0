@@ -761,6 +761,15 @@ function renderizarItemBobina(bobina) {
     const statusIcon = bobina.status === 'Disponível' ? '🟢' : 
                       bobina.status === 'Em uso' ? '🟡' : '🔴';
     
+    const metragemReservada = parseFloat(bobina.metragem_reservada || 0);
+    const metragemAtual = parseFloat(bobina.metragem_atual);
+    const metragemDisponivel = metragemAtual - metragemReservada;
+    const metragemInicial = parseFloat(bobina.metragem_inicial);
+    
+    const metragensHTML = metragemReservada > 0 
+        ? `📏 <strong>${metragemAtual.toFixed(2)}m</strong> (${metragemDisponivel.toFixed(2)}m disponível, ${metragemReservada.toFixed(2)}m reservada) de ${metragemInicial.toFixed(2)}m`
+        : `📏 ${metragemAtual.toFixed(2)}m de ${metragemInicial.toFixed(2)}m`;
+    
     return `
         <div class="bobina-item" id="bobina-item-${bobina.id}">
             <div class="bobina-info">
@@ -768,7 +777,7 @@ function renderizarItemBobina(bobina) {
                     <strong>🏷️ ${bobina.codigo_interno}</strong> | 📄 NF: ${bobina.nota_fiscal}
                 </div>
                 <div class="bobina-metragem">
-                    📏 ${parseFloat(bobina.metragem_atual).toFixed(2)}m de ${parseFloat(bobina.metragem_inicial).toFixed(2)}m | 
+                    ${metragensHTML} | 
                     ${statusIcon} <span class="badge badge-${statusClass}">${bobina.status}</span>
                 </div>
                 <div class="bobina-localizacao" id="loc-display-${bobina.id}">
@@ -822,6 +831,14 @@ function renderizarItemRetalho(retalho) {
     const statusIcon = retalho.status === 'Disponível' ? '🟢' : 
                       retalho.status === 'Em uso' ? '🟡' : '🔴';
     
+    const metragemReservada = parseFloat(retalho.metragem_reservada || 0);
+    const metragem = parseFloat(retalho.metragem);
+    const metragemDisponivel = metragem - metragemReservada;
+    
+    const metragensHTML = metragemReservada > 0 
+        ? `<strong>${metragem.toFixed(2)}m</strong> (${metragemDisponivel.toFixed(2)}m disponível, ${metragemReservada.toFixed(2)}m reservada)`
+        : `${metragem.toFixed(2)}m`;
+    
     return `
         <div class="bobina-item retalho-item" id="retalho-item-${retalho.id}">
             <div class="bobina-info">
@@ -830,7 +847,7 @@ function renderizarItemRetalho(retalho) {
                     ${retalho.bobina_origem_id ? ` <span class="badge badge-info" title="Convertido de bobina">♻️ Convertido</span>` : ''}
                 </div>
                 <div class="bobina-metragem" id="metragem-display-ret-${retalho.id}">
-                    📏 <span id="metragem-value-ret-${retalho.id}">${parseFloat(retalho.metragem).toFixed(2)}m</span> | 
+                    📏 <span id="metragem-value-ret-${retalho.id}">${metragensHTML}</span> | 
                     ${statusIcon} <span class="badge badge-${statusClass}">${retalho.status}</span>
                     <button class="btn-edit-loc" onclick="editarMetragemRetalho(${retalho.id}, ${retalho.metragem})" title="Editar metragem" style="margin-left: 8px;">✏️</button>
                 </div>
