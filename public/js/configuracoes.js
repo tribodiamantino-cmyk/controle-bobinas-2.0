@@ -1,4 +1,160 @@
 // ======================
+// EDIÇÃO INLINE GENÉRICA
+// ======================
+
+// Função para ativar modo de edição
+function editarCampo(campoId) {
+    // Esconder o display e mostrar o input
+    const display = document.getElementById(campoId + '-display');
+    const edit = document.getElementById(campoId);
+    
+    if (display && edit) {
+        display.style.display = 'none';
+        edit.style.display = edit.tagName === 'SELECT' ? 'block' : (edit.tagName === 'DIV' ? 'flex' : 'inline-block');
+        
+        // Focar no campo (se for input ou select direto)
+        if (edit.tagName === 'INPUT') {
+            edit.focus();
+            edit.select();
+        } else if (edit.tagName === 'SELECT') {
+            edit.focus();
+        } else if (edit.tagName === 'DIV') {
+            // Se for div (caso da gramatura), focar no input dentro
+            const input = edit.querySelector('input');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }
+    }
+}
+
+// Função genérica para salvar campo
+async function salvarCampo(tipo, id, campo) {
+    let valor, displayId, editId;
+    
+    if (tipo === 'cor') {
+        if (campo === 'nome') {
+            editId = `cor-nome-${id}`;
+            displayId = `cor-nome-${id}-display`;
+            valor = document.getElementById(editId).value;
+            
+            // Atualizar display
+            document.getElementById(displayId).textContent = valor;
+            
+            // Salvar no backend
+            await atualizarCor(id, { nome_cor: valor });
+        } else if (campo === 'ativo') {
+            editId = `cor-ativo-${id}`;
+            displayId = `cor-ativo-${id}-display`;
+            const ativoValue = document.getElementById(editId).value;
+            valor = ativoValue === '1';
+            
+            // Atualizar display
+            document.getElementById(displayId).innerHTML = valor ? 
+                '<span class="badge badge-success">Ativo</span>' : 
+                '<span class="badge badge-danger">Inativo</span>';
+            
+            // Salvar no backend
+            await atualizarCor(id, { ativo: valor });
+        }
+    } else if (tipo === 'gramatura') {
+        if (campo === 'numero') {
+            editId = `gramatura-numero-${id}`;
+            displayId = `gramatura-numero-${id}-display`;
+            const numero = document.getElementById(`${editId}-input`).value;
+            valor = numero + ' g/m²';
+            
+            // Atualizar display
+            document.getElementById(displayId).innerHTML = `<strong>${valor}</strong>`;
+            
+            // Salvar no backend
+            await atualizarGramatura(id, { gramatura: valor });
+        } else if (campo === 'ativo') {
+            editId = `gramatura-ativo-${id}`;
+            displayId = `gramatura-ativo-${id}-display`;
+            const ativoValue = document.getElementById(editId).value;
+            valor = ativoValue === '1';
+            
+            // Atualizar display
+            document.getElementById(displayId).innerHTML = valor ? 
+                '<span class="badge badge-success">Ativo</span>' : 
+                '<span class="badge badge-danger">Inativo</span>';
+            
+            // Salvar no backend
+            await atualizarGramatura(id, { ativo: valor });
+        }
+    }
+    
+    // Voltar para modo display
+    document.getElementById(displayId).style.display = 'inline-block';
+    document.getElementById(editId).style.display = 'none';
+}
+
+// Funções auxiliares para atualizar no backend
+async function atualizarCor(id, dados) {
+    // Buscar dados atuais para manter o que não foi editado
+    const response = await fetch('/api/cores');
+    const cores = await response.json();
+    const corAtual = cores.find(c => c.id === id);
+    
+    const dadosCompletos = {
+        nome_cor: dados.nome_cor !== undefined ? dados.nome_cor : corAtual.nome_cor,
+        ativo: dados.ativo !== undefined ? dados.ativo : corAtual.ativo
+    };
+    
+    try {
+        const res = await fetch(`/api/cores/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dadosCompletos)
+        });
+        
+        if (res.ok) {
+            mostrarAlerta('cores', 'Atualizado com sucesso!', 'success');
+        } else {
+            const data = await res.json();
+            mostrarAlerta('cores', data.error || 'Erro ao atualizar', 'danger');
+            carregarCores();
+        }
+    } catch (error) {
+        mostrarAlerta('cores', 'Erro: ' + error.message, 'danger');
+        carregarCores();
+    }
+}
+
+async function atualizarGramatura(id, dados) {
+    // Buscar dados atuais para manter o que não foi editado
+    const response = await fetch('/api/gramaturas');
+    const gramaturas = await response.json();
+    const gramaturaAtual = gramaturas.find(g => g.id === id);
+    
+    const dadosCompletos = {
+        gramatura: dados.gramatura !== undefined ? dados.gramatura : gramaturaAtual.gramatura,
+        ativo: dados.ativo !== undefined ? dados.ativo : gramaturaAtual.ativo
+    };
+    
+    try {
+        const res = await fetch(`/api/gramaturas/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dadosCompletos)
+        });
+        
+        if (res.ok) {
+            mostrarAlerta('gramaturas', 'Atualizado com sucesso!', 'success');
+        } else {
+            const data = await res.json();
+            mostrarAlerta('gramaturas', data.error || 'Erro ao atualizar', 'danger');
+            carregarGramaturas();
+        }
+    } catch (error) {
+        mostrarAlerta('gramaturas', 'Erro: ' + error.message, 'danger');
+        carregarGramaturas();
+    }
+}
+
+// ======================
 // TABS
 // ======================
 function showTab(tabName) {
@@ -51,17 +207,25 @@ async function carregarCores() {
             table.style.display = 'table';
             tbody.innerHTML = cores.map(cor => `
                 <tr>
-                    <td>
+                    <td onclick="editarCampo('cor-nome-${cor.id}')">
+                        <span id="cor-nome-${cor.id}-display" class="campo-display">${cor.nome_cor}</span>
                         <input type="text" 
                                value="${cor.nome_cor}" 
                                id="cor-nome-${cor.id}"
-                               style="border: 1px solid #ddd; padding: 0.5rem; border-radius: 5px; width: 100%;"
-                               onchange="atualizarCorInline(${cor.id})">
+                               class="campo-edit"
+                               style="display: none;"
+                               onblur="salvarCampo('cor', ${cor.id}, 'nome')"
+                               onkeypress="if(event.key==='Enter') this.blur()">
                     </td>
-                    <td>
+                    <td onclick="editarCampo('cor-ativo-${cor.id}')">
+                        <span id="cor-ativo-${cor.id}-display" class="campo-display">
+                            ${cor.ativo ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>'}
+                        </span>
                         <select id="cor-ativo-${cor.id}" 
-                                style="border: 1px solid #ddd; padding: 0.5rem; border-radius: 5px;"
-                                onchange="atualizarCorInline(${cor.id})">
+                                class="campo-edit"
+                                style="display: none;"
+                                onblur="salvarCampo('cor', ${cor.id}, 'ativo')"
+                                onchange="this.blur()">
                             <option value="1" ${cor.ativo ? 'selected' : ''}>Ativo</option>
                             <option value="0" ${!cor.ativo ? 'selected' : ''}>Inativo</option>
                         </select>
@@ -69,7 +233,7 @@ async function carregarCores() {
                     <td>${formatarData(cor.data_criacao)}</td>
                     <td>
                         <button class="btn btn-sm btn-danger" onclick="excluirCor(${cor.id})">
-                            🗑️ Excluir
+                            🗑️
                         </button>
                     </td>
                 </tr>
@@ -143,32 +307,6 @@ async function salvarCor(event) {
     }
 }
 
-// Atualizar cor inline
-async function atualizarCorInline(id) {
-    const nome_cor = document.getElementById(`cor-nome-${id}`).value;
-    const ativo = document.getElementById(`cor-ativo-${id}`).value === '1';
-    
-    try {
-        const response = await fetch(`/api/cores/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nome_cor, ativo })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            mostrarAlerta('cores', 'Cor atualizada com sucesso!', 'success');
-        } else {
-            mostrarAlerta('cores', data.error || 'Erro ao atualizar cor', 'danger');
-            carregarCores(); // Recarregar em caso de erro
-        }
-    } catch (error) {
-        mostrarAlerta('cores', 'Erro ao atualizar cor: ' + error.message, 'danger');
-        carregarCores();
-    }
-}
-
 // Excluir cor
 async function excluirCor(id) {
     if (!confirm('Deseja realmente excluir esta cor?')) return;
@@ -222,21 +360,30 @@ async function carregarGramaturas() {
                 
                 return `
                 <tr>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <td onclick="editarCampo('gramatura-numero-${gramatura.id}')">
+                        <span id="gramatura-numero-${gramatura.id}-display" class="campo-display">
+                            <strong>${gramatura.gramatura}</strong>
+                        </span>
+                        <div id="gramatura-numero-${gramatura.id}" class="campo-edit" style="display: none; align-items: center; gap: 0.5rem;">
                             <input type="number" 
                                    value="${numero}" 
-                                   id="gramatura-numero-${gramatura.id}"
-                                   style="border: 1px solid #ddd; padding: 0.5rem; border-radius: 5px; width: 120px;"
+                                   id="gramatura-numero-${gramatura.id}-input"
+                                   style="width: 120px; padding: 0.5rem; border: 2px solid var(--primary-color); border-radius: 5px;"
                                    min="1"
-                                   onchange="atualizarGramaturaInline(${gramatura.id})">
+                                   onblur="salvarCampo('gramatura', ${gramatura.id}, 'numero')"
+                                   onkeypress="if(event.key==='Enter') this.blur()">
                             <span style="font-weight: bold; color: #666;">g/m²</span>
                         </div>
                     </td>
-                    <td>
+                    <td onclick="editarCampo('gramatura-ativo-${gramatura.id}')">
+                        <span id="gramatura-ativo-${gramatura.id}-display" class="campo-display">
+                            ${gramatura.ativo ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>'}
+                        </span>
                         <select id="gramatura-ativo-${gramatura.id}" 
-                                style="border: 1px solid #ddd; padding: 0.5rem; border-radius: 5px;"
-                                onchange="atualizarGramaturaInline(${gramatura.id})">
+                                class="campo-edit"
+                                style="display: none;"
+                                onblur="salvarCampo('gramatura', ${gramatura.id}, 'ativo')"
+                                onchange="this.blur()">
                             <option value="1" ${gramatura.ativo ? 'selected' : ''}>Ativo</option>
                             <option value="0" ${!gramatura.ativo ? 'selected' : ''}>Inativo</option>
                         </select>
@@ -244,7 +391,7 @@ async function carregarGramaturas() {
                     <td>${formatarData(gramatura.data_criacao)}</td>
                     <td>
                         <button class="btn btn-sm btn-danger" onclick="excluirGramatura(${gramatura.id})">
-                            🗑️ Excluir
+                            🗑️
                         </button>
                     </td>
                 </tr>
@@ -316,33 +463,6 @@ async function salvarGramatura(event) {
         }
     } catch (error) {
         mostrarAlerta('gramaturas', 'Erro ao salvar gramatura: ' + error.message, 'danger');
-    }
-}
-
-// Atualizar gramatura inline
-async function atualizarGramaturaInline(id) {
-    const numero = document.getElementById(`gramatura-numero-${id}`).value;
-    const gramatura = numero + ' g/m²';
-    const ativo = document.getElementById(`gramatura-ativo-${id}`).value === '1';
-    
-    try {
-        const response = await fetch(`/api/gramaturas/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ gramatura, ativo })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            mostrarAlerta('gramaturas', 'Gramatura atualizada com sucesso!', 'success');
-        } else {
-            mostrarAlerta('gramaturas', data.error || 'Erro ao atualizar gramatura', 'danger');
-            carregarGramaturas(); // Recarregar em caso de erro
-        }
-    } catch (error) {
-        mostrarAlerta('gramaturas', 'Erro ao atualizar gramatura: ' + error.message, 'danger');
-        carregarGramaturas();
     }
 }
 
