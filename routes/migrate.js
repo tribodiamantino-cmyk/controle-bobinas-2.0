@@ -319,6 +319,10 @@ router.post('/recreate-bobinas-table', async (req, res) => {
 // Endpoint para popular banco com dados de teste
 router.post('/seed-database', async (req, res) => {
     try {
+        // Limpar dados existentes de teste
+        await db.query("DELETE FROM bobinas WHERE observacoes LIKE '%teste gerada automaticamente%'");
+        await db.query("DELETE FROM produtos WHERE codigo LIKE 'CTV-%' OR codigo LIKE 'BN-%'");
+        
         const fabricantes = ['Propex', 'Textiloeste'];
         const lojas = ['Cortinave', 'BN'];
         const tiposTecido = ['Normal', 'Bando Y'];
