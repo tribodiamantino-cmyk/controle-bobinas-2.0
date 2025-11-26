@@ -472,4 +472,82 @@ router.post('/add-localizacao-system', async (req, res) => {
     }
 });
 
+// Endpoint para criar sistema de retalhos
+router.post('/add-retalhos-system', async (req, res) => {
+    try {
+        // 1. Criar tabela retalhos
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS retalhos (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                codigo_retalho VARCHAR(20) UNIQUE NOT NULL,
+                produto_id INT NOT NULL,
+                metragem DECIMAL(10,2) NOT NULL,
+                localizacao_atual VARCHAR(12) NULL,
+                bobina_origem_id INT NULL,
+                observacoes TEXT,
+                data_entrada DATETIME DEFAULT CURRENT_TIMESTAMP,
+                status ENUM('Disponível', 'Em uso', 'Esgotado') DEFAULT 'Disponível',
+                
+                FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE RESTRICT,
+                FOREIGN KEY (bobina_origem_id) REFERENCES bobinas(id) ON DELETE SET NULL,
+                
+                INDEX idx_codigo (codigo_retalho),
+                INDEX idx_produto (produto_id),
+                INDEX idx_status (status),
+                INDEX idx_data (data_entrada)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        console.log('✅ Tabela retalhos criada/verificada');
+        
+        // 2. Adicionar campos na tabela bobinas (se não existirem)
+        const [columns] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'bobinas' 
+            AND COLUMN_NAME = 'convertida_em_retalho'
+        `);
+        
+        if (columns.length === 0) {
+            await db.query(`
+                ALTER TABLE bobinas 
+                ADD COLUMN convertida_em_retalho BOOLEAN DEFAULT FALSE,
+                ADD COLUMN retalho_id INT NULL,
+                ADD FOREIGN KEY (retalho_id) REFERENCES retalhos(id) ON DELETE SET NULL
+            `);
+            console.log('✅ Campos convertida_em_retalho e retalho_id adicionados na tabela bobinas');
+        } else {
+            console.log('ℹ️ Campos já existem na tabela bobinas');
+        }
+        
+        // 3. Criar tabela de histórico de localização para retalhos (reutiliza a mesma lógica)
+        // Já existe historico_localizacao que funciona com bobina_id
+        // Vamos criar uma tabela separada para retalhos
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS historico_localizacao_retalhos (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                retalho_id INT NOT NULL,
+                localizacao_anterior VARCHAR(12) NULL,
+                localizacao_nova VARCHAR(12) NULL,
+                data_movimentacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (retalho_id) REFERENCES retalhos(id) ON DELETE CASCADE,
+                INDEX idx_retalho_id (retalho_id),
+                INDEX idx_data (data_movimentacao)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        console.log('✅ Tabela historico_localizacao_retalhos criada/verificada');
+        
+        res.json({ 
+            success: true, 
+            message: 'Sistema de retalhos adicionado com sucesso!' 
+        });
+    } catch (error) {
+        console.error('Erro ao adicionar sistema de retalhos:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;

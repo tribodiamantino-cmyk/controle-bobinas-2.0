@@ -155,7 +155,7 @@ exports.listarBobinasPorProduto = async (req, res) => {
             JOIN produtos p ON b.produto_id = p.id
             JOIN configuracoes_cores c ON p.cor_id = c.id
             JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-            WHERE b.produto_id = ?
+            WHERE b.produto_id = ? AND b.convertida_em_retalho = FALSE
             ORDER BY b.data_entrada DESC`,
             [produto_id]
         );
