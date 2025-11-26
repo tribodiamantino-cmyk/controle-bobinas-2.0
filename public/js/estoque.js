@@ -695,9 +695,16 @@ function renderizarItemRetalho(retalho) {
                     <strong>🏷️ ${retalho.codigo_retalho}</strong>
                     ${retalho.bobina_origem_id ? ` <span class="badge badge-info" title="Convertido de bobina">♻️ Convertido</span>` : ''}
                 </div>
-                <div class="bobina-metragem">
-                    📏 ${parseFloat(retalho.metragem).toFixed(2)}m | 
+                <div class="bobina-metragem" id="metragem-display-ret-${retalho.id}">
+                    📏 <span id="metragem-value-ret-${retalho.id}">${parseFloat(retalho.metragem).toFixed(2)}m</span> | 
                     ${statusIcon} <span class="badge badge-${statusClass}">${retalho.status}</span>
+                    <button class="btn-edit-loc" onclick="editarMetragemRetalho(${retalho.id}, ${retalho.metragem})" title="Editar metragem" style="margin-left: 8px;">✏️</button>
+                </div>
+                <div class="bobina-metragem-edit" id="metragem-edit-ret-${retalho.id}" style="display: none;">
+                    📏 <input type="number" class="input-metragem" id="input-metragem-ret-${retalho.id}" 
+                           placeholder="Metragem" step="0.01" min="0.01" style="width: 100px;">m
+                    <button class="btn btn-sm btn-success" onclick="salvarMetragemRetalho(${retalho.id})">✅</button>
+                    <button class="btn btn-sm btn-secondary" onclick="cancelarEdicaoMetragemRetalho(${retalho.id})">❌</button>
                 </div>
                 <div class="bobina-localizacao" id="loc-display-ret-${retalho.id}">
                     📍 Localização: 
@@ -816,15 +823,15 @@ async function converterEmRetalho(bobinaId, codigoInterno) {
 function abrirModalNovoRetalho(produtoId) {
     // Criar modal dinamicamente
     const modalHTML = `
-        <div class="modal fade" id="modalNovoRetalho" tabindex="-1">
-            <div class="modal-dialog">
+        <div class="modal-overlay" id="modalNovoRetalho" onclick="fecharModalRetalho(event)">
+            <div class="modal-dialog" onclick="event.stopPropagation()">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">📐 Novo Retalho</h5>
-                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <button type="button" class="close" onclick="fecharModalRetalho()">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <form id="formNovoRetalho">
+                        <form id="formNovoRetalho" onsubmit="event.preventDefault(); salvarNovoRetalho();">
                             <input type="hidden" id="retalho-produto-id" value="${produtoId}">
                             
                             <div class="form-group">
@@ -848,7 +855,7 @@ function abrirModalNovoRetalho(produtoId) {
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalRetalho()">Cancelar</button>
                         <button type="button" class="btn btn-primary" onclick="salvarNovoRetalho()">Salvar Retalho</button>
                     </div>
                 </div>
@@ -857,11 +864,25 @@ function abrirModalNovoRetalho(produtoId) {
     `;
     
     // Remover modal existente se houver
-    $('#modalNovoRetalho').remove();
+    const modalExistente = document.getElementById('modalNovoRetalho');
+    if (modalExistente) {
+        modalExistente.remove();
+    }
     
     // Adicionar e mostrar modal
-    $('body').append(modalHTML);
-    $('#modalNovoRetalho').modal('show');
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.getElementById('modalNovoRetalho').style.display = 'flex';
+}
+
+// Fechar modal de retalho
+function fecharModalRetalho(event) {
+    if (event && event.target.closest('.modal-dialog') && !event.target.classList.contains('modal-overlay')) {
+        return;
+    }
+    const modal = document.getElementById('modalNovoRetalho');
+    if (modal) {
+        modal.remove();
+    }
 }
 
 // Salvar novo retalho
@@ -892,7 +913,7 @@ async function salvarNovoRetalho() {
         
         if (response.ok) {
             mostrarAlerta(`✅ Retalho criado: ${data.data.codigo_retalho}`, 'success');
-            $('#modalNovoRetalho').modal('hide');
+            fecharModalRetalho();
             await carregarBobinasERetalhos(produtoId);
         } else {
             mostrarAlerta(data.error || 'Erro ao criar retalho', 'danger');
@@ -1070,6 +1091,62 @@ function aplicarMascaraLocalizacaoInput(inputId) {
     }
     
     input.value = valor;
+}
+
+// === FUNÇÕES DE EDIÇÃO DE METRAGEM DE RETALHOS ===
+
+// Editar metragem de retalho
+function editarMetragemRetalho(retalhoId, metragemAtual) {
+    document.getElementById(`metragem-display-ret-${retalhoId}`).style.display = 'none';
+    document.getElementById(`metragem-edit-ret-${retalhoId}`).style.display = 'block';
+    
+    const input = document.getElementById(`input-metragem-ret-${retalhoId}`);
+    input.value = parseFloat(metragemAtual).toFixed(2);
+    input.focus();
+    input.select();
+}
+
+// Cancelar edição de metragem de retalho
+function cancelarEdicaoMetragemRetalho(retalhoId) {
+    document.getElementById(`metragem-display-ret-${retalhoId}`).style.display = 'block';
+    document.getElementById(`metragem-edit-ret-${retalhoId}`).style.display = 'none';
+}
+
+// Salvar metragem de retalho
+async function salvarMetragemRetalho(retalhoId) {
+    const novaMetragem = document.getElementById(`input-metragem-ret-${retalhoId}`).value.trim();
+    
+    if (!novaMetragem || parseFloat(novaMetragem) <= 0) {
+        mostrarAlerta('Metragem deve ser maior que zero!', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/retalhos/${retalhoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                metragem: parseFloat(novaMetragem)
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Atualizar interface
+            document.getElementById(`metragem-value-ret-${retalhoId}`).textContent = 
+                parseFloat(novaMetragem).toFixed(2) + 'm';
+            cancelarEdicaoMetragemRetalho(retalhoId);
+            
+            mostrarAlerta('Metragem atualizada com sucesso!', 'success');
+        } else {
+            mostrarAlerta(data.error || 'Erro ao atualizar metragem', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao salvar metragem:', error);
+        mostrarAlerta('Erro ao salvar metragem', 'danger');
+    }
 }
 
 // === SISTEMA DE FILTROS MULTI-SELECT ===

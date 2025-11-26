@@ -246,11 +246,11 @@ exports.buscarRetalhoPorCodigo = async (req, res) => {
     }
 };
 
-// Atualizar retalho (principalmente localização)
+// Atualizar retalho (localização, metragem, observações)
 exports.atualizarRetalho = async (req, res) => {
     try {
         const { id } = req.params;
-        const { localizacao_atual, observacoes } = req.body;
+        const { localizacao_atual, metragem, observacoes } = req.body;
         
         // Verificar se retalho existe
         const [retalhos] = await db.query(
@@ -283,6 +283,17 @@ exports.atualizarRetalho = async (req, res) => {
                     [id, localizacao_atual]
                 );
             }
+        }
+        
+        if (metragem !== undefined) {
+            if (parseFloat(metragem) <= 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Metragem deve ser maior que zero' 
+                });
+            }
+            updates.push('metragem = ?');
+            values.push(parseFloat(metragem));
         }
         
         if (observacoes !== undefined) {
