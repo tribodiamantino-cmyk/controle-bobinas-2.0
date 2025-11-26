@@ -582,6 +582,7 @@ async function carregarEstoque() {
             produtosEstoque = data.data;
             renderizarEstoque(produtosEstoque);
             carregarOpcoesFilros(); // Carregar opções dos filtros dinâmicos
+            await atualizarResumoEstoque(); // Atualizar resumo de estoque
         }
         
     } catch (error) {
@@ -1697,5 +1698,74 @@ function fecharModalHistorico() {
     const modal = document.getElementById('modal-historico-loc');
     if (modal) {
         modal.remove();
+    }
+}
+
+// Atualizar resumo de estoque
+async function atualizarResumoEstoque() {
+    try {
+        // Buscar todas as bobinas
+        const responseBobinas = await fetch('/api/bobinas');
+        const dataBobinas = await responseBobinas.json();
+        
+        // Buscar todos os retalhos
+        const responseRetalhos = await fetch('/api/retalhos');
+        const dataRetalhos = await responseRetalhos.json();
+        
+        if (dataBobinas.success && dataRetalhos.success) {
+            const bobinas = dataBobinas.data;
+            const retalhos = dataRetalhos.data;
+            
+            // Calcular totais de bobinas
+            let totalBobinasMetragem = 0;
+            let totalBobinasDisponivel = 0;
+            let totalBobinasReservado = 0;
+            
+            bobinas.forEach(bobina => {
+                const metragem = parseFloat(bobina.metragem_atual || 0);
+                const reservada = parseFloat(bobina.metragem_reservada || 0);
+                const disponivel = metragem - reservada;
+                
+                totalBobinasMetragem += metragem;
+                totalBobinasReservado += reservada;
+                totalBobinasDisponivel += disponivel;
+            });
+            
+            // Calcular totais de retalhos
+            let totalRetalhosMetragem = 0;
+            let totalRetalhosDisponivel = 0;
+            let totalRetalhosReservado = 0;
+            
+            retalhos.forEach(retalho => {
+                const metragem = parseFloat(retalho.metragem || 0);
+                const reservada = parseFloat(retalho.metragem_reservada || 0);
+                const disponivel = metragem - reservada;
+                
+                totalRetalhosMetragem += metragem;
+                totalRetalhosReservado += reservada;
+                totalRetalhosDisponivel += disponivel;
+            });
+            
+            // Calcular totais gerais
+            const totalGeralMetragem = totalBobinasMetragem + totalRetalhosMetragem;
+            const totalGeralDisponivel = totalBobinasDisponivel + totalRetalhosDisponivel;
+            const totalGeralReservado = totalBobinasReservado + totalRetalhosReservado;
+            
+            // Atualizar elementos do DOM
+            document.getElementById('total-bobinas-metragem').textContent = totalBobinasMetragem.toFixed(2);
+            document.getElementById('total-bobinas-disponivel').textContent = totalBobinasDisponivel.toFixed(2);
+            document.getElementById('total-bobinas-reservado').textContent = totalBobinasReservado.toFixed(2);
+            
+            document.getElementById('total-retalhos-metragem').textContent = totalRetalhosMetragem.toFixed(2);
+            document.getElementById('total-retalhos-disponivel').textContent = totalRetalhosDisponivel.toFixed(2);
+            document.getElementById('total-retalhos-reservado').textContent = totalRetalhosReservado.toFixed(2);
+            
+            document.getElementById('total-geral-metragem').textContent = totalGeralMetragem.toFixed(2);
+            document.getElementById('total-geral-disponivel').textContent = totalGeralDisponivel.toFixed(2);
+            document.getElementById('total-geral-reservado').textContent = totalGeralReservado.toFixed(2);
+        }
+        
+    } catch (error) {
+        console.error('Erro ao atualizar resumo de estoque:', error);
     }
 }

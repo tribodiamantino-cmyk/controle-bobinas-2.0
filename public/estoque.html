@@ -29,6 +29,76 @@
         
         <div id="alerta-container"></div>
 
+        <!-- Resumo de Estoque -->
+        <div class="card mb-3">
+            <div class="card-header-compact">
+                <h2>📊 Resumo de Estoque</h2>
+            </div>
+            <div class="card-body">
+                <div class="resumo-estoque-grid">
+                    <div class="resumo-card resumo-card-bobinas">
+                        <div class="resumo-icon">🎞️</div>
+                        <div class="resumo-content">
+                            <div class="resumo-label">Bobinas</div>
+                            <div class="resumo-valores">
+                                <div class="resumo-valor-principal">
+                                    <span id="total-bobinas-metragem">0</span> m
+                                </div>
+                                <div class="resumo-valor-secundario">
+                                    <span class="badge-disponivel">
+                                        <span id="total-bobinas-disponivel">0</span> m disponível
+                                    </span>
+                                    <span class="badge-reservado">
+                                        <span id="total-bobinas-reservado">0</span> m reservado
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="resumo-card resumo-card-retalhos">
+                        <div class="resumo-icon">📐</div>
+                        <div class="resumo-content">
+                            <div class="resumo-label">Retalhos</div>
+                            <div class="resumo-valores">
+                                <div class="resumo-valor-principal">
+                                    <span id="total-retalhos-metragem">0</span> m
+                                </div>
+                                <div class="resumo-valor-secundario">
+                                    <span class="badge-disponivel">
+                                        <span id="total-retalhos-disponivel">0</span> m disponível
+                                    </span>
+                                    <span class="badge-reservado">
+                                        <span id="total-retalhos-reservado">0</span> m reservado
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="resumo-card resumo-card-total">
+                        <div class="resumo-icon">📦</div>
+                        <div class="resumo-content">
+                            <div class="resumo-label">Total Geral</div>
+                            <div class="resumo-valores">
+                                <div class="resumo-valor-principal">
+                                    <span id="total-geral-metragem">0</span> m
+                                </div>
+                                <div class="resumo-valor-secundario">
+                                    <span class="badge-disponivel">
+                                        <span id="total-geral-disponivel">0</span> m disponível
+                                    </span>
+                                    <span class="badge-reservado">
+                                        <span id="total-geral-reservado">0</span> m reservado
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Lista de Produtos com Bobinas (Acordeão) -->
         <div class="card">
             <div class="card-header-compact">

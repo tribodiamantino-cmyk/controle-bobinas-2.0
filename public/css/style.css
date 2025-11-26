@@ -1409,6 +1409,99 @@ body {
     background-color: #138496;
 }
 
+/* Resumo de Estoque */
+.resumo-estoque-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.resumo-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.resumo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.resumo-card-bobinas {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.resumo-card-retalhos {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.resumo-card-total {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.resumo-icon {
+    font-size: 3rem;
+    opacity: 0.9;
+    line-height: 1;
+}
+
+.resumo-content {
+    flex: 1;
+}
+
+.resumo-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    opacity: 0.9;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.resumo-valores {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.resumo-valor-principal {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.resumo-valor-secundario {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.badge-disponivel,
+.badge-reservado {
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    white-space: nowrap;
+}
+
+.badge-disponivel {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.badge-reservado {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 /* Badge de Prioridade */
 .badge-prioridade {
     padding: 4px 10px;
