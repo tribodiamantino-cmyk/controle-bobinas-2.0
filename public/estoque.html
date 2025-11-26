@@ -224,6 +224,88 @@
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label">Tipo de Bainha</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-bainha')">
+                                <span id="filtro-estoque-bainha-label">Todas</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-bainha-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-bainha-todas" value="" onchange="toggleSelectAll('filtro-estoque-bainha')"> 
+                                    <label for="filtro-estoque-bainha-todas">Todas</label>
+                                </div>
+                                <div id="filtro-estoque-bainha-opcoes"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Larg. S/Costura</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-larg-sem-costura')">
+                                <span id="filtro-estoque-larg-sem-costura-label">Todas</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-larg-sem-costura-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-larg-sem-costura-todas" value="" onchange="toggleSelectAll('filtro-estoque-larg-sem-costura')"> 
+                                    <label for="filtro-estoque-larg-sem-costura-todas">Todas</label>
+                                </div>
+                                <div id="filtro-estoque-larg-sem-costura-opcoes"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Larg. Final</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-larg-final')">
+                                <span id="filtro-estoque-larg-final-label">Todas</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-larg-final-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-larg-final-todas" value="" onchange="toggleSelectAll('filtro-estoque-larg-final')"> 
+                                    <label for="filtro-estoque-larg-final-todas">Todas</label>
+                                </div>
+                                <div id="filtro-estoque-larg-final-opcoes"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Larg. Maior (Bando Y)</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-larg-maior')">
+                                <span id="filtro-estoque-larg-maior-label">Todas</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-larg-maior-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-larg-maior-todas" value="" onchange="toggleSelectAll('filtro-estoque-larg-maior')"> 
+                                    <label for="filtro-estoque-larg-maior-todas">Todas</label>
+                                </div>
+                                <div id="filtro-estoque-larg-maior-opcoes"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Larg. Y (Bando Y)</label>
+                        <div class="multi-select-dropdown">
+                            <button type="button" class="btn-multi-select" onclick="toggleDropdown('filtro-estoque-larg-y')">
+                                <span id="filtro-estoque-larg-y-label">Todas</span> ▼
+                            </button>
+                            <div class="dropdown-content" id="filtro-estoque-larg-y-dropdown">
+                                <div class="dropdown-item">
+                                    <input type="checkbox" id="filtro-estoque-larg-y-todas" value="" onchange="toggleSelectAll('filtro-estoque-larg-y')"> 
+                                    <label for="filtro-estoque-larg-y-todas">Todas</label>
+                                </div>
+                                <div id="filtro-estoque-larg-y-opcoes"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Busca Geral</label>
                         <input type="text" class="form-control" id="search-estoque" placeholder="🔍 Buscar por código, NF..." onkeyup="aplicarTodosFiltrosEstoque()">
                     </div>

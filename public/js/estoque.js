@@ -692,7 +692,8 @@ function aplicarFiltrosEstoque(filtroId) {
     
     // Atualizar label do botão
     if (selecionados.length === 0 || selecionados.length === checkboxes.length) {
-        const textoTodas = filtroId.includes('loja') || filtroId.includes('cor') || filtroId.includes('gramatura') ? 'Todas' : 'Todos';
+        const textoTodas = filtroId.includes('loja') || filtroId.includes('cor') || filtroId.includes('gramatura') || 
+                          filtroId.includes('bainha') || filtroId.includes('larg-') ? 'Todas' : 'Todos';
         label.textContent = textoTodas;
     } else if (selecionados.length === 1) {
         label.textContent = selecionados[0].nextElementSibling.textContent;
@@ -714,6 +715,11 @@ function aplicarTodosFiltrosEstoque() {
     const gramaturasSelecionadas = getFiltrosSelecionados('filtro-estoque-gramatura');
     const fabricantesSelecionados = getFiltrosSelecionados('filtro-estoque-fabricante');
     const tiposSelecionados = getFiltrosSelecionados('filtro-estoque-tipo');
+    const bainhasSelecionadas = getFiltrosSelecionados('filtro-estoque-bainha');
+    const largSemCosturaSelecionadas = getFiltrosSelecionados('filtro-estoque-larg-sem-costura');
+    const largFinalSelecionadas = getFiltrosSelecionados('filtro-estoque-larg-final');
+    const largMaiorSelecionadas = getFiltrosSelecionados('filtro-estoque-larg-maior');
+    const largYSelecionadas = getFiltrosSelecionados('filtro-estoque-larg-y');
     
     // Filtrar produtos
     const produtosFiltrados = produtosEstoque.filter(produto => {
@@ -725,17 +731,25 @@ function aplicarTodosFiltrosEstoque() {
             produto.gramatura.toLowerCase().includes(termo) ||
             produto.fabricante.toLowerCase().includes(termo);
         
-        // Filtros multi-select
+        // Filtros multi-select básicos
         const matchLoja = lojasSelecionadas.length === 0 || lojasSelecionadas.includes(produto.loja);
         const matchCor = coresSelecionadas.length === 0 || coresSelecionadas.includes(produto.nome_cor);
         const matchGramatura = gramaturasSelecionadas.length === 0 || gramaturasSelecionadas.includes(produto.gramatura);
         const matchFabricante = fabricantesSelecionados.length === 0 || fabricantesSelecionados.includes(produto.fabricante);
         const matchTipo = tiposSelecionados.length === 0 || tiposSelecionados.includes(produto.tipo_tecido || 'Normal');
         
+        // Filtros de medidas
+        const matchBainha = bainhasSelecionadas.length === 0 || bainhasSelecionadas.includes(produto.tipo_bainha);
+        const matchLargSemCostura = largSemCosturaSelecionadas.length === 0 || largSemCosturaSelecionadas.includes(String(parseFloat(produto.largura_sem_costura)));
+        const matchLargFinal = largFinalSelecionadas.length === 0 || largFinalSelecionadas.includes(String(parseFloat(produto.largura_final)));
+        const matchLargMaior = largMaiorSelecionadas.length === 0 || largMaiorSelecionadas.includes(String(parseFloat(produto.largura_maior)));
+        const matchLargY = largYSelecionadas.length === 0 || largYSelecionadas.includes(String(parseFloat(produto.largura_y)));
+        
         // Note: Status filter will be applied at the bobina level, not product level
         // For now, we'll keep it at product level based on overall stock status
         
-        return matchBusca && matchLoja && matchCor && matchGramatura && matchFabricante && matchTipo;
+        return matchBusca && matchLoja && matchCor && matchGramatura && matchFabricante && matchTipo &&
+               matchBainha && matchLargSemCostura && matchLargFinal && matchLargMaior && matchLargY;
     });
     
     renderizarEstoque(produtosFiltrados);
@@ -754,6 +768,11 @@ function carregarOpcoesFilros() {
     const cores = [...new Set(produtosEstoque.map(p => p.nome_cor))].sort();
     const gramaturas = [...new Set(produtosEstoque.map(p => p.gramatura))].sort();
     const fabricantes = [...new Set(produtosEstoque.map(p => p.fabricante))].sort();
+    const bainhas = [...new Set(produtosEstoque.map(p => p.tipo_bainha).filter(b => b))].sort();
+    const largSemCosturas = [...new Set(produtosEstoque.map(p => p.largura_sem_costura).filter(l => l).map(l => parseFloat(l)))].sort((a, b) => a - b);
+    const largFinais = [...new Set(produtosEstoque.map(p => p.largura_final).filter(l => l).map(l => parseFloat(l)))].sort((a, b) => a - b);
+    const largMaiores = [...new Set(produtosEstoque.map(p => p.largura_maior).filter(l => l).map(l => parseFloat(l)))].sort((a, b) => a - b);
+    const largYs = [...new Set(produtosEstoque.map(p => p.largura_y).filter(l => l).map(l => parseFloat(l)))].sort((a, b) => a - b);
     
     // Popular filtro de loja
     const lojaOpcoes = document.getElementById('filtro-estoque-loja-opcoes');
@@ -788,6 +807,51 @@ function carregarOpcoesFilros() {
         <div class="dropdown-item">
             <input type="checkbox" class="filtro-estoque-fabricante-checkbox" value="${fab}" onchange="aplicarFiltrosEstoque('filtro-estoque-fabricante')"> 
             <label>${fab}</label>
+        </div>
+    `).join('');
+    
+    // Popular filtro de tipo de bainha
+    const bainhaOpcoes = document.getElementById('filtro-estoque-bainha-opcoes');
+    bainhaOpcoes.innerHTML = bainhas.map(bainha => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="filtro-estoque-bainha-checkbox" value="${bainha}" onchange="aplicarFiltrosEstoque('filtro-estoque-bainha')"> 
+            <label>${bainha}</label>
+        </div>
+    `).join('');
+    
+    // Popular filtro de largura sem costura
+    const largSemCosturaOpcoes = document.getElementById('filtro-estoque-larg-sem-costura-opcoes');
+    largSemCosturaOpcoes.innerHTML = largSemCosturas.map(larg => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="filtro-estoque-larg-sem-costura-checkbox" value="${larg}" onchange="aplicarFiltrosEstoque('filtro-estoque-larg-sem-costura')"> 
+            <label>${larg}cm</label>
+        </div>
+    `).join('');
+    
+    // Popular filtro de largura final
+    const largFinalOpcoes = document.getElementById('filtro-estoque-larg-final-opcoes');
+    largFinalOpcoes.innerHTML = largFinais.map(larg => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="filtro-estoque-larg-final-checkbox" value="${larg}" onchange="aplicarFiltrosEstoque('filtro-estoque-larg-final')"> 
+            <label>${larg}cm</label>
+        </div>
+    `).join('');
+    
+    // Popular filtro de largura maior
+    const largMaiorOpcoes = document.getElementById('filtro-estoque-larg-maior-opcoes');
+    largMaiorOpcoes.innerHTML = largMaiores.map(larg => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="filtro-estoque-larg-maior-checkbox" value="${larg}" onchange="aplicarFiltrosEstoque('filtro-estoque-larg-maior')"> 
+            <label>${larg}cm</label>
+        </div>
+    `).join('');
+    
+    // Popular filtro de largura Y
+    const largYOpcoes = document.getElementById('filtro-estoque-larg-y-opcoes');
+    largYOpcoes.innerHTML = largYs.map(larg => `
+        <div class="dropdown-item">
+            <input type="checkbox" class="filtro-estoque-larg-y-checkbox" value="${larg}" onchange="aplicarFiltrosEstoque('filtro-estoque-larg-y')"> 
+            <label>${larg}cm</label>
         </div>
     `).join('');
 }
