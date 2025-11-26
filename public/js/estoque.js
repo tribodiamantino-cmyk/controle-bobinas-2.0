@@ -2,12 +2,43 @@
 let produtosEstoque = [];
 let produtoSelecionado = null;
 let bobinaCriada = null;
+let cores = [];
+let gramaturas = [];
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     carregarEstoque();
+    carregarCoresGramaturas();
     document.getElementById('form-bobina').addEventListener('submit', registrarBobina);
+    document.getElementById('form-cadastro-rapido').addEventListener('submit', cadastrarProdutoRapido);
 });
+
+// Carregar cores e gramaturas para cadastro rápido
+async function carregarCoresGramaturas() {
+    try {
+        // Carregar cores
+        const resCores = await fetch('/api/cores');
+        const dataCores = await resCores.json();
+        if (dataCores.success) {
+            cores = dataCores.data;
+            const selectCor = document.getElementById('quick-cor_id');
+            selectCor.innerHTML = '<option value="">Selecione...</option>' +
+                cores.map(cor => `<option value="${cor.id}">${cor.nome_cor}</option>`).join('');
+        }
+        
+        // Carregar gramaturas
+        const resGram = await fetch('/api/gramaturas');
+        const dataGram = await resGram.json();
+        if (dataGram.success) {
+            gramaturas = dataGram.data;
+            const selectGram = document.getElementById('quick-gramatura_id');
+            selectGram.innerHTML = '<option value="">Selecione...</option>' +
+                gramaturas.map(g => `<option value="${g.id}">${g.gramatura}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar cores/gramaturas:', error);
+    }
+}
 
 // Resetar busca ao mudar loja ou fabricante
 function resetarBusca() {
@@ -86,6 +117,113 @@ function mostrarProdutoEncontrado(produto) {
 function mostrarProdutoNaoEncontrado() {
     document.getElementById('produto-encontrado').style.display = 'none';
     document.getElementById('produto-nao-encontrado').style.display = 'block';
+}
+
+// Abrir modal de cadastro rápido de produto
+function abrirModalCadastroProduto() {
+    const loja = document.getElementById('loja').value;
+    const fabricante = document.getElementById('fabricante').value;
+    const codigo = document.getElementById('codigo').value;
+    
+    // Preencher dados no modal
+    document.getElementById('quick-loja').textContent = loja;
+    document.getElementById('quick-fabricante').textContent = fabricante;
+    document.getElementById('quick-codigo').textContent = codigo;
+    
+    // Mostrar modal
+    document.getElementById('modal-cadastro-produto').style.display = 'flex';
+}
+
+// Fechar modal de cadastro de produto
+function fecharModalCadastroProduto() {
+    document.getElementById('modal-cadastro-produto').style.display = 'none';
+    document.getElementById('form-cadastro-rapido').reset();
+}
+
+// Toggle campos do cadastro rápido
+function toggleCamposTecidoRapido() {
+    const tipoTecido = document.getElementById('quick-tipo_tecido').value;
+    const camposNormal = document.getElementById('quick-campos-normal');
+    const camposBandoY = document.getElementById('quick-campos-bando-y');
+    
+    if (tipoTecido === 'Bando Y') {
+        camposNormal.style.display = 'none';
+        camposBandoY.style.display = 'grid';
+        
+        // Remover required dos campos normais
+        document.getElementById('quick-largura_sem_costura').removeAttribute('required');
+        document.getElementById('quick-tipo_bainha').removeAttribute('required');
+        document.getElementById('quick-largura_final').removeAttribute('required');
+        
+        // Adicionar required aos campos Bando Y
+        document.getElementById('quick-largura_maior').setAttribute('required', 'required');
+        document.getElementById('quick-largura_y').setAttribute('required', 'required');
+    } else {
+        camposNormal.style.display = 'grid';
+        camposBandoY.style.display = 'none';
+        
+        // Adicionar required aos campos normais
+        document.getElementById('quick-largura_sem_costura').setAttribute('required', 'required');
+        document.getElementById('quick-tipo_bainha').setAttribute('required', 'required');
+        document.getElementById('quick-largura_final').setAttribute('required', 'required');
+        
+        // Remover required dos campos Bando Y
+        document.getElementById('quick-largura_maior').removeAttribute('required');
+        document.getElementById('quick-largura_y').removeAttribute('required');
+    }
+}
+
+// Cadastrar produto rapidamente
+async function cadastrarProdutoRapido(e) {
+    e.preventDefault();
+    
+    const loja = document.getElementById('loja').value;
+    const fabricante = document.getElementById('fabricante').value;
+    const codigo = document.getElementById('codigo').value;
+    const tipoTecido = document.getElementById('quick-tipo_tecido').value;
+    
+    const produto = {
+        loja: loja,
+        codigo: codigo,
+        cor_id: parseInt(document.getElementById('quick-cor_id').value),
+        gramatura_id: parseInt(document.getElementById('quick-gramatura_id').value),
+        fabricante: fabricante,
+        tipo_tecido: tipoTecido
+    };
+    
+    // Adicionar campos específicos conforme o tipo
+    if (tipoTecido === 'Bando Y') {
+        produto.largura_maior = parseFloat(document.getElementById('quick-largura_maior').value);
+        produto.largura_y = parseFloat(document.getElementById('quick-largura_y').value);
+    } else {
+        produto.largura_sem_costura = parseFloat(document.getElementById('quick-largura_sem_costura').value);
+        produto.tipo_bainha = document.getElementById('quick-tipo_bainha').value;
+        produto.largura_final = parseFloat(document.getElementById('quick-largura_final').value);
+    }
+    
+    try {
+        const response = await fetch('/api/produtos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(produto)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            mostrarAlerta('Produto cadastrado com sucesso!', 'success');
+            fecharModalCadastroProduto();
+            
+            // Buscar produto novamente
+            await buscarProduto();
+        } else {
+            mostrarAlerta(data.error || 'Erro ao cadastrar produto', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao cadastrar produto:', error);
+        mostrarAlerta('Erro ao cadastrar produto: ' + error.message, 'danger');
+    }
 }
 
 // Registrar nova bobina

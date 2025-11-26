@@ -68,7 +68,10 @@
                 <!-- Alerta de Produto Não Encontrado -->
                 <div id="produto-nao-encontrado" class="alert alert-warning" style="display: none; margin-top: 15px;">
                     <h3 style="margin-top: 0;">⚠️ Produto não encontrado!</h3>
-                    <p>Este código não existe no cadastro. <a href="/produtos.html" target="_blank">Clique aqui para cadastrar o produto primeiro</a>.</p>
+                    <p>Este código não existe no cadastro.</p>
+                    <button type="button" class="btn btn-primary" onclick="abrirModalCadastroProduto()">
+                        ➕ Cadastrar Produto Agora
+                    </button>
                 </div>
 
                 <div class="form-row" style="margin-top: 15px;">
@@ -121,6 +124,87 @@
                 <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
                 <button class="btn btn-primary" onclick="imprimirEtiqueta()">🖨️ Imprimir Etiqueta</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cadastro Rápido de Produto -->
+    <div id="modal-cadastro-produto" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 700px;">
+            <h2>➕ Cadastrar Novo Produto</h2>
+            <form id="form-cadastro-rapido">
+                <div class="alert alert-info">
+                    <strong>Dados pré-preenchidos:</strong><br>
+                    Loja: <span id="quick-loja"></span> | 
+                    Fabricante: <span id="quick-fabricante"></span> | 
+                    Código: <span id="quick-codigo"></span>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="quick-cor_id">Cor *</label>
+                        <select class="form-control" id="quick-cor_id" required>
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="quick-gramatura_id">Gramatura *</label>
+                        <select class="form-control" id="quick-gramatura_id" required>
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="quick-tipo_tecido">Tipo de Tecido *</label>
+                        <select class="form-control" id="quick-tipo_tecido" required onchange="toggleCamposTecidoRapido()">
+                            <option value="Normal">Normal</option>
+                            <option value="Bando Y">Bando Y</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Campos para Tecido Normal -->
+                <div id="quick-campos-normal" class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="quick-largura_sem_costura">Largura sem costura (cm) *</label>
+                        <input type="number" class="form-control" id="quick-largura_sem_costura" step="0.01" min="0" placeholder="Ex: 300">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="quick-tipo_bainha">Tipo de Bainha *</label>
+                        <select class="form-control" id="quick-tipo_bainha">
+                            <option value="">Selecione...</option>
+                            <option value="Sem Bainha">Sem Bainha</option>
+                            <option value="Cano/Cano">Cano/Cano</option>
+                            <option value="Cano/Arame">Cano/Arame</option>
+                            <option value="Arame/Arame">Arame/Arame</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="quick-largura_final">Largura Final (cm) *</label>
+                        <input type="number" class="form-control" id="quick-largura_final" step="0.01" min="0" placeholder="Ex: 298.5">
+                    </div>
+                </div>
+
+                <!-- Campos para Bando Y -->
+                <div id="quick-campos-bando-y" class="form-row" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="quick-largura_maior">Largura Maior (cm) *</label>
+                        <input type="number" class="form-control" id="quick-largura_maior" step="0.01" min="0" placeholder="Ex: 350">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="quick-largura_y">Largura Y (cm) *</label>
+                        <input type="number" class="form-control" id="quick-largura_y" step="0.01" min="0" placeholder="Ex: 200">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalCadastroProduto()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">✅ Salvar e Continuar</button>
+                </div>
+            </form>
         </div>
     </div>
 

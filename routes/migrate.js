@@ -208,4 +208,42 @@ router.post('/create-bobinas-table', async (req, res) => {
     }
 });
 
+// Endpoint para adicionar coluna codigo_interno em bobinas
+router.post('/fix-bobinas-codigo-interno', async (req, res) => {
+    try {
+        // Verificar se a coluna existe
+        const [columns] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'bobinas' 
+            AND COLUMN_NAME = 'codigo_interno'
+        `);
+        
+        if (columns.length === 0) {
+            // Adicionar coluna
+            await db.query(`
+                ALTER TABLE bobinas 
+                ADD COLUMN codigo_interno VARCHAR(20) UNIQUE NOT NULL AFTER id
+            `);
+            
+            res.json({ 
+                success: true, 
+                message: 'Coluna codigo_interno adicionada com sucesso!' 
+            });
+        } else {
+            res.json({ 
+                success: true, 
+                message: 'Coluna codigo_interno já existe' 
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao adicionar coluna:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;
