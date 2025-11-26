@@ -266,59 +266,40 @@ router.get('/check-bobinas-table', async (req, res) => {
     }
 });
 
-// Endpoint para adicionar colunas faltantes em bobinas
-router.post('/fix-bobinas-complete', async (req, res) => {
+// Endpoint para recriar tabela bobinas completamente
+router.post('/recreate-bobinas-table', async (req, res) => {
     try {
-        const operations = [];
+        // Dropar tabela se existir
+        await db.query('DROP TABLE IF EXISTS bobinas');
         
-        // Verificar e adicionar nota_fiscal
-        const [notaFiscalExists] = await db.query(`
-            SELECT COLUMN_NAME 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE() 
-            AND TABLE_NAME = 'bobinas' 
-            AND COLUMN_NAME = 'nota_fiscal'
+        // Criar tabela nova
+        await db.query(`
+            CREATE TABLE bobinas (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                codigo_interno VARCHAR(20) UNIQUE NOT NULL COMMENT 'Código único da bobina (ex: CTV-2024-00001)',
+                nota_fiscal VARCHAR(50) NOT NULL COMMENT 'Número da nota fiscal',
+                loja ENUM('Cortinave', 'BN') NOT NULL COMMENT 'Loja de destino',
+                produto_id INT NOT NULL COMMENT 'Referência ao produto',
+                metragem_inicial DECIMAL(10,2) NOT NULL COMMENT 'Metragem inicial da bobina em metros',
+                metragem_atual DECIMAL(10,2) NOT NULL COMMENT 'Metragem atual após cortes',
+                observacoes TEXT COMMENT 'Observações adicionais',
+                status ENUM('Disponível', 'Em uso', 'Esgotada') DEFAULT 'Disponível' COMMENT 'Status da bobina',
+                data_entrada DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de entrada da bobina',
+                FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE RESTRICT,
+                INDEX idx_codigo_interno (codigo_interno),
+                INDEX idx_loja (loja),
+                INDEX idx_produto (produto_id),
+                INDEX idx_status (status),
+                INDEX idx_data_entrada (data_entrada)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tabela de bobinas de lonas'
         `);
         
-        if (notaFiscalExists.length === 0) {
-            await db.query(`
-                ALTER TABLE bobinas 
-                ADD COLUMN nota_fiscal VARCHAR(50) NOT NULL AFTER codigo_interno
-            `);
-            operations.push('Adicionada coluna nota_fiscal');
-        }
-        
-        // Verificar e adicionar loja
-        const [lojaExists] = await db.query(`
-            SELECT COLUMN_NAME 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE() 
-            AND TABLE_NAME = 'bobinas' 
-            AND COLUMN_NAME = 'loja'
-        `);
-        
-        if (lojaExists.length === 0) {
-            await db.query(`
-                ALTER TABLE bobinas 
-                ADD COLUMN loja ENUM('Cortinave', 'BN') NOT NULL AFTER nota_fiscal
-            `);
-            operations.push('Adicionada coluna loja');
-        }
-        
-        if (operations.length > 0) {
-            res.json({ 
-                success: true, 
-                message: 'Colunas adicionadas com sucesso!',
-                operations: operations
-            });
-        } else {
-            res.json({ 
-                success: true, 
-                message: 'Todas as colunas já existem'
-            });
-        }
+        res.json({ 
+            success: true, 
+            message: 'Tabela bobinas recriada com sucesso!' 
+        });
     } catch (error) {
-        console.error('Erro ao adicionar colunas:', error);
+        console.error('Erro ao recriar tabela:', error);
         res.status(500).json({ 
             success: false, 
             error: error.message 
