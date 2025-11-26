@@ -36,6 +36,9 @@ exports.criarProduto = async (req, res) => {
         largura_y
     } = req.body;
 
+    console.log('=== CRIAR PRODUTO ===');
+    console.log('Dados recebidos:', JSON.stringify(req.body, null, 2));
+
     if (!loja || !codigo || !cor_id || !gramatura_id || !fabricante) {
         return res.status(400).json({ success: false, error: 'Campos obrigatórios: loja, código, cor, gramatura e fabricante' });
     }
@@ -48,6 +51,10 @@ exports.criarProduto = async (req, res) => {
     } else {
         if (!largura_sem_costura || !tipo_bainha || !largura_final) {
             return res.status(400).json({ success: false, error: 'Para tecido normal é necessário informar: Largura sem costura, Tipo de bainha e Largura final' });
+        }
+        // Validar que largura final não pode ser maior que largura sem costura
+        if (parseFloat(largura_final) > parseFloat(largura_sem_costura)) {
+            return res.status(400).json({ success: false, error: 'Largura final não pode ser maior que largura sem costura' });
         }
     }
 
@@ -75,9 +82,11 @@ exports.criarProduto = async (req, res) => {
             ]
         );
 
+        console.log('Produto criado com sucesso, ID:', result.insertId);
         res.json({ success: true, message: 'Produto criado com sucesso', id: result.insertId });
     } catch (error) {
         console.error('Erro ao criar produto:', error);
+        console.error('Stack:', error.stack);
         res.status(500).json({ success: false, error: error.message });
     }
 };

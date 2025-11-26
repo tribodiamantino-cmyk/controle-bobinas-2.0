@@ -69,4 +69,25 @@ router.post('/remove-largura-total', async (req, res) => {
     }
 });
 
+// Endpoint para adicionar "Sem Bainha" ao ENUM tipo_bainha
+router.post('/add-sem-bainha', async (req, res) => {
+    try {
+        await db.query(`
+            ALTER TABLE produtos 
+            MODIFY COLUMN tipo_bainha ENUM('Sem Bainha', 'Cano/Cano', 'Cano/Arame', 'Arame/Arame')
+        `);
+        
+        res.json({ 
+            success: true, 
+            message: 'Opção "Sem Bainha" adicionada com sucesso!' 
+        });
+    } catch (error) {
+        console.error('Erro ao atualizar ENUM:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;

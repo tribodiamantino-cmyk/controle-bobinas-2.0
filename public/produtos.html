@@ -94,6 +94,7 @@
                         <label class="form-label" for="tipo_bainha">Tipo de Bainha *</label>
                         <select class="form-control" id="tipo_bainha">
                             <option value="">Selecione...</option>
+                            <option value="Sem Bainha">Sem Bainha</option>
                             <option value="Cano/Cano">Cano/Cano</option>
                             <option value="Cano/Arame">Cano/Arame</option>
                             <option value="Arame/Arame">Arame/Arame</option>
@@ -102,7 +103,8 @@
 
                     <div class="form-group">
                         <label class="form-label" for="largura_final">Largura Final (cm) *</label>
-                        <input type="number" class="form-control" id="largura_final" step="0.01" min="0" placeholder="Ex: 298.5">
+                        <input type="number" class="form-control" id="largura_final" step="0.01" min="0" placeholder="Ex: 298.5" onchange="validarLarguraFinal()">
+                        <small id="erro-largura-final" style="color: red; display: none;">Largura final não pode ser maior que largura sem costura</small>
                     </div>
                 </div>
 

@@ -12,6 +12,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('form-produto').addEventListener('submit', cadastrarProduto);
 });
 
+// Validar largura final
+function validarLarguraFinal() {
+    const larguraSemCostura = parseFloat(document.getElementById('largura_sem_costura').value);
+    const larguraFinal = parseFloat(document.getElementById('largura_final').value);
+    const erroMsg = document.getElementById('erro-largura-final');
+    
+    if (larguraFinal && larguraSemCostura && larguraFinal > larguraSemCostura) {
+        erroMsg.style.display = 'block';
+        document.getElementById('largura_final').style.borderColor = 'red';
+        return false;
+    } else {
+        erroMsg.style.display = 'none';
+        document.getElementById('largura_final').style.borderColor = '';
+        return true;
+    }
+}
+
 // Alternar campos conforme tipo de tecido
 function toggleCamposTecido() {
     const tipoTecido = document.getElementById('tipo_tecido').value;
@@ -162,6 +179,12 @@ async function cadastrarProduto(e) {
     e.preventDefault();
     
     const tipoTecido = document.getElementById('tipo_tecido').value;
+    
+    // Validar largura final se for tecido normal
+    if (tipoTecido !== 'Bando Y' && !validarLarguraFinal()) {
+        mostrarAlerta('Largura final não pode ser maior que largura sem costura', 'danger');
+        return;
+    }
     
     const produto = {
         loja: document.getElementById('loja').value,
