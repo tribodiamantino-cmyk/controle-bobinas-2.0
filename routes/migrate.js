@@ -550,4 +550,127 @@ router.post('/add-retalhos-system', async (req, res) => {
     }
 });
 
+// Endpoint para criar sistema de ordens de corte
+router.post('/add-ordens-corte-system', async (req, res) => {
+    try {
+        // 1. Criar tabela planos_corte
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS planos_corte (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                codigo_plano VARCHAR(50) UNIQUE NOT NULL,
+                cliente VARCHAR(255) NOT NULL,
+                aviario VARCHAR(100) NOT NULL,
+                status ENUM('planejamento', 'em_producao', 'finalizado') DEFAULT 'planejamento',
+                data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                data_finalizacao DATETIME NULL,
+                
+                INDEX idx_codigo (codigo_plano),
+                INDEX idx_cliente (cliente),
+                INDEX idx_status (status),
+                INDEX idx_data_criacao (data_criacao)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        console.log('✅ Tabela planos_corte criada/verificada');
+        
+        // 2. Criar tabela itens_plano_corte
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS itens_plano_corte (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                plano_corte_id INT NOT NULL,
+                produto_id INT NOT NULL,
+                metragem DECIMAL(10,2) NOT NULL,
+                observacoes TEXT,
+                ordem INT NOT NULL DEFAULT 0,
+                
+                FOREIGN KEY (plano_corte_id) REFERENCES planos_corte(id) ON DELETE CASCADE,
+                FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE RESTRICT,
+                
+                INDEX idx_plano (plano_corte_id),
+                INDEX idx_produto (produto_id),
+                INDEX idx_ordem (ordem)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        console.log('✅ Tabela itens_plano_corte criada/verificada');
+        
+        // 3. Criar tabela alocacoes_corte
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS alocacoes_corte (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                item_plano_corte_id INT NOT NULL,
+                tipo_origem ENUM('bobina', 'retalho') NOT NULL,
+                bobina_id INT NULL,
+                retalho_id INT NULL,
+                metragem_alocada DECIMAL(10,2) NOT NULL,
+                data_alocacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                confirmado BOOLEAN DEFAULT FALSE,
+                
+                FOREIGN KEY (item_plano_corte_id) REFERENCES itens_plano_corte(id) ON DELETE CASCADE,
+                FOREIGN KEY (bobina_id) REFERENCES bobinas(id) ON DELETE RESTRICT,
+                FOREIGN KEY (retalho_id) REFERENCES retalhos(id) ON DELETE RESTRICT,
+                
+                INDEX idx_item (item_plano_corte_id),
+                INDEX idx_bobina (bobina_id),
+                INDEX idx_retalho (retalho_id),
+                
+                CHECK (
+                    (tipo_origem = 'bobina' AND bobina_id IS NOT NULL AND retalho_id IS NULL) OR
+                    (tipo_origem = 'retalho' AND retalho_id IS NOT NULL AND bobina_id IS NULL)
+                )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        console.log('✅ Tabela alocacoes_corte criada/verificada');
+        
+        // 4. Adicionar campo metragem_reservada em bobinas (se não existir)
+        const [columnsBobinas] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'bobinas' 
+            AND COLUMN_NAME = 'metragem_reservada'
+        `);
+        
+        if (columnsBobinas.length === 0) {
+            await db.query(`
+                ALTER TABLE bobinas 
+                ADD COLUMN metragem_reservada DECIMAL(10,2) DEFAULT 0 
+                COMMENT 'Metragem reservada para ordens de corte em produção'
+            `);
+            console.log('✅ Campo metragem_reservada adicionado na tabela bobinas');
+        } else {
+            console.log('ℹ️ Campo metragem_reservada já existe em bobinas');
+        }
+        
+        // 5. Adicionar campo metragem_reservada em retalhos (se não existir)
+        const [columnsRetalhos] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'retalhos' 
+            AND COLUMN_NAME = 'metragem_reservada'
+        `);
+        
+        if (columnsRetalhos.length === 0) {
+            await db.query(`
+                ALTER TABLE retalhos 
+                ADD COLUMN metragem_reservada DECIMAL(10,2) DEFAULT 0 
+                COMMENT 'Metragem reservada para ordens de corte em produção'
+            `);
+            console.log('✅ Campo metragem_reservada adicionado na tabela retalhos');
+        } else {
+            console.log('ℹ️ Campo metragem_reservada já existe em retalhos');
+        }
+        
+        res.json({ 
+            success: true, 
+            message: 'Sistema de ordens de corte adicionado com sucesso!' 
+        });
+    } catch (error) {
+        console.error('Erro ao adicionar sistema de ordens de corte:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;
