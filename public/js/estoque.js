@@ -4,14 +4,148 @@ let produtoSelecionado = null;
 let bobinaCriada = null;
 let cores = [];
 let gramaturas = [];
+let filtrosVisiveis = false;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     carregarEstoque();
     carregarCoresGramaturas();
-    document.getElementById('form-bobina').addEventListener('submit', registrarBobina);
-    document.getElementById('form-cadastro-rapido').addEventListener('submit', cadastrarProdutoRapido);
+    
+    // Listeners de formulários
+    const formBobina = document.getElementById('form-bobina');
+    if (formBobina) {
+        formBobina.addEventListener('submit', registrarBobina);
+    }
+    
+    const formCadastroRapido = document.getElementById('form-cadastro-rapido');
+    if (formCadastroRapido) {
+        formCadastroRapido.addEventListener('submit', cadastrarProdutoRapido);
+    }
 });
+
+// Toggle dos filtros
+function toggleFiltros() {
+    const container = document.getElementById('filter-container');
+    const btn = document.getElementById('btn-toggle-filters');
+    
+    filtrosVisiveis = !filtrosVisiveis;
+    
+    if (filtrosVisiveis) {
+        container.style.display = 'block';
+        btn.textContent = '🔼 Ocultar Filtros';
+    } else {
+        container.style.display = 'none';
+        btn.textContent = '🔽 Mostrar Filtros';
+    }
+}
+
+// Abrir modal de nova bobina
+function abrirModalNovaBobina() {
+    const modalHTML = `
+        <div class="modal-overlay" id="modalNovaBobina" onclick="fecharModalNovaBobina(event)">
+            <div class="modal-dialog" style="max-width: 700px;" onclick="event.stopPropagation()">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">➕ Entrada de Nova Bobina</h5>
+                        <button type="button" class="close" onclick="fecharModalNovaBobina()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="form-bobina-modal" onsubmit="event.preventDefault(); registrarBobina(event);">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="nota_fiscal">Nota Fiscal *</label>
+                                    <input type="text" class="form-control" id="nota_fiscal" required placeholder="Ex: 12345">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="loja">Loja *</label>
+                                    <select class="form-control" id="loja" required onchange="resetarBusca()">
+                                        <option value="">Selecione...</option>
+                                        <option value="Cortinave">Cortinave</option>
+                                        <option value="BN">BN</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="fabricante">Fabricante *</label>
+                                    <select class="form-control" id="fabricante" required onchange="resetarBusca()">
+                                        <option value="">Selecione...</option>
+                                        <option value="Propex">Propex</option>
+                                        <option value="Textiloeste">Textiloeste</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="codigo">Código do Produto *</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" class="form-control" id="codigo" required placeholder="Ex: BR-001" onchange="buscarProduto()">
+                                        <button type="button" class="btn btn-secondary" onclick="buscarProduto()" title="Buscar produto">🔍</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card de Produto Encontrado -->
+                            <div id="produto-encontrado" class="alert alert-success" style="display: none; margin-top: 15px;">
+                                <h3 style="margin-top: 0;">✅ Produto Encontrado!</h3>
+                                <div id="produto-dados"></div>
+                            </div>
+
+                            <!-- Alerta de Produto Não Encontrado -->
+                            <div id="produto-nao-encontrado" class="alert alert-warning" style="display: none; margin-top: 15px;">
+                                <h3 style="margin-top: 0;">⚠️ Produto não encontrado!</h3>
+                                <p>Este código não existe no cadastro.</p>
+                                <button type="button" class="btn btn-primary" onclick="abrirModalCadastroProduto()">
+                                    ➕ Cadastrar Produto Agora
+                                </button>
+                            </div>
+
+                            <div class="form-row" style="margin-top: 15px;">
+                                <div class="form-group">
+                                    <label class="form-label" for="metragem_inicial">Metragem Linear (m) *</label>
+                                    <input type="number" class="form-control" id="metragem_inicial" step="0.01" min="0.01" required placeholder="Ex: 500.00">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="observacoes">Observações</label>
+                                    <input type="text" class="form-control" id="observacoes" placeholder="Informações adicionais (opcional)">
+                                </div>
+                            </div>
+
+                            <div class="modal-footer" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                <button type="button" class="btn btn-secondary" onclick="fecharModalNovaBobina()">Cancelar</button>
+                                <button type="submit" class="btn btn-primary" id="btn-salvar" disabled>✅ Registrar Entrada</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal existente se houver
+    const modalExistente = document.getElementById('modalNovaBobina');
+    if (modalExistente) {
+        modalExistente.remove();
+    }
+    
+    // Adicionar e mostrar modal
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.getElementById('modalNovaBobina').style.display = 'flex';
+}
+
+// Fechar modal de nova bobina
+function fecharModalNovaBobina(event) {
+    if (event && event.target.closest('.modal-dialog') && !event.target.classList.contains('modal-overlay')) {
+        return;
+    }
+    const modal = document.getElementById('modalNovaBobina');
+    if (modal) {
+        modal.remove();
+    }
+    produtoSelecionado = null;
+}
 
 // Carregar cores e gramaturas para cadastro rápido
 async function carregarCoresGramaturas() {
