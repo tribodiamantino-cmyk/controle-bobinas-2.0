@@ -30,6 +30,7 @@ const coresRoutes = require('./routes/cores');
 const gramaturasRoutes = require('./routes/gramaturas');
 const produtosRoutes = require('./routes/produtos');
 const bobinasRoutes = require('./routes/bobinas');
+const localizacaoRoutes = require('./routes/localizacao');
 const setupRoutes = require('./routes/setup');
 const migrateRoutes = require('./routes/migrate');
 
@@ -38,6 +39,7 @@ app.use('/api/cores', coresRoutes);
 app.use('/api/gramaturas', gramaturasRoutes);
 app.use('/api/produtos', produtosRoutes);
 app.use('/api/bobinas', bobinasRoutes);
+app.use('/api/localizacao', localizacaoRoutes);
 app.use('/api/database', setupRoutes);
 app.use('/api/database', migrateRoutes);
 

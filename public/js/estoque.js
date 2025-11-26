@@ -570,7 +570,7 @@ function renderizarBobinas(produtoId, bobinas) {
                               bobina.status === 'Em uso' ? '🟡' : '🔴';
             
             return `
-                <div class="bobina-item">
+                <div class="bobina-item" id="bobina-item-${bobina.id}">
                     <div class="bobina-info">
                         <div class="bobina-codigo">
                             <strong>🏷️ ${bobina.codigo_interno}</strong> | 📄 NF: ${bobina.nota_fiscal}
@@ -578,6 +578,22 @@ function renderizarBobinas(produtoId, bobinas) {
                         <div class="bobina-metragem">
                             📏 ${parseFloat(bobina.metragem_atual).toFixed(2)}m de ${parseFloat(bobina.metragem_inicial).toFixed(2)}m | 
                             ${statusIcon} <span class="badge badge-${statusClass}">${bobina.status}</span>
+                        </div>
+                        <div class="bobina-localizacao" id="loc-display-${bobina.id}">
+                            📍 Localização: 
+                            <span class="loc-value" id="loc-value-${bobina.id}">
+                                ${bobina.localizacao_atual || '<em>Não definida</em>'}
+                            </span>
+                            <button class="btn-edit-loc" onclick="editarLocalizacao(${bobina.id}, '${bobina.localizacao_atual || ''}')" title="Editar localização">✏️</button>
+                            ${bobina.localizacao_atual ? `<button class="btn-history" onclick="verHistoricoLocalizacao(${bobina.id})" title="Ver histórico">📜</button>` : ''}
+                        </div>
+                        <div class="bobina-localizacao-edit" id="loc-edit-${bobina.id}" style="display: none;">
+                            📍 Localização: 
+                            <input type="text" class="input-localizacao" id="input-loc-${bobina.id}" 
+                                   placeholder="0000-X-0000" maxlength="12" 
+                                   onkeyup="aplicarMascaraLocalizacao(${bobina.id})">
+                            <button class="btn btn-sm btn-success" onclick="salvarLocalizacao(${bobina.id})">✅</button>
+                            <button class="btn btn-sm btn-secondary" onclick="cancelarEdicaoLocalizacao(${bobina.id})">❌</button>
                         </div>
                         <div class="bobina-data">
                             📅 ${new Date(bobina.data_entrada).toLocaleDateString('pt-BR')} | 
@@ -870,4 +886,169 @@ function mostrarAlerta(mensagem, tipo = 'success') {
     setTimeout(() => {
         container.innerHTML = '';
     }, 5000);
+}
+
+// === SISTEMA DE LOCALIZAÇÃO ===
+
+// Editar localização
+function editarLocalizacao(bobinaId, localizacaoAtual) {
+    // Esconder exibição, mostrar edição
+    document.getElementById(`loc-display-${bobinaId}`).style.display = 'none';
+    document.getElementById(`loc-edit-${bobinaId}`).style.display = 'block';
+    
+    // Preencher input com valor atual
+    const input = document.getElementById(`input-loc-${bobinaId}`);
+    input.value = localizacaoAtual || '';
+    input.focus();
+}
+
+// Cancelar edição
+function cancelarEdicaoLocalizacao(bobinaId) {
+    document.getElementById(`loc-display-${bobinaId}`).style.display = 'block';
+    document.getElementById(`loc-edit-${bobinaId}`).style.display = 'none';
+}
+
+// Aplicar máscara de localização: 0000-X-0000
+function aplicarMascaraLocalizacao(bobinaId) {
+    const input = document.getElementById(`input-loc-${bobinaId}`);
+    let valor = input.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
+    
+    // Aplicar máscara
+    if (valor.length <= 4) {
+        input.value = valor;
+    } else if (valor.length <= 5) {
+        input.value = valor.slice(0, 4) + '-' + valor.slice(4);
+    } else {
+        input.value = valor.slice(0, 4) + '-' + valor.slice(4, 5) + '-' + valor.slice(5, 9);
+    }
+}
+
+// Validar formato de localização
+function validarLocalizacao(localizacao) {
+    if (!localizacao) return true; // Vazio é permitido
+    const regex = /^\d{1,4}-[A-Z]-\d{1,4}$/;
+    return regex.test(localizacao);
+}
+
+// Salvar localização
+async function salvarLocalizacao(bobinaId) {
+    const input = document.getElementById(`input-loc-${bobinaId}`);
+    const novaLocalizacao = input.value.trim();
+    
+    // Validar formato
+    if (novaLocalizacao && !validarLocalizacao(novaLocalizacao)) {
+        mostrarAlerta('Formato inválido! Use: 0000-X-0000 (ex: 0150-B-0320)', 'danger');
+        input.focus();
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/localizacao/${bobinaId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ localizacao: novaLocalizacao || null })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Atualizar exibição
+            const locValueSpan = document.getElementById(`loc-value-${bobinaId}`);
+            locValueSpan.innerHTML = novaLocalizacao || '<em>Não definida</em>';
+            
+            // Atualizar botão de histórico
+            const locDisplay = document.getElementById(`loc-display-${bobinaId}`);
+            const btnHistory = locDisplay.querySelector('.btn-history');
+            
+            if (novaLocalizacao && !btnHistory) {
+                // Adicionar botão de histórico se não existir
+                const newBtn = document.createElement('button');
+                newBtn.className = 'btn-history';
+                newBtn.onclick = () => verHistoricoLocalizacao(bobinaId);
+                newBtn.title = 'Ver histórico';
+                newBtn.textContent = '📜';
+                locDisplay.appendChild(newBtn);
+            }
+            
+            cancelarEdicaoLocalizacao(bobinaId);
+            mostrarAlerta('Localização atualizada com sucesso!', 'success');
+        } else {
+            mostrarAlerta(data.error || 'Erro ao atualizar localização', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao salvar localização:', error);
+        mostrarAlerta('Erro ao salvar localização', 'danger');
+    }
+}
+
+// Ver histórico de localizações
+async function verHistoricoLocalizacao(bobinaId) {
+    try {
+        const response = await fetch(`/api/localizacao/historico/${bobinaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarModalHistorico(bobinaId, data.data);
+        } else {
+            mostrarAlerta('Erro ao carregar histórico', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        mostrarAlerta('Erro ao carregar histórico', 'danger');
+    }
+}
+
+// Mostrar modal com histórico
+function mostrarModalHistorico(bobinaId, historico) {
+    const modalHtml = `
+        <div id="modal-historico-loc" class="modal" style="display: flex;">
+            <div class="modal-content">
+                <h2>📜 Histórico de Localizações</h2>
+                <div style="margin: 20px 0;">
+                    ${historico.length === 0 ? 
+                        '<p>Nenhuma movimentação registrada.</p>' :
+                        `<table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>De</th>
+                                    <th>Para</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${historico.map(h => `
+                                    <tr>
+                                        <td>${new Date(h.data_movimentacao).toLocaleString('pt-BR')}</td>
+                                        <td>${h.localizacao_anterior || '<em>Não definida</em>'}</td>
+                                        <td>${h.localizacao_nova || '<em>Não definida</em>'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>`
+                    }
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="fecharModalHistorico()">Fechar</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Adicionar ao body
+    const existingModal = document.getElementById('modal-historico-loc');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// Fechar modal de histórico
+function fecharModalHistorico() {
+    const modal = document.getElementById('modal-historico-loc');
+    if (modal) {
+        modal.remove();
+    }
 }

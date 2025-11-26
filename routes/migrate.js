@@ -421,4 +421,55 @@ router.post('/seed-database', async (req, res) => {
     }
 });
 
+// Endpoint para adicionar sistema de localização
+router.post('/add-localizacao-system', async (req, res) => {
+    try {
+        // 1. Adicionar coluna localizacao_atual na tabela bobinas (se não existir)
+        const [columns] = await db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'bobinas' 
+            AND COLUMN_NAME = 'localizacao_atual'
+        `);
+        
+        if (columns.length === 0) {
+            await db.query(`
+                ALTER TABLE bobinas 
+                ADD COLUMN localizacao_atual VARCHAR(12) NULL 
+                COMMENT 'Localização física da bobina no formato 0000-X-0000'
+            `);
+            console.log('✅ Coluna localizacao_atual adicionada na tabela bobinas');
+        } else {
+            console.log('ℹ️ Coluna localizacao_atual já existe');
+        }
+        
+        // 2. Criar tabela historico_localizacao (se não existir)
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS historico_localizacao (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                bobina_id INT NOT NULL,
+                localizacao_anterior VARCHAR(12) NULL,
+                localizacao_nova VARCHAR(12) NULL,
+                data_movimentacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (bobina_id) REFERENCES bobinas(id) ON DELETE CASCADE,
+                INDEX idx_bobina_id (bobina_id),
+                INDEX idx_data (data_movimentacao)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        console.log('✅ Tabela historico_localizacao criada/verificada');
+        
+        res.json({ 
+            success: true, 
+            message: 'Sistema de localização adicionado com sucesso!' 
+        });
+    } catch (error) {
+        console.error('Erro ao adicionar sistema de localização:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;

@@ -149,7 +149,8 @@ exports.listarBobinasPorProduto = async (req, res) => {
                 p.codigo,
                 p.fabricante,
                 c.nome_cor,
-                g.gramatura
+                g.gramatura,
+                b.localizacao_atual
             FROM bobinas b
             JOIN produtos p ON b.produto_id = p.id
             JOIN configuracoes_cores c ON p.cor_id = c.id
@@ -187,7 +188,8 @@ exports.buscarBobinaPorCodigo = async (req, res) => {
                 p.largura_maior,
                 p.largura_y,
                 c.nome_cor,
-                g.gramatura
+                g.gramatura,
+                b.localizacao_atual
             FROM bobinas b
             JOIN produtos p ON b.produto_id = p.id
             JOIN configuracoes_cores c ON p.cor_id = c.id
