@@ -2,9 +2,72 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs').promises;
+const db = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Função para executar migrations automaticamente
+async function runMigrations() {
+    try {
+        console.log('🔄 Verificando migrations...');
+
+        // Criar tabela de controle de migrations se não existir
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS migrations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL UNIQUE,
+                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Ler arquivos de migration
+        const migrationsDir = path.join(__dirname, 'migrations');
+        const files = await fs.readdir(migrationsDir);
+        const migrationFiles = files.filter(f => f.endsWith('.js')).sort();
+
+        let executedCount = 0;
+
+        for (const file of migrationFiles) {
+            // Verificar se já foi executada
+            const [rows] = await db.query(
+                'SELECT * FROM migrations WHERE name = ?',
+                [file]
+            );
+
+            if (rows.length > 0) {
+                continue;
+            }
+
+            console.log(`▶️  Executando ${file}...`);
+            
+            const migration = require(path.join(migrationsDir, file));
+            
+            // Executar migration
+            await migration.up({ query: db.query.bind(db) });
+            
+            // Registrar como executada
+            await db.query(
+                'INSERT INTO migrations (name) VALUES (?)',
+                [file]
+            );
+            
+            executedCount++;
+            console.log(`✅ ${file} - concluída`);
+        }
+
+        if (executedCount > 0) {
+            console.log(`✨ ${executedCount} migration(s) executada(s) com sucesso!`);
+        } else {
+            console.log('✓ Todas as migrations já estão atualizadas');
+        }
+
+    } catch (error) {
+        console.error('⚠️ Erro ao executar migrations:', error.message);
+        // Não interrompe a aplicação se a migration falhar
+    }
+}
 
 // Middleware
 app.use(cors());
@@ -58,8 +121,10 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
-    console.log(`📍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+// Executar migrations e iniciar servidor
+runMigrations().then(() => {
+    app.listen(PORT, () => {
+        console.log(`🚀 Servidor rodando na porta ${PORT}`);
+        console.log(`📍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    });
 });
