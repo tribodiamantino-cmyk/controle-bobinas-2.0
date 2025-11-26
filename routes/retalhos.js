@@ -14,6 +14,12 @@ router.get('/produto/:produto_id', retalhosController.listarRetalhosPorProduto);
 // Buscar retalho por código
 router.get('/codigo/:codigo_retalho', retalhosController.buscarRetalhoPorCodigo);
 
+// Atualizar retalho (principalmente localização)
+router.put('/:id', retalhosController.atualizarRetalho);
+
+// Histórico de localização
+router.get('/:id/historico-localizacao', retalhosController.obterHistoricoLocalizacao);
+
 // Excluir retalho
 router.delete('/:id', retalhosController.excluirRetalho);
 

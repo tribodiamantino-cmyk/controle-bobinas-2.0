@@ -516,16 +516,16 @@ function renderizarEstoque(produtos) {
     }).join('');
 }
 
-// Toggle expansão do produto (carregar bobinas)
+// Toggle expansão do produto (carregar bobinas e retalhos)
 async function toggleProduto(produtoId) {
     const bobinasContainer = document.getElementById(`bobinas-${produtoId}`);
     const btnExpand = document.getElementById(`btn-expand-${produtoId}`);
     
     if (bobinasContainer.style.display === 'none') {
-        // Expandir - carregar bobinas
+        // Expandir - carregar bobinas e retalhos
         bobinasContainer.style.display = 'block';
         btnExpand.textContent = '▲';
-        await carregarBobinasProduto(produtoId);
+        await carregarBobinasERetalhos(produtoId);
     } else {
         // Colapsar
         bobinasContainer.style.display = 'none';
@@ -533,80 +533,198 @@ async function toggleProduto(produtoId) {
     }
 }
 
-// Carregar bobinas de um produto
-async function carregarBobinasProduto(produtoId) {
+// Carregar bobinas e retalhos de um produto
+async function carregarBobinasERetalhos(produtoId) {
     try {
-        const response = await fetch(`/api/bobinas/produto/${produtoId}`);
-        const data = await response.json();
+        // Carregar bobinas e retalhos em paralelo
+        const [resBobinas, resRetalhos] = await Promise.all([
+            fetch(`/api/bobinas/produto/${produtoId}`),
+            fetch(`/api/retalhos/produto/${produtoId}`)
+        ]);
         
-        if (data.success) {
-            renderizarBobinas(produtoId, data.data);
+        const dataBobinas = await resBobinas.json();
+        const dataRetalhos = await resRetalhos.json();
+        
+        if (dataBobinas.success && dataRetalhos.success) {
+            renderizarBobinasERetalhos(produtoId, dataBobinas.data, dataRetalhos.data);
         }
         
     } catch (error) {
-        console.error('Erro ao carregar bobinas:', error);
+        console.error('Erro ao carregar bobinas e retalhos:', error);
         document.getElementById(`bobinas-${produtoId}`).innerHTML = 
-            '<div class="alert alert-danger">Erro ao carregar bobinas</div>';
+            '<div class="alert alert-danger">Erro ao carregar dados</div>';
     }
 }
 
-// Renderizar bobinas de um produto
-function renderizarBobinas(produtoId, bobinas) {
+// Renderizar bobinas e retalhos com sistema de abas
+function renderizarBobinasERetalhos(produtoId, bobinas, retalhos) {
     const container = document.getElementById(`bobinas-${produtoId}`);
     
-    if (bobinas.length === 0) {
-        container.innerHTML = '<div class="alert alert-warning">Nenhuma bobina encontrada</div>';
-        return;
-    }
+    const totalBobinas = bobinas.length;
+    const totalRetalhos = retalhos.length;
     
     container.innerHTML = `
+        <div class="abas-container">
+            <div class="abas-header">
+                <button class="aba-btn active" id="aba-bobinas-${produtoId}" onclick="mostrarAba(${produtoId}, 'bobinas')">
+                    📦 Bobinas (${totalBobinas})
+                </button>
+                <button class="aba-btn" id="aba-retalhos-${produtoId}" onclick="mostrarAba(${produtoId}, 'retalhos')">
+                    📐 Retalhos (${totalRetalhos})
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="abrirModalNovoRetalho(${produtoId})" style="margin-left: auto;">
+                    ➕ Novo Retalho
+                </button>
+            </div>
+            
+            <div class="aba-content active" id="content-bobinas-${produtoId}">
+                ${renderizarListaBobinas(bobinas)}
+            </div>
+            
+            <div class="aba-content" id="content-retalhos-${produtoId}" style="display: none;">
+                ${renderizarListaRetalhos(retalhos)}
+            </div>
+        </div>
+    `;
+}
+
+// Alternar entre abas
+function mostrarAba(produtoId, tipo) {
+    // Desativar todas as abas
+    document.getElementById(`aba-bobinas-${produtoId}`).classList.remove('active');
+    document.getElementById(`aba-retalhos-${produtoId}`).classList.remove('active');
+    document.getElementById(`content-bobinas-${produtoId}`).style.display = 'none';
+    document.getElementById(`content-retalhos-${produtoId}`).style.display = 'none';
+    
+    // Ativar aba selecionada
+    if (tipo === 'bobinas') {
+        document.getElementById(`aba-bobinas-${produtoId}`).classList.add('active');
+        document.getElementById(`content-bobinas-${produtoId}`).style.display = 'block';
+    } else {
+        document.getElementById(`aba-retalhos-${produtoId}`).classList.add('active');
+        document.getElementById(`content-retalhos-${produtoId}`).style.display = 'block';
+    }
+}
+
+// Renderizar lista de bobinas (função antiga renomeada)
+function renderizarListaBobinas(bobinas) {
+    if (bobinas.length === 0) {
+        return '<div class="alert alert-warning">Nenhuma bobina encontrada</div>';
+    }
+    
+    return `
         <div class="bobinas-header">
             <h4>📦 Bobinas Individuais:</h4>
         </div>
-        ${bobinas.map(bobina => {
-            const statusClass = bobina.status === 'Disponível' ? 'success' : 
-                               bobina.status === 'Em uso' ? 'warning' : 'danger';
-            const statusIcon = bobina.status === 'Disponível' ? '🟢' : 
-                              bobina.status === 'Em uso' ? '🟡' : '🔴';
-            
-            return `
-                <div class="bobina-item" id="bobina-item-${bobina.id}">
-                    <div class="bobina-info">
-                        <div class="bobina-codigo">
-                            <strong>🏷️ ${bobina.codigo_interno}</strong> | 📄 NF: ${bobina.nota_fiscal}
-                        </div>
-                        <div class="bobina-metragem">
-                            📏 ${parseFloat(bobina.metragem_atual).toFixed(2)}m de ${parseFloat(bobina.metragem_inicial).toFixed(2)}m | 
-                            ${statusIcon} <span class="badge badge-${statusClass}">${bobina.status}</span>
-                        </div>
-                        <div class="bobina-localizacao" id="loc-display-${bobina.id}">
-                            📍 Localização: 
-                            <span class="loc-value" id="loc-value-${bobina.id}">
-                                ${bobina.localizacao_atual || '<em>Não definida</em>'}
-                            </span>
-                            <button class="btn-edit-loc" onclick="editarLocalizacao(${bobina.id}, '${bobina.localizacao_atual || ''}')" title="Editar localização">✏️</button>
-                            ${bobina.localizacao_atual ? `<button class="btn-history" onclick="verHistoricoLocalizacao(${bobina.id})" title="Ver histórico">📜</button>` : ''}
-                        </div>
-                        <div class="bobina-localizacao-edit" id="loc-edit-${bobina.id}" style="display: none;">
-                            📍 Localização: 
-                            <input type="text" class="input-localizacao" id="input-loc-${bobina.id}" 
-                                   placeholder="0000-X-0000" maxlength="12" 
-                                   onkeyup="aplicarMascaraLocalizacao(${bobina.id})">
-                            <button class="btn btn-sm btn-success" onclick="salvarLocalizacao(${bobina.id})">✅</button>
-                            <button class="btn btn-sm btn-secondary" onclick="cancelarEdicaoLocalizacao(${bobina.id})">❌</button>
-                        </div>
-                        <div class="bobina-data">
-                            📅 ${new Date(bobina.data_entrada).toLocaleDateString('pt-BR')} | 
-                            💬 ${bobina.observacoes || 'Sem observações'}
-                        </div>
-                    </div>
-                    <div class="bobina-actions">
-                        <button class="btn btn-sm btn-secondary" onclick="imprimirEtiquetaBobina('${bobina.codigo_interno}')" title="Imprimir etiqueta">🖨️</button>
-                        <button class="btn btn-sm btn-danger" onclick="excluirBobina(${bobina.id})" title="Excluir bobina">🗑️</button>
-                    </div>
+        ${bobinas.map(bobina => renderizarItemBobina(bobina)).join('')}
+    `;
+}
+
+// Renderizar item individual de bobina
+function renderizarItemBobina(bobina) {
+    const statusClass = bobina.status === 'Disponível' ? 'success' : 
+                       bobina.status === 'Em uso' ? 'warning' : 'danger';
+    const statusIcon = bobina.status === 'Disponível' ? '🟢' : 
+                      bobina.status === 'Em uso' ? '🟡' : '🔴';
+    
+    return `
+        <div class="bobina-item" id="bobina-item-${bobina.id}">
+            <div class="bobina-info">
+                <div class="bobina-codigo">
+                    <strong>🏷️ ${bobina.codigo_interno}</strong> | 📄 NF: ${bobina.nota_fiscal}
                 </div>
-            `;
-        }).join('')}
+                <div class="bobina-metragem">
+                    📏 ${parseFloat(bobina.metragem_atual).toFixed(2)}m de ${parseFloat(bobina.metragem_inicial).toFixed(2)}m | 
+                    ${statusIcon} <span class="badge badge-${statusClass}">${bobina.status}</span>
+                </div>
+                <div class="bobina-localizacao" id="loc-display-${bobina.id}">
+                    📍 Localização: 
+                    <span class="loc-value" id="loc-value-${bobina.id}">
+                        ${bobina.localizacao_atual || '<em>Não definida</em>'}
+                    </span>
+                    <button class="btn-edit-loc" onclick="editarLocalizacao(${bobina.id}, '${bobina.localizacao_atual || ''}')" title="Editar localização">✏️</button>
+                    ${bobina.localizacao_atual ? `<button class="btn-history" onclick="verHistoricoLocalizacao(${bobina.id})" title="Ver histórico">📜</button>` : ''}
+                </div>
+                <div class="bobina-localizacao-edit" id="loc-edit-${bobina.id}" style="display: none;">
+                    📍 Localização: 
+                    <input type="text" class="input-localizacao" id="input-loc-${bobina.id}" 
+                           placeholder="0000-X-0000" maxlength="12" 
+                           onkeyup="aplicarMascaraLocalizacao(${bobina.id})">
+                    <button class="btn btn-sm btn-success" onclick="salvarLocalizacao(${bobina.id})">✅</button>
+                    <button class="btn btn-sm btn-secondary" onclick="cancelarEdicaoLocalizacao(${bobina.id})">❌</button>
+                </div>
+                <div class="bobina-data">
+                    📅 ${new Date(bobina.data_entrada).toLocaleDateString('pt-BR')} | 
+                    💬 ${bobina.observacoes || 'Sem observações'}
+                </div>
+            </div>
+            <div class="bobina-actions">
+                <button class="btn btn-sm btn-warning" onclick="converterEmRetalho(${bobina.id}, '${bobina.codigo_interno}')" title="Converter em retalho">📐</button>
+                <button class="btn btn-sm btn-secondary" onclick="imprimirEtiquetaBobina('${bobina.codigo_interno}')" title="Imprimir etiqueta">🖨️</button>
+                <button class="btn btn-sm btn-danger" onclick="excluirBobina(${bobina.id})" title="Excluir bobina">🗑️</button>
+            </div>
+        </div>
+    `;
+}
+
+// Renderizar lista de retalhos
+function renderizarListaRetalhos(retalhos) {
+    if (retalhos.length === 0) {
+        return '<div class="alert alert-warning">Nenhum retalho encontrado</div>';
+    }
+    
+    return `
+        <div class="bobinas-header">
+            <h4>📐 Retalhos Individuais:</h4>
+        </div>
+        ${retalhos.map(retalho => renderizarItemRetalho(retalho)).join('')}
+    `;
+}
+
+// Renderizar item individual de retalho
+function renderizarItemRetalho(retalho) {
+    const statusClass = retalho.status === 'Disponível' ? 'success' : 
+                       retalho.status === 'Em uso' ? 'warning' : 'danger';
+    const statusIcon = retalho.status === 'Disponível' ? '🟢' : 
+                      retalho.status === 'Em uso' ? '🟡' : '🔴';
+    
+    return `
+        <div class="bobina-item retalho-item" id="retalho-item-${retalho.id}">
+            <div class="bobina-info">
+                <div class="bobina-codigo">
+                    <strong>🏷️ ${retalho.codigo_retalho}</strong>
+                    ${retalho.bobina_origem_id ? ` <span class="badge badge-info" title="Convertido de bobina">♻️ Convertido</span>` : ''}
+                </div>
+                <div class="bobina-metragem">
+                    📏 ${parseFloat(retalho.metragem).toFixed(2)}m | 
+                    ${statusIcon} <span class="badge badge-${statusClass}">${retalho.status}</span>
+                </div>
+                <div class="bobina-localizacao" id="loc-display-ret-${retalho.id}">
+                    📍 Localização: 
+                    <span class="loc-value" id="loc-value-ret-${retalho.id}">
+                        ${retalho.localizacao_atual || '<em>Não definida</em>'}
+                    </span>
+                    <button class="btn-edit-loc" onclick="editarLocalizacaoRetalho(${retalho.id}, '${retalho.localizacao_atual || ''}')" title="Editar localização">✏️</button>
+                    ${retalho.localizacao_atual ? `<button class="btn-history" onclick="verHistoricoLocalizacaoRetalho(${retalho.id})" title="Ver histórico">📜</button>` : ''}
+                </div>
+                <div class="bobina-localizacao-edit" id="loc-edit-ret-${retalho.id}" style="display: none;">
+                    📍 Localização: 
+                    <input type="text" class="input-localizacao" id="input-loc-ret-${retalho.id}" 
+                           placeholder="0000-X-0000" maxlength="12" 
+                           onkeyup="aplicarMascaraLocalizacaoRetalho(${retalho.id})">
+                    <button class="btn btn-sm btn-success" onclick="salvarLocalizacaoRetalho(${retalho.id})">✅</button>
+                    <button class="btn btn-sm btn-secondary" onclick="cancelarEdicaoLocalizacaoRetalho(${retalho.id})">❌</button>
+                </div>
+                <div class="bobina-data">
+                    📅 ${new Date(retalho.data_entrada).toLocaleDateString('pt-BR')} | 
+                    💬 ${retalho.observacoes || 'Sem observações'}
+                </div>
+            </div>
+            <div class="bobina-actions">
+                <button class="btn btn-sm btn-secondary" onclick="imprimirEtiquetaRetalho('${retalho.codigo_retalho}')" title="Imprimir etiqueta">🖨️</button>
+                <button class="btn btn-sm btn-danger" onclick="excluirRetalho(${retalho.id})" title="Excluir retalho">🗑️</button>
+            </div>
+        </div>
     `;
 }
 
@@ -651,6 +769,307 @@ async function excluirBobina(id) {
         console.error('Erro ao excluir bobina:', error);
         mostrarAlerta('Erro ao excluir bobina', 'danger');
     }
+}
+
+// === FUNÇÕES DE RETALHOS ===
+
+// Converter bobina em retalho
+async function converterEmRetalho(bobinaId, codigoInterno) {
+    const confirmacao = confirm(
+        `⚠️ ATENÇÃO: Esta ação é irreversível!\n\n` +
+        `Você está convertendo a bobina ${codigoInterno} em RETALHO.\n\n` +
+        `Após a conversão:\n` +
+        `✓ Um retalho será criado com a metragem atual\n` +
+        `✓ A bobina será marcada como convertida\n` +
+        `✓ A bobina não aparecerá mais na lista de bobinas\n\n` +
+        `Deseja continuar?`
+    );
+    
+    if (!confirmacao) return;
+    
+    try {
+        const response = await fetch(`/api/retalhos/converter-bobina/${bobinaId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            mostrarAlerta(`✅ Bobina convertida em retalho: ${data.data.codigo_retalho}`, 'success');
+            // Recarregar a lista do produto
+            const produtoId = document.querySelector(`#bobina-item-${bobinaId}`)
+                .closest('[id^="bobinas-"]')
+                .id.replace('bobinas-', '');
+            await carregarBobinasERetalhos(produtoId);
+        } else {
+            mostrarAlerta(data.error || 'Erro ao converter bobina', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao converter bobina:', error);
+        mostrarAlerta('Erro ao converter bobina em retalho', 'danger');
+    }
+}
+
+// Abrir modal de novo retalho
+function abrirModalNovoRetalho(produtoId) {
+    // Criar modal dinamicamente
+    const modalHTML = `
+        <div class="modal fade" id="modalNovoRetalho" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">📐 Novo Retalho</h5>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formNovoRetalho">
+                            <input type="hidden" id="retalho-produto-id" value="${produtoId}">
+                            
+                            <div class="form-group">
+                                <label>📏 Metragem *</label>
+                                <input type="number" class="form-control" id="retalho-metragem" 
+                                       step="0.01" min="0.01" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>📍 Localização (Opcional)</label>
+                                <input type="text" class="form-control" id="retalho-localizacao" 
+                                       placeholder="0000-X-0000" maxlength="12"
+                                       onkeyup="aplicarMascaraLocalizacaoInput('retalho-localizacao')">
+                                <small class="form-text text-muted">Formato: 0000-X-0000</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>💬 Observações</label>
+                                <textarea class="form-control" id="retalho-observacoes" rows="3"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" onclick="salvarNovoRetalho()">Salvar Retalho</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal existente se houver
+    $('#modalNovoRetalho').remove();
+    
+    // Adicionar e mostrar modal
+    $('body').append(modalHTML);
+    $('#modalNovoRetalho').modal('show');
+}
+
+// Salvar novo retalho
+async function salvarNovoRetalho() {
+    const produtoId = document.getElementById('retalho-produto-id').value;
+    const metragem = document.getElementById('retalho-metragem').value;
+    const localizacao = document.getElementById('retalho-localizacao').value;
+    const observacoes = document.getElementById('retalho-observacoes').value;
+    
+    if (!metragem || parseFloat(metragem) <= 0) {
+        mostrarAlerta('Informe a metragem do retalho', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/retalhos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                produto_id: produtoId,
+                metragem: parseFloat(metragem),
+                localizacao_atual: localizacao || null,
+                observacoes: observacoes || null
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            mostrarAlerta(`✅ Retalho criado: ${data.data.codigo_retalho}`, 'success');
+            $('#modalNovoRetalho').modal('hide');
+            await carregarBobinasERetalhos(produtoId);
+        } else {
+            mostrarAlerta(data.error || 'Erro ao criar retalho', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao criar retalho:', error);
+        mostrarAlerta('Erro ao criar retalho', 'danger');
+    }
+}
+
+// Imprimir etiqueta de retalho
+async function imprimirEtiquetaRetalho(codigoRetalho) {
+    try {
+        const response = await fetch(`/api/retalhos/codigo/${codigoRetalho}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // TODO: Implementar geração de etiqueta ZPL para retalhos
+            mostrarAlerta('Funcionalidade de impressão de etiquetas será implementada em breve', 'info');
+        } else {
+            mostrarAlerta('Retalho não encontrado', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao buscar retalho:', error);
+        mostrarAlerta('Erro ao buscar retalho', 'danger');
+    }
+}
+
+// Excluir retalho
+async function excluirRetalho(id) {
+    if (!confirm('Tem certeza que deseja excluir este retalho?')) return;
+    
+    try {
+        const response = await fetch(`/api/retalhos/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            mostrarAlerta('Retalho excluído com sucesso!', 'success');
+            // Recarregar a lista do produto
+            const produtoId = document.querySelector(`#retalho-item-${id}`)
+                .closest('[id^="bobinas-"]')
+                .id.replace('bobinas-', '');
+            await carregarBobinasERetalhos(produtoId);
+        } else {
+            mostrarAlerta(data.error || 'Erro ao excluir retalho', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao excluir retalho:', error);
+        mostrarAlerta('Erro ao excluir retalho', 'danger');
+    }
+}
+
+// === FUNÇÕES DE LOCALIZAÇÃO DE RETALHOS ===
+
+// Editar localização de retalho
+function editarLocalizacaoRetalho(retalhoId, localizacaoAtual) {
+    document.getElementById(`loc-display-ret-${retalhoId}`).style.display = 'none';
+    document.getElementById(`loc-edit-ret-${retalhoId}`).style.display = 'block';
+    
+    const input = document.getElementById(`input-loc-ret-${retalhoId}`);
+    input.value = localizacaoAtual || '';
+    input.focus();
+}
+
+// Cancelar edição de localização de retalho
+function cancelarEdicaoLocalizacaoRetalho(retalhoId) {
+    document.getElementById(`loc-display-ret-${retalhoId}`).style.display = 'block';
+    document.getElementById(`loc-edit-ret-${retalhoId}`).style.display = 'none';
+}
+
+// Aplicar máscara de localização em retalho
+function aplicarMascaraLocalizacaoRetalho(retalhoId) {
+    const input = document.getElementById(`input-loc-ret-${retalhoId}`);
+    let valor = input.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    
+    if (valor.length > 4) {
+        valor = valor.substring(0, 4) + '-' + valor.substring(4);
+    }
+    if (valor.length > 6) {
+        valor = valor.substring(0, 6) + '-' + valor.substring(6);
+    }
+    if (valor.length > 11) {
+        valor = valor.substring(0, 11);
+    }
+    
+    input.value = valor;
+}
+
+// Salvar localização de retalho
+async function salvarLocalizacaoRetalho(retalhoId) {
+    const novaLocalizacao = document.getElementById(`input-loc-ret-${retalhoId}`).value.trim();
+    
+    // Validar formato
+    const regex = /^\d{4}-[A-Z]-\d{4}$/;
+    if (novaLocalizacao && !regex.test(novaLocalizacao)) {
+        mostrarAlerta('Formato de localização inválido! Use: 0000-X-0000', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/retalhos/${retalhoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                localizacao_atual: novaLocalizacao || null
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Atualizar interface
+            document.getElementById(`loc-value-ret-${retalhoId}`).innerHTML = 
+                novaLocalizacao || '<em>Não definida</em>';
+            cancelarEdicaoLocalizacaoRetalho(retalhoId);
+            
+            // Recarregar lista para atualizar botão de histórico
+            const produtoId = document.querySelector(`#retalho-item-${retalhoId}`)
+                .closest('[id^="bobinas-"]')
+                .id.replace('bobinas-', '');
+            await carregarBobinasERetalhos(produtoId);
+            
+            mostrarAlerta('Localização atualizada com sucesso!', 'success');
+        } else {
+            mostrarAlerta(data.error || 'Erro ao atualizar localização', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao salvar localização:', error);
+        mostrarAlerta('Erro ao salvar localização', 'danger');
+    }
+}
+
+// Ver histórico de localização de retalho
+async function verHistoricoLocalizacaoRetalho(retalhoId) {
+    try {
+        const response = await fetch(`/api/retalhos/${retalhoId}/historico-localizacao`);
+        const data = await response.json();
+        
+        if (data.success && data.data.length > 0) {
+            const historico = data.data.map(h => 
+                `📍 ${h.localizacao || 'Removida'} - ${new Date(h.data_movimento).toLocaleString('pt-BR')}`
+            ).join('\n');
+            
+            alert(`📜 Histórico de Localização:\n\n${historico}`);
+        } else {
+            mostrarAlerta('Sem histórico de localização para este retalho', 'info');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao buscar histórico:', error);
+        mostrarAlerta('Erro ao buscar histórico', 'danger');
+    }
+}
+
+// Aplicar máscara em input genérico (para modal)
+function aplicarMascaraLocalizacaoInput(inputId) {
+    const input = document.getElementById(inputId);
+    let valor = input.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    
+    if (valor.length > 4) {
+        valor = valor.substring(0, 4) + '-' + valor.substring(4);
+    }
+    if (valor.length > 6) {
+        valor = valor.substring(0, 6) + '-' + valor.substring(6);
+    }
+    if (valor.length > 11) {
+        valor = valor.substring(0, 11);
+    }
+    
+    input.value = valor;
 }
 
 // === SISTEMA DE FILTROS MULTI-SELECT ===

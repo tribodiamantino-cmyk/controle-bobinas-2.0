@@ -246,6 +246,99 @@ exports.buscarRetalhoPorCodigo = async (req, res) => {
     }
 };
 
+// Atualizar retalho (principalmente localização)
+exports.atualizarRetalho = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { localizacao_atual, observacoes } = req.body;
+        
+        // Verificar se retalho existe
+        const [retalhos] = await db.query(
+            'SELECT localizacao_atual FROM retalhos WHERE id = ?',
+            [id]
+        );
+        
+        if (retalhos.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Retalho não encontrado' 
+            });
+        }
+        
+        const localizacaoAnterior = retalhos[0].localizacao_atual;
+        
+        // Atualizar retalho
+        const updates = [];
+        const values = [];
+        
+        if (localizacao_atual !== undefined) {
+            updates.push('localizacao_atual = ?');
+            values.push(localizacao_atual);
+            
+            // Registrar no histórico se localização mudou
+            if (localizacaoAnterior !== localizacao_atual) {
+                await db.query(
+                    `INSERT INTO historico_localizacao_retalhos 
+                    (retalho_id, localizacao) VALUES (?, ?)`,
+                    [id, localizacao_atual]
+                );
+            }
+        }
+        
+        if (observacoes !== undefined) {
+            updates.push('observacoes = ?');
+            values.push(observacoes);
+        }
+        
+        if (updates.length > 0) {
+            values.push(id);
+            await db.query(
+                `UPDATE retalhos SET ${updates.join(', ')} WHERE id = ?`,
+                values
+            );
+        }
+        
+        res.json({ 
+            success: true, 
+            message: 'Retalho atualizado com sucesso!' 
+        });
+        
+    } catch (error) {
+        console.error('Erro ao atualizar retalho:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
+// Obter histórico de localização
+exports.obterHistoricoLocalizacao = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const [historico] = await db.query(
+            `SELECT localizacao, data_movimento 
+            FROM historico_localizacao_retalhos 
+            WHERE retalho_id = ? 
+            ORDER BY data_movimento DESC`,
+            [id]
+        );
+        
+        res.json({ 
+            success: true, 
+            data: historico 
+        });
+        
+    } catch (error) {
+        console.error('Erro ao buscar histórico:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
 // Excluir retalho
 exports.excluirRetalho = async (req, res) => {
     try {
@@ -298,5 +391,7 @@ module.exports = {
     converterBobinaEmRetalho,
     listarRetalhosPorProduto,
     buscarRetalhoPorCodigo,
+    atualizarRetalho,
+    obterHistoricoLocalizacao,
     excluirRetalho
 };
