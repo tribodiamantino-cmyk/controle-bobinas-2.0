@@ -90,4 +90,24 @@ router.post('/add-sem-bainha', async (req, res) => {
     }
 });
 
+// Endpoint para verificar estrutura da tabela produtos
+router.get('/check-produtos-table', async (req, res) => {
+    try {
+        const [columns] = await db.query(`
+            SHOW COLUMNS FROM produtos
+        `);
+        
+        res.json({ 
+            success: true, 
+            columns: columns 
+        });
+    } catch (error) {
+        console.error('Erro ao verificar tabela:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;

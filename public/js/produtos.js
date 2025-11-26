@@ -214,6 +214,8 @@ async function cadastrarProduto(e) {
         
         const data = await response.json();
         
+        console.log('Resposta do servidor:', response.status, data);
+        
         if (response.ok) {
             mostrarAlerta('Produto cadastrado com sucesso!', 'success');
             
@@ -227,9 +229,11 @@ async function cadastrarProduto(e) {
             // Recarregar lista de produtos
             carregarProdutos();
         } else {
+            console.error('Erro detalhado:', data);
             mostrarAlerta(data.error || 'Erro ao cadastrar produto', 'danger');
         }
     } catch (error) {
+        console.error('Erro na requisição:', error);
         mostrarAlerta('Erro ao cadastrar produto: ' + error.message, 'danger');
     }
 }
