@@ -141,14 +141,59 @@
                         <th>Gramatura</th>
                         <th>Fabricante</th>
                         <th>Tipo</th>
-                        <th>Medidas</th>
+                        <th>Larg. S/Costura</th>
+                        <th>Tipo Bainha</th>
+                        <th>Larg. Final</th>
+                        <th>Larg. Maior</th>
+                        <th>Larg. Y</th>
                         <th>Status</th>
                         <th>Ações</th>
+                    </tr>
+                    <tr class="filter-row">
+                        <th>
+                            <select class="form-control form-control-sm" id="filtro-loja" onchange="aplicarFiltros()">
+                                <option value="">Todas</option>
+                            </select>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" id="filtro-codigo" placeholder="Código..." onkeyup="aplicarFiltros()">
+                        </th>
+                        <th>
+                            <select class="form-control form-control-sm" id="filtro-cor" onchange="aplicarFiltros()">
+                                <option value="">Todas</option>
+                            </select>
+                        </th>
+                        <th>
+                            <select class="form-control form-control-sm" id="filtro-gramatura" onchange="aplicarFiltros()">
+                                <option value="">Todas</option>
+                            </select>
+                        </th>
+                        <th>
+                            <select class="form-control form-control-sm" id="filtro-fabricante" onchange="aplicarFiltros()">
+                                <option value="">Todos</option>
+                            </select>
+                        </th>
+                        <th>
+                            <select class="form-control form-control-sm" id="filtro-tipo" onchange="aplicarFiltros()">
+                                <option value="">Todos</option>
+                                <option value="Normal">Normal</option>
+                                <option value="Bando Y">Bando Y</option>
+                            </select>
+                        </th>
+                        <th colspan="5"></th>
+                        <th>
+                            <select class="form-control form-control-sm" id="filtro-status" onchange="aplicarFiltros()">
+                                <option value="">Todos</option>
+                                <option value="1">Ativo</option>
+                                <option value="0">Inativo</option>
+                            </select>
+                        </th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="lista-produtos">
                     <tr>
-                        <td colspan="9" class="text-center">Carregando produtos...</td>
+                        <td colspan="13" class="text-center">Carregando produtos...</td>
                     </tr>
                 </tbody>
             </table>
@@ -160,6 +205,17 @@
             </div>
         </div>
     </div>
+
+    <style>
+        .filter-row th {
+            padding: 5px;
+            background-color: #f8f9fa;
+        }
+        .filter-row .form-control-sm {
+            font-size: 0.875rem;
+            height: calc(1.5em + 0.5rem + 2px);
+        }
+    </style>
 
     <script src="/js/produtos.js"></script>
 </body>

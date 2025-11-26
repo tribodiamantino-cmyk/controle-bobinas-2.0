@@ -120,12 +120,116 @@ async function carregarProdutos() {
         
         if (data.success) {
             produtos = data.data;
+            popularFiltros();
             renderizarProdutos(produtos);
         } else {
             mostrarAlerta(data.error || 'Erro ao carregar produtos', 'danger');
         }
     } catch (error) {
         mostrarAlerta('Erro ao carregar produtos: ' + error.message, 'danger');
+    }
+}
+
+// Popular filtros com valores únicos
+function popularFiltros() {
+    // Extrair valores únicos
+    const lojas = [...new Set(produtos.map(p => p.loja))].sort();
+    const coresUnicas = [...new Set(produtos.map(p => p.nome_cor))].sort();
+    const gramaturasUnicas = [...new Set(produtos.map(p => p.gramatura))].sort();
+    const fabricantes = [...new Set(produtos.map(p => p.fabricante))].sort();
+    
+    // Popular select de lojas
+    const filtroLoja = document.getElementById('filtro-loja');
+    filtroLoja.innerHTML = '<option value="">Todas</option>' +
+        lojas.map(loja => `<option value="${loja}">${loja}</option>`).join('');
+    
+    // Popular select de cores
+    const filtroCor = document.getElementById('filtro-cor');
+    filtroCor.innerHTML = '<option value="">Todas</option>' +
+        coresUnicas.map(cor => `<option value="${cor}">${cor}</option>`).join('');
+    
+    // Popular select de gramaturas
+    const filtroGramatura = document.getElementById('filtro-gramatura');
+    filtroGramatura.innerHTML = '<option value="">Todas</option>' +
+        gramaturasUnicas.map(g => `<option value="${g}">${g}</option>`).join('');
+    
+    // Popular select de fabricantes
+    const filtroFabricante = document.getElementById('filtro-fabricante');
+    filtroFabricante.innerHTML = '<option value="">Todos</option>' +
+        fabricantes.map(f => `<option value="${f}">${f}</option>`).join('');
+}
+
+// Aplicar filtros em cascata
+function aplicarFiltros() {
+    const filtroLoja = document.getElementById('filtro-loja').value.toLowerCase();
+    const filtroCodigo = document.getElementById('filtro-codigo').value.toLowerCase();
+    const filtroCor = document.getElementById('filtro-cor').value.toLowerCase();
+    const filtroGramatura = document.getElementById('filtro-gramatura').value.toLowerCase();
+    const filtroFabricante = document.getElementById('filtro-fabricante').value.toLowerCase();
+    const filtroTipo = document.getElementById('filtro-tipo').value;
+    const filtroStatus = document.getElementById('filtro-status').value;
+    
+    let produtosFiltrados = produtos.filter(produto => {
+        // Filtro de loja
+        if (filtroLoja && produto.loja.toLowerCase() !== filtroLoja) return false;
+        
+        // Filtro de código
+        if (filtroCodigo && !produto.codigo.toLowerCase().includes(filtroCodigo)) return false;
+        
+        // Filtro de cor
+        if (filtroCor && produto.nome_cor.toLowerCase() !== filtroCor) return false;
+        
+        // Filtro de gramatura
+        if (filtroGramatura && produto.gramatura.toLowerCase() !== filtroGramatura) return false;
+        
+        // Filtro de fabricante
+        if (filtroFabricante && produto.fabricante.toLowerCase() !== filtroFabricante) return false;
+        
+        // Filtro de tipo
+        if (filtroTipo && produto.tipo_tecido !== filtroTipo) return false;
+        
+        // Filtro de status
+        if (filtroStatus !== '' && produto.ativo !== parseInt(filtroStatus)) return false;
+        
+        return true;
+    });
+    
+    renderizarProdutos(produtosFiltrados);
+    
+    // Atualizar opções em cascata
+    atualizarFiltrosCascata(produtosFiltrados);
+}
+
+// Atualizar opções dos filtros baseado nos produtos filtrados
+function atualizarFiltrosCascata(produtosFiltrados) {
+    const filtroLojaAtual = document.getElementById('filtro-loja').value;
+    const filtroCorAtual = document.getElementById('filtro-cor').value;
+    const filtroGramaturaAtual = document.getElementById('filtro-gramatura').value;
+    const filtroFabricanteAtual = document.getElementById('filtro-fabricante').value;
+    
+    // Se houver loja selecionada, atualizar outras opções
+    if (filtroLojaAtual) {
+        const coresDisponiveis = [...new Set(produtosFiltrados.map(p => p.nome_cor))].sort();
+        const gramaturasDisponiveis = [...new Set(produtosFiltrados.map(p => p.gramatura))].sort();
+        const fabricantesDisponiveis = [...new Set(produtosFiltrados.map(p => p.fabricante))].sort();
+        
+        // Atualizar cores
+        const filtroCor = document.getElementById('filtro-cor');
+        const corSelecionada = filtroCor.value;
+        filtroCor.innerHTML = '<option value="">Todas</option>' +
+            coresDisponiveis.map(cor => `<option value="${cor}" ${cor === corSelecionada ? 'selected' : ''}>${cor}</option>`).join('');
+        
+        // Atualizar gramaturas
+        const filtroGramatura = document.getElementById('filtro-gramatura');
+        const gramaturaSelecionada = filtroGramatura.value;
+        filtroGramatura.innerHTML = '<option value="">Todas</option>' +
+            gramaturasDisponiveis.map(g => `<option value="${g}" ${g === gramaturaSelecionada ? 'selected' : ''}>${g}</option>`).join('');
+        
+        // Atualizar fabricantes
+        const filtroFabricante = document.getElementById('filtro-fabricante');
+        const fabricanteSelecionado = filtroFabricante.value;
+        filtroFabricante.innerHTML = '<option value="">Todos</option>' +
+            fabricantesDisponiveis.map(f => `<option value="${f}" ${f === fabricanteSelecionado ? 'selected' : ''}>${f}</option>`).join('');
     }
 }
 
@@ -145,13 +249,12 @@ function renderizarProdutos(listaProdutos) {
     emptyState.style.display = 'none';
     
     tbody.innerHTML = listaProdutos.map(produto => {
-        // Montar informações de medidas conforme o tipo
-        let medidas = '';
-        if (produto.tipo_tecido === 'Bando Y') {
-            medidas = `Maior: ${produto.largura_maior || '-'} cm<br>Y: ${produto.largura_y || '-'} cm`;
-        } else {
-            medidas = `S/Costura: ${produto.largura_sem_costura || '-'} cm<br>${produto.tipo_bainha || '-'}<br>Final: ${produto.largura_final || '-'} cm`;
-        }
+        // Valores para cada coluna de medida
+        const largSemCostura = produto.tipo_tecido === 'Normal' ? (produto.largura_sem_costura || '-') : '-';
+        const tipoBainha = produto.tipo_tecido === 'Normal' ? (produto.tipo_bainha || '-') : '-';
+        const largFinal = produto.tipo_tecido === 'Normal' ? (produto.largura_final || '-') : '-';
+        const largMaior = produto.tipo_tecido === 'Bando Y' ? (produto.largura_maior || '-') : '-';
+        const largY = produto.tipo_tecido === 'Bando Y' ? (produto.largura_y || '-') : '-';
         
         return `
         <tr>
@@ -161,7 +264,11 @@ function renderizarProdutos(listaProdutos) {
             <td>${produto.gramatura}</td>
             <td>${produto.fabricante}</td>
             <td>${produto.tipo_tecido || 'Normal'}</td>
-            <td style="font-size: 0.85rem;">${medidas}</td>
+            <td>${largSemCostura}</td>
+            <td>${tipoBainha}</td>
+            <td>${largFinal}</td>
+            <td>${largMaior}</td>
+            <td>${largY}</td>
             <td>
                 <span class="badge ${produto.ativo ? 'badge-success' : 'badge-danger'}">
                     ${produto.ativo ? 'Ativo' : 'Inativo'}
@@ -339,7 +446,7 @@ async function excluirProduto(id) {
     }
 }
 
-// Filtrar produtos
+// Filtrar produtos (mantido para compatibilidade com search box)
 function filtrarProdutos() {
     const termo = document.getElementById('search-produtos').value.toLowerCase();
     
