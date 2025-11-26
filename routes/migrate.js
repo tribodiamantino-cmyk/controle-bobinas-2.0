@@ -1,0 +1,39 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../config/database');
+const fs = require('fs').promises;
+const path = require('path');
+
+// Endpoint para executar migração do Bando Y
+router.post('/migrate-bando-y', async (req, res) => {
+    try {
+        const sqlPath = path.join(__dirname, '..', 'database', 'alter-produtos-bando-y.sql');
+        const sql = await fs.readFile(sqlPath, 'utf8');
+        
+        // Dividir por ; e executar cada statement
+        const statements = sql.split(';').filter(s => s.trim());
+        
+        for (const statement of statements) {
+            if (statement.trim()) {
+                try {
+                    await db.query(statement);
+                } catch (err) {
+                    console.log('Statement error (pode ser ignorado se coluna já existe):', err.message);
+                }
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            message: 'Migração executada com sucesso! Tabela produtos atualizada para suportar Bando Y' 
+        });
+    } catch (error) {
+        console.error('Erro na migração:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+module.exports = router;

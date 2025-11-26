@@ -30,12 +30,14 @@ const coresRoutes = require('./routes/cores');
 const gramaturasRoutes = require('./routes/gramaturas');
 const produtosRoutes = require('./routes/produtos');
 const setupRoutes = require('./routes/setup');
+const migrateRoutes = require('./routes/migrate');
 
 // Usar rotas
 app.use('/api/cores', coresRoutes);
 app.use('/api/gramaturas', gramaturasRoutes);
 app.use('/api/produtos', produtosRoutes);
 app.use('/api/database', setupRoutes);
+app.use('/api/database', migrateRoutes);
 
 // Tratamento de erro 404
 app.use((req, res) => {
