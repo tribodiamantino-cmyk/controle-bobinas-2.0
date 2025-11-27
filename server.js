@@ -123,6 +123,7 @@ const ordensCorteRoutes = require('./routes/ordensCorte');
 const obrasPadraoRoutes = require('./routes/obrasPadrao');
 const setupRoutes = require('./routes/setup');
 const migrateRoutes = require('./routes/migrate');
+const mobileRoutes = require('./routes/mobile');
 
 // Usar rotas
 app.use('/api/cores', coresRoutes);
@@ -135,6 +136,7 @@ app.use('/api/ordens-corte', ordensCorteRoutes);
 app.use('/api/obras-padrao', obrasPadraoRoutes);
 app.use('/api/database', setupRoutes);
 app.use('/api/database', migrateRoutes);
+app.use('/api/mobile', mobileRoutes);
 
 // Tratamento de erro 404
 app.use((req, res) => {

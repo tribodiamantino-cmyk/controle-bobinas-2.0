@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>Bobinas App - Operações</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/mobile/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/mobile/icon-192.png">
+    <link rel="apple-touch-icon" href="/mobile/icon-192.png">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/mobile/styles.css">
+    
+    <!-- QR Code Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="app-header">
+        <div class="header-content">
+            <h1>📦 Bobinas App</h1>
+            <div class="header-subtitle">Operações de Corte</div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <div class="container">
+        <!-- TELA INICIAL: Menu -->
+        <div id="tela-menu" class="tela active">
+            <div class="menu-grid">
+                <button class="menu-card" onclick="abrirTelaCorte()">
+                    <div class="card-icon">✂️</div>
+                    <div class="card-title">Registrar Corte</div>
+                    <div class="card-desc">Escanear bobina e registrar metragem cortada</div>
+                </button>
+
+                <button class="menu-card" onclick="abrirTelaConsulta()">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-title">Consultar Bobina</div>
+                    <div class="card-desc">Visualizar detalhes e histórico completo</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- TELA: Registrar Corte -->
+        <div id="tela-corte" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="voltarMenu()">← Voltar</button>
+                <h2>✂️ Registrar Corte</h2>
+            </div>
+
+            <!-- Passo 1: Scanner -->
+            <div id="passo-scanner-corte" class="passo active">
+                <div class="scanner-container">
+                    <div id="reader-corte" class="qr-reader"></div>
+                    <div class="scanner-instrucao">
+                        📱 Aponte a câmera para o QR Code da bobina
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="cancelarScanner('corte')">Cancelar</button>
+            </div>
+
+            <!-- Passo 2: Formulário de Corte -->
+            <div id="passo-form-corte" class="passo">
+                <div class="bobina-info" id="bobina-info-corte">
+                    <!-- Preenchido via JS -->
+                </div>
+
+                <form id="form-corte" onsubmit="salvarCorte(event)">
+                    <div class="form-group">
+                        <label for="metragem-cortada">Metragem Cortada (metros)</label>
+                        <input type="number" id="metragem-cortada" step="0.01" min="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="observacoes-corte">Observações (opcional)</label>
+                        <textarea id="observacoes-corte" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="voltarScannerCorte()">Escanear Outra</button>
+                        <button type="submit" class="btn btn-primary">💾 Salvar Corte</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- TELA: Consultar Bobina -->
+        <div id="tela-consulta" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="voltarMenu()">← Voltar</button>
+                <h2>🔍 Consultar Bobina</h2>
+            </div>
+
+            <!-- Passo 1: Scanner -->
+            <div id="passo-scanner-consulta" class="passo active">
+                <div class="scanner-container">
+                    <div id="reader-consulta" class="qr-reader"></div>
+                    <div class="scanner-instrucao">
+                        📱 Aponte a câmera para o QR Code da bobina
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="cancelarScanner('consulta')">Cancelar</button>
+            </div>
+
+            <!-- Passo 2: Detalhes da Bobina -->
+            <div id="passo-detalhes" class="passo">
+                <div id="bobina-detalhes">
+                    <!-- Preenchido via JS -->
+                </div>
+                <button class="btn btn-secondary" onclick="voltarScannerConsulta()">Escanear Outra</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST DE MENSAGENS -->
+    <div id="toast" class="toast"></div>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Carregando...</div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/mobile/app.js"></script>
+</body>
+</html>
