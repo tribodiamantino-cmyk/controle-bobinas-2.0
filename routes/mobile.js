@@ -33,8 +33,33 @@ router.get('/bobina/:id', async (req, res) => {
 // Debug: ver todas as ordens no banco
 router.get('/debug-ordens', async (req, res) => {
     try {
-        const [ordens] = await db.query('SELECT id, numero_ordem, status, data_criacao FROM ordens_corte ORDER BY id DESC LIMIT 10');
-        return res.json({ success: true, ordens });
+        let result = {};
+        
+        // Tentar ordens_corte
+        try {
+            const [ordens] = await db.query('SELECT id, numero_ordem, status, data_criacao FROM ordens_corte ORDER BY id DESC LIMIT 10');
+            result.ordens_corte = ordens;
+        } catch (e) { result.ordens_corte_erro = e.message; }
+        
+        // Tentar planos_corte
+        try {
+            const [planos] = await db.query('SELECT id, codigo_plano, status, cliente FROM planos_corte ORDER BY id DESC LIMIT 10');
+            result.planos_corte = planos;
+        } catch (e) { result.planos_corte_erro = e.message; }
+        
+        // Contar bobinas
+        try {
+            const [count] = await db.query('SELECT COUNT(*) as total FROM bobinas');
+            result.total_bobinas = count[0].total;
+        } catch (e) { result.bobinas_erro = e.message; }
+        
+        // Listar tabelas
+        try {
+            const [tables] = await db.query('SHOW TABLES');
+            result.tabelas = tables;
+        } catch (e) { result.tabelas_erro = e.message; }
+        
+        return res.json({ success: true, ...result });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
