@@ -853,9 +853,11 @@ function renderizarOpcoesOrigem(origens) {
 function criarCardOrigem(origem, tipo) {
     const metragemDisp = parseFloat(origem.metragem_disponivel).toFixed(2);
     const metragemTotal = parseFloat(origem.metragem_total).toFixed(2);
+    const metragemReservada = metragemTotal - metragemDisp;
+    const temReserva = metragemReservada > 0;
     
     return `
-        <div class="origem-sugestao">
+        <div class="origem-sugestao ${temReserva ? 'origem-com-reserva' : ''}">
             <div class="origem-header">
                 <div class="origem-codigo">${origem.codigo}</div>
                 <span class="badge-prioridade ${tipo === 'retalho' ? 'alta' : 'media'}">
@@ -867,10 +869,16 @@ function criarCardOrigem(origem, tipo) {
                     <span class="origem-info-label">Metragem Total:</span>
                     <span>${metragemTotal}m</span>
                 </div>
-                <div class="origem-info-item">
+                <div class="origem-info-item ${temReserva ? 'destaque-disponivel' : ''}">
                     <span class="origem-info-label">Disponível:</span>
                     <span><strong>${metragemDisp}m</strong></span>
                 </div>
+                ${temReserva ? `
+                <div class="origem-info-item origem-info-reservada">
+                    <span class="origem-info-label">⚠️ Reservada:</span>
+                    <span><strong>${metragemReservada.toFixed(2)}m</strong></span>
+                </div>
+                ` : ''}
                 ${origem.localizacao_atual ? `
                 <div class="origem-info-item">
                     <span class="origem-info-label">Localização:</span>
@@ -884,6 +892,11 @@ function criarCardOrigem(origem, tipo) {
                 </div>
                 ` : ''}
             </div>
+            ${temReserva ? `
+                <div class="alert alert-warning" style="margin-top: 0.5rem; font-size: 0.85rem;">
+                    ⚠️ Esta origem possui ${metragemReservada.toFixed(2)}m reservada em outro plano
+                </div>
+            ` : ''}
             <div class="origem-actions">
                 <button class="btn btn-primary" onclick="confirmarAlocacao(${origem.id}, '${tipo}')">
                     ✅ Selecionar Esta Origem

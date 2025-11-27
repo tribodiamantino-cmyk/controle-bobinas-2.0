@@ -1794,6 +1794,11 @@ body {
     border-color: #f44336;
 }
 
+.origem-sugestao.origem-com-reserva {
+    background: #fff8e1;
+    border-color: #ffc107;
+}
+
 .origem-header {
     display: flex;
     justify-content: space-between;
@@ -1817,6 +1822,20 @@ body {
 .origem-info-item {
     display: flex;
     justify-content: space-between;
+}
+
+.origem-info-item.destaque-disponivel {
+    background: #e8f5e9;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border-left: 3px solid #4CAF50;
+}
+
+.origem-info-item.origem-info-reservada {
+    background: #fff3cd;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border-left: 3px solid #ffc107;
 }
 
 .origem-info-label {

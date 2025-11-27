@@ -507,7 +507,59 @@ exports.enviarParaProducao = async (req, res) => {
             WHERE ipc.plano_corte_id = ?
         `, [id]);
         
-        // Reservar metragens
+        // VALIDAÇÃO CRÍTICA: Verificar se todas as origens têm metragem disponível
+        for (const alocacao of alocacoes) {
+            let metragemDisponivel = 0;
+            let origemNome = '';
+            
+            if (alocacao.tipo_origem === 'bobina') {
+                const [bobinas] = await db.query(`
+                    SELECT 
+                        codigo_interno,
+                        (metragem_atual - COALESCE(metragem_reservada, 0)) as disponivel
+                    FROM bobinas WHERE id = ?
+                `, [alocacao.bobina_id]);
+                
+                if (bobinas.length === 0) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        error: 'Bobina alocada não encontrada' 
+                    });
+                }
+                
+                metragemDisponivel = parseFloat(bobinas[0].disponivel);
+                origemNome = bobinas[0].codigo_interno;
+            } else {
+                const [retalhos] = await db.query(`
+                    SELECT 
+                        codigo_retalho,
+                        (metragem - COALESCE(metragem_reservada, 0)) as disponivel
+                    FROM retalhos WHERE id = ?
+                `, [alocacao.retalho_id]);
+                
+                if (retalhos.length === 0) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        error: 'Retalho alocado não encontrado' 
+                    });
+                }
+                
+                metragemDisponivel = parseFloat(retalhos[0].disponivel);
+                origemNome = retalhos[0].codigo_retalho;
+            }
+            
+            // Validar se há metragem suficiente
+            if (metragemDisponivel < parseFloat(alocacao.metragem_alocada)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: `Erro: A origem "${origemNome}" não possui metragem disponível suficiente. ` +
+                           `Disponível: ${metragemDisponivel.toFixed(2)}m, Necessário: ${parseFloat(alocacao.metragem_alocada).toFixed(2)}m. ` +
+                           `Provavelmente já foi reservada em outro plano. Por favor, realoque este corte.`
+                });
+            }
+        }
+        
+        // Reservar metragens (só chega aqui se passou todas as validações)
         for (const alocacao of alocacoes) {
             if (alocacao.tipo_origem === 'bobina') {
                 await db.query(`
