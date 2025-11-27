@@ -126,9 +126,9 @@ function abrirOrdem(ordemId) {
 function renderizarDetalhesOrdem() {
     const container = document.getElementById('ordem-detalhes-container');
     
-    // Filtrar itens que têm bobina alocada
-    const itensComBobina = ordemAtual.itens.filter(item => item.bobina_id !== null);
-    const itensSemBobina = ordemAtual.itens.filter(item => item.bobina_id === null);
+    // Filtrar itens que têm origem alocada (bobina ou retalho)
+    const itensComOrigem = ordemAtual.itens.filter(item => item.origem_id !== null && item.origem_id !== undefined);
+    const itensSemOrigem = ordemAtual.itens.filter(item => item.origem_id === null || item.origem_id === undefined);
     
     container.innerHTML = `
         <div class="ordem-detalhes-header">
@@ -140,13 +140,16 @@ function renderizarDetalhesOrdem() {
         
         <div class="itens-lista">
             <h4>📦 Itens Prontos para Corte</h4>
-            ${itensComBobina.length === 0 ? 
-                '<p style="color: var(--text-light);">Nenhum item com bobina alocada</p>' :
-                itensComBobina.map(item => `
+            ${itensComOrigem.length === 0 ? 
+                '<p style="color: var(--text-light);">Nenhum item com origem alocada</p>' :
+                itensComOrigem.map(item => {
+                    const tipoIcon = item.tipo === 'retalho' ? '🧵' : '📦';
+                    const tipoLabel = item.tipo === 'retalho' ? 'Retalho' : 'Bobina';
+                    return `
                     <div class="item-card" onclick="iniciarValidacaoItem(${item.alocacao_id || item.item_id})">
                         <div class="item-header">
-                            <span class="item-bobina">${item.bobina_codigo || 'Bobina #' + item.bobina_id}</span>
-                            <span class="item-metragem">${item.metragem_alocada || item.metragem_solicitada}m</span>
+                            <span class="item-bobina">${tipoIcon} ${item.origem_codigo || tipoLabel + ' #' + item.origem_id}</span>
+                            <span class="item-metragem">${item.metragem_alocada}m</span>
                         </div>
                         <div class="item-info">
                             <span>${item.produto_codigo || ''} ${item.nome_cor ? '- ' + item.nome_cor : ''}</span>
@@ -159,16 +162,16 @@ function renderizarDetalhesOrdem() {
                             👆 Toque para validar corte
                         </div>
                     </div>
-                `).join('')
+                `}).join('')
             }
             
-            ${itensSemBobina.length > 0 ? `
-                <h4 style="margin-top: 1.5rem;">⏳ Aguardando Alocação de Bobina</h4>
-                ${itensSemBobina.map(item => `
+            ${itensSemOrigem.length > 0 ? `
+                <h4 style="margin-top: 1.5rem;">⏳ Aguardando Alocação</h4>
+                ${itensSemOrigem.map(item => `
                     <div class="item-card item-pendente" style="opacity: 0.7; background: #f3f4f6;">
                         <div class="item-header">
-                            <span class="item-bobina" style="color: #6b7280;">Sem bobina</span>
-                            <span class="item-metragem">${item.metragem_alocada || item.metragem_solicitada}m</span>
+                            <span class="item-bobina" style="color: #6b7280;">Sem origem</span>
+                            <span class="item-metragem">${item.metragem_alocada}m</span>
                         </div>
                         <div class="item-info">
                             <span>${item.produto_codigo || ''} ${item.nome_cor ? '- ' + item.nome_cor : ''}</span>
@@ -197,9 +200,12 @@ async function iniciarValidacaoItem(alocacaoId) {
     itemValidando = ordemAtual.itens.find(i => (i.alocacao_id || i.item_id) === alocacaoId);
     if (!itemValidando) return;
     
+    const tipoIcon = itemValidando.tipo === 'retalho' ? '🧵' : '📦';
+    const tipoLabel = itemValidando.tipo === 'retalho' ? 'retalho' : 'bobina';
+    
     // Atualizar instrução do scanner
     document.getElementById('instrucao-validacao').innerHTML = `
-        📱 Escaneie a bobina <strong>${itemValidando.bobina_codigo || '#' + itemValidando.bobina_id}</strong>
+        📱 Escaneie ${tipoLabel === 'retalho' ? 'o' : 'a'} ${tipoLabel} <strong>${itemValidando.origem_codigo || '#' + itemValidando.origem_id}</strong>
     `;
     
     mostrarPasso('passo-scanner-validacao');
@@ -215,31 +221,40 @@ function cancelarValidacao() {
 }
 
 // ========== PROCESSAMENTO DA VALIDAÇÃO ==========
-async function processarValidacao(bobinaId) {
-    // Verificar se bobina escaneada corresponde ao item
-    if (itemValidando.bobina_id != bobinaId) {
-        mostrarToast('❌ Bobina incorreta! Escaneie a bobina ' + (itemValidando.bobina_codigo || '#' + itemValidando.bobina_id), 'error');
+async function processarValidacao(origemId) {
+    // Verificar se origem escaneada corresponde ao item (bobina_id ou retalho_id)
+    const idEsperado = itemValidando.origem_id || itemValidando.bobina_id || itemValidando.retalho_id;
+    
+    if (idEsperado != origemId) {
+        const tipoLabel = itemValidando.tipo === 'retalho' ? 'retalho' : 'bobina';
+        mostrarToast('❌ ' + tipoLabel.charAt(0).toUpperCase() + tipoLabel.slice(1) + ' incorreta! Escaneie ' + (itemValidando.origem_codigo || '#' + idEsperado), 'error');
         // Reiniciar scanner para tentar novamente
         setTimeout(() => iniciarScanner('validacao'), 1500);
         return;
     }
     
-    // Bobina correta - buscar dados atualizados
+    // Origem correta - buscar dados atualizados
     mostrarLoading(true);
     
     try {
-        const response = await fetch(`/api/mobile/bobina/${bobinaId}`);
+        // Determinar endpoint baseado no tipo
+        const endpoint = itemValidando.tipo === 'retalho' 
+            ? `/api/mobile/retalho/${origemId}`
+            : `/api/mobile/bobina/${origemId}`;
+            
+        const response = await fetch(endpoint);
         const data = await response.json();
         
         if (data.success) {
             bobinaAtual = data.data;
+            bobinaAtual.tipo_origem = itemValidando.tipo || 'bobina';
             mostrarConfirmacaoCorte();
         } else {
-            throw new Error(data.message || 'Erro ao carregar bobina');
+            throw new Error(data.message || 'Erro ao carregar origem');
         }
     } catch (error) {
-        console.error('Erro ao carregar bobina:', error);
-        mostrarToast('Erro ao carregar dados da bobina', 'error');
+        console.error('Erro ao carregar origem:', error);
+        mostrarToast('Erro ao carregar dados', 'error');
         cancelarValidacao();
     } finally {
         mostrarLoading(false);
@@ -251,10 +266,16 @@ function mostrarConfirmacaoCorte() {
     
     const metragemReservada = Number(bobinaAtual.metragem_reservada || 0);
     const metragemSolicitada = Number(itemValidando.metragem_alocada || itemValidando.metragem_solicitada || 0);
+    const metragemAtual = Number(bobinaAtual.metragem_atual || bobinaAtual.metragem || 0);
+    
+    const isRetalho = bobinaAtual.tipo_origem === 'retalho';
+    const tipoIcon = isRetalho ? '🧵' : '📦';
+    const tipoLabel = isRetalho ? 'Retalho' : 'Bobina';
+    const codigoOrigem = bobinaAtual.codigo_interno || bobinaAtual.codigo_retalho;
     
     container.innerHTML = `
         <div class="confirma-header">
-            <h3>✅ Bobina Verificada</h3>
+            <h3>✅ ${tipoLabel} Verificado</h3>
             <p>Confirme o corte do item</p>
         </div>
         
@@ -262,17 +283,20 @@ function mostrarConfirmacaoCorte() {
             <strong>Ordem:</strong> ${ordemAtual.numero_ordem}
         </div>
         
-        <div class="bobina-info" style="margin: 1rem 0;">
-            <div class="bobina-info-codigo">${bobinaAtual.codigo_interno}</div>
+        <div class="bobina-info" style="margin: 1rem 0; ${isRetalho ? 'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);' : ''}">
+            <div class="bobina-info-codigo">${tipoIcon} ${codigoOrigem}</div>
             <div class="bobina-info-grid">
                 <div class="bobina-info-item">
-                    <strong>Produto:</strong><br>${bobinaAtual.codigo}
+                    <strong>Tipo:</strong><br>${tipoLabel}
                 </div>
                 <div class="bobina-info-item">
-                    <strong>Cor:</strong><br>${bobinaAtual.nome_cor}
+                    <strong>Produto:</strong><br>${bobinaAtual.codigo || bobinaAtual.produto_codigo || 'N/A'}
                 </div>
                 <div class="bobina-info-item">
-                    <strong>Metragem Atual:</strong><br>${bobinaAtual.metragem_atual}m
+                    <strong>Cor:</strong><br>${bobinaAtual.nome_cor || 'N/A'}
+                </div>
+                <div class="bobina-info-item">
+                    <strong>Metragem Atual:</strong><br>${metragemAtual}m
                 </div>
                 <div class="bobina-info-item">
                     <strong>Localização:</strong><br>${bobinaAtual.localizacao_atual || 'N/A'}
@@ -290,7 +314,7 @@ function mostrarConfirmacaoCorte() {
                 <label for="metragem-validacao">Metragem Cortada (metros)</label>
                 <input type="number" id="metragem-validacao" step="0.01" min="0.01" 
                        value="${metragemSolicitada}" 
-                       max="${bobinaAtual.metragem_atual}" required>
+                       max="${metragemAtual}" required>
                 <small style="color: var(--text-light);">Solicitado: ${metragemSolicitada}m</small>
             </div>
 
@@ -314,9 +338,10 @@ async function confirmarValidacao(event) {
     
     const metragemCortada = parseFloat(document.getElementById('metragem-validacao').value);
     const observacoes = document.getElementById('observacoes-validacao').value;
+    const metragemAtual = Number(bobinaAtual.metragem_atual || bobinaAtual.metragem || 0);
     
     // Validar metragem
-    if (metragemCortada > bobinaAtual.metragem_atual) {
+    if (metragemCortada > metragemAtual) {
         mostrarToast('Metragem cortada não pode ser maior que a disponível', 'error');
         return;
     }
@@ -336,7 +361,8 @@ async function confirmarValidacao(event) {
             },
             body: JSON.stringify({
                 item_id: itemValidando.alocacao_id || itemValidando.item_id,
-                bobina_id: bobinaAtual.id,
+                origem_id: bobinaAtual.id,
+                tipo_origem: bobinaAtual.tipo_origem || 'bobina',
                 metragem_cortada: metragemCortada,
                 observacoes: observacoes || null
             })

@@ -71,8 +71,37 @@ router.get('/ordens-producao', async (req, res) => {
         try {
             const [planos] = await db.query('SELECT pc.id, pc.codigo_plano AS numero_ordem, pc.status, pc.cliente, pc.aviario, pc.data_criacao FROM planos_corte pc WHERE pc.status IN (\'em_producao\', \'pendente\', \'Em Andamento\', \'Pendente\') ORDER BY pc.data_criacao DESC LIMIT 20');
             for (let plano of planos) {
-                const [itens] = await db.query('SELECT ipc.id AS item_id, ac.id AS alocacao_id, ac.bobina_id, ac.metragem_alocada, b.codigo_interno AS bobina_codigo, b.metragem_atual, b.localizacao_atual, p.codigo AS produto_codigo, c.nome_cor FROM itens_plano_corte ipc LEFT JOIN alocacoes_corte ac ON ac.item_plano_corte_id = ipc.id LEFT JOIN bobinas b ON ac.bobina_id = b.id LEFT JOIN produtos p ON ipc.produto_id = p.id LEFT JOIN configuracoes_cores c ON p.cor_id = c.id WHERE ipc.plano_corte_id = ? AND (ac.confirmado IS NULL OR ac.confirmado = FALSE) ORDER BY ipc.ordem', [plano.id]);
-                plano.itens = itens.filter(i => i.alocacao_id !== null);
+                // Buscar itens com alocações (bobina OU retalho)
+                const [itens] = await db.query(`
+                    SELECT 
+                        ipc.id AS item_id,
+                        ac.id AS alocacao_id,
+                        ac.tipo_origem,
+                        ac.bobina_id,
+                        ac.retalho_id,
+                        ac.metragem_alocada,
+                        COALESCE(b.codigo_interno, r.codigo_retalho) AS origem_codigo,
+                        COALESCE(b.metragem_atual, r.metragem) AS metragem_atual,
+                        COALESCE(b.localizacao_atual, r.localizacao_atual) AS localizacao_atual,
+                        p.codigo AS produto_codigo,
+                        c.nome_cor
+                    FROM itens_plano_corte ipc
+                    LEFT JOIN alocacoes_corte ac ON ac.item_plano_corte_id = ipc.id
+                    LEFT JOIN bobinas b ON ac.bobina_id = b.id
+                    LEFT JOIN retalhos r ON ac.retalho_id = r.id
+                    LEFT JOIN produtos p ON ipc.produto_id = p.id
+                    LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                    WHERE ipc.plano_corte_id = ?
+                      AND (ac.confirmado IS NULL OR ac.confirmado = FALSE)
+                    ORDER BY ipc.ordem
+                `, [plano.id]);
+                
+                // Mapear itens para incluir info de tipo
+                plano.itens = itens.filter(i => i.alocacao_id !== null).map(i => ({
+                    ...i,
+                    origem_id: i.bobina_id || i.retalho_id,
+                    tipo: i.tipo_origem || (i.bobina_id ? 'bobina' : 'retalho')
+                }));
                 plano.qtd_itens = plano.itens.length;
                 plano.qtd_total = itens.length;
                 plano.observacoes = (plano.cliente || '') + (plano.aviario ? ' - ' + plano.aviario : '');
@@ -85,8 +114,8 @@ router.get('/ordens-producao', async (req, res) => {
                 // Buscar ordens que NAO estao Concluidas ou Canceladas
                 const [ordensCorte] = await db.query('SELECT oc.id, oc.numero_ordem, oc.status, oc.criado_por, oc.data_criacao, oc.observacoes FROM ordens_corte oc WHERE oc.status NOT IN (\'Concluída\', \'Cancelada\') ORDER BY oc.data_criacao DESC LIMIT 20');
                 for (let ordem of ordensCorte) {
-                    const [itens] = await db.query('SELECT i.id AS item_id, i.id AS alocacao_id, i.bobina_id, i.metragem_cortada AS metragem_alocada, b.codigo_interno AS bobina_codigo, b.metragem_atual, b.localizacao_atual, p.codigo AS produto_codigo, c.nome_cor FROM itens_ordem_corte i LEFT JOIN bobinas b ON i.bobina_id = b.id LEFT JOIN produtos p ON i.produto_id = p.id LEFT JOIN configuracoes_cores c ON p.cor_id = c.id WHERE i.ordem_corte_id = ? ORDER BY i.id', [ordem.id]);
-                    ordem.itens = itens;
+                    const [itens] = await db.query('SELECT i.id AS item_id, i.id AS alocacao_id, i.bobina_id, i.metragem_cortada AS metragem_alocada, b.codigo_interno AS origem_codigo, b.metragem_atual, b.localizacao_atual, p.codigo AS produto_codigo, c.nome_cor FROM itens_ordem_corte i LEFT JOIN bobinas b ON i.bobina_id = b.id LEFT JOIN produtos p ON i.produto_id = p.id LEFT JOIN configuracoes_cores c ON p.cor_id = c.id WHERE i.ordem_corte_id = ? ORDER BY i.id', [ordem.id]);
+                    ordem.itens = itens.map(i => ({ ...i, origem_id: i.bobina_id, tipo: 'bobina' }));
                     ordem.qtd_itens = itens.length;
                     ordem.qtd_total = itens.length;
                     ordem.fonte = 'ordens';
@@ -104,22 +133,53 @@ router.get('/ordens-producao', async (req, res) => {
 
 router.post('/validar-item', async (req, res) => {
     try {
-        const { item_id, bobina_id, metragem_cortada } = req.body;
-        if (!item_id || !bobina_id || !metragem_cortada) {
-            return res.status(400).json({ success: false, message: 'Item, bobina e metragem obrigatorios' });
+        const { item_id, origem_id, tipo_origem, metragem_cortada } = req.body;
+        // Compatibilidade com versão antiga
+        const origemId = origem_id || req.body.bobina_id;
+        const tipoOrigem = tipo_origem || 'bobina';
+        
+        if (!item_id || !origemId || !metragem_cortada) {
+            return res.status(400).json({ success: false, message: 'Item, origem e metragem obrigatorios' });
         }
-        const [bobinas] = await db.query('SELECT id, metragem_atual, metragem_reservada FROM bobinas WHERE id = ?', [bobina_id]);
-        if (bobinas.length === 0) {
-            return res.status(404).json({ success: false, message: 'Bobina nao encontrada' });
+        
+        let metragem_disponivel = 0;
+        let metragem_reservada = 0;
+        
+        if (tipoOrigem === 'retalho') {
+            const [retalhos] = await db.query('SELECT id, metragem, metragem_reservada FROM retalhos WHERE id = ?', [origemId]);
+            if (retalhos.length === 0) {
+                return res.status(404).json({ success: false, message: 'Retalho nao encontrado' });
+            }
+            metragem_disponivel = Number(retalhos[0].metragem);
+            metragem_reservada = Number(retalhos[0].metragem_reservada || 0);
+        } else {
+            const [bobinas] = await db.query('SELECT id, metragem_atual, metragem_reservada FROM bobinas WHERE id = ?', [origemId]);
+            if (bobinas.length === 0) {
+                return res.status(404).json({ success: false, message: 'Bobina nao encontrada' });
+            }
+            metragem_disponivel = Number(bobinas[0].metragem_atual);
+            metragem_reservada = Number(bobinas[0].metragem_reservada || 0);
         }
-        const bobina = bobinas[0];
-        const metragem_disponivel = Number(bobina.metragem_atual);
+        
         if (metragem_cortada > metragem_disponivel) {
             return res.status(400).json({ success: false, message: 'Metragem insuficiente. Disponivel: ' + metragem_disponivel.toFixed(2) + 'm' });
         }
+        
         const nova_metragem = metragem_disponivel - metragem_cortada;
-        const nova_reserva = Math.max(0, Number(bobina.metragem_reservada || 0) - metragem_cortada);
-        await db.query('UPDATE bobinas SET metragem_atual = ?, metragem_reservada = ? WHERE id = ?', [nova_metragem, nova_reserva, bobina_id]);
+        const nova_reserva = Math.max(0, metragem_reservada - metragem_cortada);
+        
+        // Atualizar metragem da origem
+        if (tipoOrigem === 'retalho') {
+            await db.query('UPDATE retalhos SET metragem = ?, metragem_reservada = ? WHERE id = ?', [nova_metragem, nova_reserva, origemId]);
+        } else {
+            await db.query('UPDATE bobinas SET metragem_atual = ?, metragem_reservada = ? WHERE id = ?', [nova_metragem, nova_reserva, origemId]);
+        }
+        
+        // Marcar alocacao como confirmada
+        try {
+            await db.query('UPDATE alocacoes_corte SET confirmado = TRUE WHERE id = ?', [item_id]);
+        } catch (e) { /* pode nao existir */ }
+        
         return res.json({ success: true, message: 'Corte validado!', data: { metragem_cortada, metragem_restante: nova_metragem.toFixed(2) } });
     } catch (error) {
         console.error('Erro validar:', error);
