@@ -542,6 +542,58 @@ window.onclick = function(event) {
     }
 }
 
+// ======================
+// MANUTENÇÃO
+// ======================
+
+// Limpar reservas órfãs
+async function limparReservasOrfas() {
+    if (!confirm('⚠️ ATENÇÃO!\n\nEsta operação irá:\n\n1. Resetar TODAS as metragens reservadas\n2. Recalcular apenas as reservas de planos em produção\n3. Remover reservas órfãs acumuladas\n\nDeseja continuar?')) {
+        return;
+    }
+    
+    const btn = document.getElementById('btn-limpar-reservas');
+    const resultado = document.getElementById('resultado-limpeza');
+    
+    btn.disabled = true;
+    btn.textContent = '⏳ Processando...';
+    resultado.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/ordens-corte/admin/limpar-reservas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            resultado.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>✅ Sucesso!</strong><br>
+                    ${data.message}
+                </div>
+            `;
+            resultado.style.display = 'block';
+        } else {
+            throw new Error(data.error || 'Erro desconhecido');
+        }
+        
+    } catch (error) {
+        resultado.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>❌ Erro!</strong><br>
+                ${error.message}
+            </div>
+        `;
+        resultado.style.display = 'block';
+        console.error('Erro ao limpar reservas:', error);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🧹 Executar Limpeza de Reservas';
+    }
+}
+
 // Carregar dados ao iniciar
 document.addEventListener('DOMContentLoaded', () => {
     carregarCores();
