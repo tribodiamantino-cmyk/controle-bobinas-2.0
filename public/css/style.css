@@ -1015,6 +1015,16 @@ body {
     animation: fadeIn 0.2s;
 }
 
+/* Modal de alocação deve ficar acima de outros modais */
+#modalAlocacao {
+    z-index: 10100;
+}
+
+/* Modal de finalização */
+#modalFinalizacao {
+    z-index: 10050;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
