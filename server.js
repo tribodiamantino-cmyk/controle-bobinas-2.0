@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs').promises;
 const db = require('./config/database');
@@ -72,7 +74,26 @@ async function runMigrations() {
     }
 }
 
-// Middleware
+// ============= SEGURANÇA =============
+
+// Helmet - Headers de segurança
+app.use(helmet({
+    contentSecurityPolicy: false, // Desabilitado para não quebrar inline scripts
+    crossOriginEmbedderPolicy: false // Permite recursos externos
+}));
+
+// Rate Limiting - Proteção contra abuso
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 1000, // Limite generoso: 1000 requisições por 15min
+    message: 'Muitas requisições. Tente novamente em alguns minutos.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use('/api/', limiter); // Aplica apenas nas rotas de API
+
+// ============= MIDDLEWARE =============
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

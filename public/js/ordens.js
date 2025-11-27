@@ -1,3 +1,16 @@
+// ========== UTILITÁRIO DEBOUNCE (INLINE - SEGURO) ==========
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Variáveis globais
 const API_BASE = window.location.hostname === 'localhost' 
     ? 'http://localhost:3000/api'
