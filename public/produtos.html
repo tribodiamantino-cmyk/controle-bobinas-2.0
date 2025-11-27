@@ -144,7 +144,7 @@
             </div>
             
             <div class="search-box mb-3">
-                <input type="text" class="form-control" id="search-produtos" placeholder="🔍 Buscar por código, cor, loja..." onkeyup="filtrarProdutosDebounced()">
+                <input type="text" class="form-control" id="search-produtos" placeholder="🔍 Buscar por código, cor, loja..." onkeyup="filtrarProdutos()">
             </div>
 
             <table class="table" id="tabela-produtos">
@@ -180,7 +180,7 @@
                             </div>
                         </th>
                         <th>
-                            <input type="text" class="form-control form-control-sm" id="filtro-codigo" placeholder="Código..." onkeyup="aplicarFiltrosDebounced()">
+                            <input type="text" class="form-control form-control-sm" id="filtro-codigo" placeholder="Código..." onkeyup="aplicarFiltros()">
                         </th>
                         <th>
                             <div class="multi-select-dropdown">
@@ -248,7 +248,7 @@
                             </div>
                         </th>
                         <th>
-                            <input type="text" class="form-control form-control-sm" id="filtro-larg-sem-costura" placeholder="cm..." onkeyup="aplicarFiltrosDebounced()">
+                            <input type="text" class="form-control form-control-sm" id="filtro-larg-sem-costura" placeholder="cm..." onkeyup="aplicarFiltros()">
                         </th>
                         <th>
                             <div class="multi-select-dropdown">
@@ -282,13 +282,13 @@
                             </div>
                         </th>
                         <th>
-                            <input type="text" class="form-control form-control-sm" id="filtro-larg-final" placeholder="cm..." onkeyup="aplicarFiltrosDebounced()">
+                            <input type="text" class="form-control form-control-sm" id="filtro-larg-final" placeholder="cm..." onkeyup="aplicarFiltros()">
                         </th>
                         <th>
-                            <input type="text" class="form-control form-control-sm" id="filtro-larg-maior" placeholder="cm..." onkeyup="aplicarFiltrosDebounced()">
+                            <input type="text" class="form-control form-control-sm" id="filtro-larg-maior" placeholder="cm..." onkeyup="aplicarFiltros()">
                         </th>
                         <th>
-                            <input type="text" class="form-control form-control-sm" id="filtro-larg-y" placeholder="cm..." onkeyup="aplicarFiltrosDebounced()">
+                            <input type="text" class="form-control form-control-sm" id="filtro-larg-y" placeholder="cm..." onkeyup="aplicarFiltros()">
                         </th>
                         <th>
                             <div class="multi-select-dropdown">
@@ -406,7 +406,6 @@
         }
     </style>
 
-    <script src="/js/utils.js"></script>
     <script src="/js/produtos.js"></script>
 </body>
 </html>

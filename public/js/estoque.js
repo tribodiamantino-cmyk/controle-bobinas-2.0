@@ -6,9 +6,6 @@ let cores = [];
 let gramaturas = [];
 let filtrosVisiveis = false;
 
-// Funções com debounce para filtros
-const aplicarTodosFiltrosEstoqueDebounced = debounce(aplicarTodosFiltrosEstoque, 300);
-
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     carregarEstoque();
