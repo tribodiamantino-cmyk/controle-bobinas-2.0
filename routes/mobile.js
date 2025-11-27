@@ -69,7 +69,7 @@ router.get('/ordens-producao', async (req, res) => {
     try {
         let ordens = [];
         try {
-            const [planos] = await db.query('SELECT pc.id, pc.codigo_plano AS numero_ordem, pc.status, pc.cliente, pc.aviario, pc.data_criacao FROM planos_corte pc WHERE pc.status IN (\'Em Andamento\', \'Pendente\') ORDER BY pc.data_criacao DESC LIMIT 20');
+            const [planos] = await db.query('SELECT pc.id, pc.codigo_plano AS numero_ordem, pc.status, pc.cliente, pc.aviario, pc.data_criacao FROM planos_corte pc WHERE pc.status IN (\'em_producao\', \'pendente\', \'Em Andamento\', \'Pendente\') ORDER BY pc.data_criacao DESC LIMIT 20');
             for (let plano of planos) {
                 const [itens] = await db.query('SELECT ipc.id AS item_id, ac.id AS alocacao_id, ac.bobina_id, ac.metragem_alocada, b.codigo_interno AS bobina_codigo, b.metragem_atual, b.localizacao_atual, p.codigo AS produto_codigo, c.nome_cor FROM itens_plano_corte ipc LEFT JOIN alocacoes_corte ac ON ac.item_plano_corte_id = ipc.id LEFT JOIN bobinas b ON ac.bobina_id = b.id LEFT JOIN produtos p ON ipc.produto_id = p.id LEFT JOIN configuracoes_cores c ON p.cor_id = c.id WHERE ipc.plano_corte_id = ? AND (ac.confirmado IS NULL OR ac.confirmado = FALSE) ORDER BY ipc.ordem', [plano.id]);
                 plano.itens = itens.filter(i => i.alocacao_id !== null);
