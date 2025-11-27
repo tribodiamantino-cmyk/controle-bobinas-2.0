@@ -1,9 +1,10 @@
 // ========== ESTADO GLOBAL ==========
 let scannerAtivo = null;
+let scannerTransicao = false; // evita start/stop concorrente
 let bobinaAtual = null;
 
 // ========== NAVEGAÇÃO ENTRE TELAS ==========
-function mostrarTela(telaId) {
+async function mostrarTela(telaId) {
     // Esconder todas as telas
     document.querySelectorAll('.tela').forEach(tela => {
         tela.classList.remove('active');
@@ -12,8 +13,8 @@ function mostrarTela(telaId) {
     // Mostrar tela solicitada
     document.getElementById(telaId).classList.add('active');
     
-    // Parar scanner se houver
-    pararScanner();
+    // Parar scanner se houver (aguardar)
+    await pararScanner();
 }
 
 function voltarMenu() {
@@ -22,29 +23,31 @@ function voltarMenu() {
 }
 
 // ========== TELA DE CORTE ==========
-function abrirTelaCorte() {
-    mostrarTela('tela-corte');
+async function abrirTelaCorte() {
+    await mostrarTela('tela-corte');
     mostrarPasso('passo-scanner-corte');
     iniciarScanner('corte');
 }
 
-function voltarScannerCorte() {
+async function voltarScannerCorte() {
     mostrarPasso('passo-scanner-corte');
     document.getElementById('form-corte').reset();
     bobinaAtual = null;
+    await pararScanner();
     iniciarScanner('corte');
 }
 
 // ========== TELA DE CONSULTA ==========
-function abrirTelaConsulta() {
-    mostrarTela('tela-consulta');
+async function abrirTelaConsulta() {
+    await mostrarTela('tela-consulta');
     mostrarPasso('passo-scanner-consulta');
     iniciarScanner('consulta');
 }
 
-function voltarScannerConsulta() {
+async function voltarScannerConsulta() {
     mostrarPasso('passo-scanner-consulta');
     bobinaAtual = null;
+    await pararScanner();
     iniciarScanner('consulta');
 }
 
@@ -66,6 +69,11 @@ function mostrarPasso(passoId) {
 function iniciarScanner(tipo) {
     const readerId = tipo === 'corte' ? 'reader-corte' : 'reader-consulta';
     
+    if (scannerTransicao || scannerAtivo) {
+        // já em execução ou em transição; evita start duplicado
+        return;
+    }
+    
     scannerAtivo = new Html5Qrcode(readerId);
     
     const config = {
@@ -74,6 +82,7 @@ function iniciarScanner(tipo) {
         aspectRatio: 1.0
     };
     
+    scannerTransicao = true;
     scannerAtivo.start(
         { facingMode: "environment" },
         config,
@@ -81,20 +90,40 @@ function iniciarScanner(tipo) {
         (errorMessage) => {
             // Ignorar erros contínuos de scan
         }
-    ).catch(err => {
+    ).then(() => {
+        scannerTransicao = false;
+    }).catch(err => {
         console.error('Erro ao iniciar scanner:', err);
         mostrarToast('Erro ao acessar câmera. Verifique as permissões.', 'error');
+        scannerTransicao = false;
     });
 }
 
 function pararScanner() {
-    if (scannerAtivo) {
+    return new Promise((resolve) => {
+        if (!scannerAtivo) return resolve();
+        if (scannerTransicao) {
+            // aguardar finalização atual
+            const wait = setInterval(() => {
+                if (!scannerTransicao) {
+                    clearInterval(wait);
+                    resolve();
+                }
+            }, 50);
+            return;
+        }
+        scannerTransicao = true;
         scannerAtivo.stop().then(() => {
             scannerAtivo = null;
+            scannerTransicao = false;
+            resolve();
         }).catch(err => {
             console.error('Erro ao parar scanner:', err);
+            scannerAtivo = null;
+            scannerTransicao = false;
+            resolve();
         });
-    }
+    });
 }
 
 function cancelarScanner(tipo) {
@@ -103,8 +132,8 @@ function cancelarScanner(tipo) {
 }
 
 async function onScanSucesso(qrData, tipo) {
-    // Parar scanner
-    pararScanner();
+    // Parar scanner e aguardar para evitar estado inconsistente
+    await pararScanner();
     
     // Vibrar (se suportado)
     if (navigator.vibrate) {
