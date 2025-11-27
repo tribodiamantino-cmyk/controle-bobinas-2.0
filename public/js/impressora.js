@@ -102,8 +102,11 @@ function gerarConteudoEtiquetaRetalho(retalho) {
 
 // Abrir página de visualização de etiquetas
 function abrirPaginaEtiquetas(etiquetas) {
+    console.log('📄 abrirPaginaEtiquetas chamada com:', etiquetas);
+    
     // etiquetas pode ser um array ou objeto único
     const listaEtiquetas = Array.isArray(etiquetas) ? etiquetas : [etiquetas];
+    console.log('📋 Lista de etiquetas processada:', listaEtiquetas);
     
     const htmlCompleto = `
         <!DOCTYPE html>
@@ -301,9 +304,19 @@ function abrirPaginaEtiquetas(etiquetas) {
         </html>
     `;
     
+    console.log('🌐 Abrindo nova janela...');
     const janela = window.open('', '_blank', 'width=1000,height=700');
+    
+    if (!janela) {
+        console.error('❌ Bloqueador de pop-up pode estar ativo!');
+        alert('⚠️ Por favor, permita pop-ups para este site para abrir a página de impressão.');
+        return;
+    }
+    
+    console.log('✍️ Escrevendo HTML na janela...');
     janela.document.write(htmlCompleto);
     janela.document.close();
+    console.log('✅ Página de etiquetas aberta com sucesso!');
 }
 
 // Preview da etiqueta (mostra como vai ficar)
