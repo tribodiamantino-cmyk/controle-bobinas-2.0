@@ -59,7 +59,7 @@ function gerarPaginaImpressaoOrdem(plano) {
             <title>Ordem de Produção - ${plano.codigo_plano}</title>
             <style>
                 @page {
-                    size: A4;
+                    size: A4 landscape;
                     margin: 15mm;
                 }
                 
@@ -109,7 +109,7 @@ function gerarPaginaImpressaoOrdem(plano) {
                 
                 .info-grid {
                     display: grid;
-                    grid-template-columns: 1fr 1fr;
+                    grid-template-columns: repeat(4, 1fr);
                     gap: 10px;
                     margin-bottom: 15px;
                 }
@@ -151,16 +151,16 @@ function gerarPaginaImpressaoOrdem(plano) {
                 
                 .cortes-table th {
                     background: #e0e0e0;
-                    padding: 6px;
+                    padding: 5px;
                     text-align: left;
-                    font-size: 10pt;
+                    font-size: 9pt;
                     border-bottom: 1px solid #999;
                 }
                 
                 .cortes-table td {
-                    padding: 6px;
+                    padding: 5px;
                     border-bottom: 1px solid #ddd;
-                    font-size: 10pt;
+                    font-size: 9pt;
                 }
                 
                 .cortes-table tr:last-child td {
@@ -178,41 +178,41 @@ function gerarPaginaImpressaoOrdem(plano) {
                 }
                 
                 .assinatura-section {
-                    margin-top: 30px;
+                    margin-top: 20px;
                     page-break-inside: avoid;
                 }
                 
                 .assinatura-box {
                     border: 1px solid #333;
-                    padding: 15px;
-                    margin-bottom: 15px;
+                    padding: 12px;
+                    margin-bottom: 12px;
                 }
                 
                 .assinatura-box h3 {
-                    font-size: 11pt;
-                    margin-bottom: 10px;
+                    font-size: 10pt;
+                    margin-bottom: 8px;
                     color: #333;
                 }
                 
                 .assinatura-linha {
                     border-top: 1px solid #000;
-                    margin-top: 40px;
+                    margin-top: 30px;
                     padding-top: 5px;
                     text-align: center;
-                    font-size: 10pt;
+                    font-size: 9pt;
                 }
                 
                 .localizacao-grid {
                     display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 10px;
+                    grid-template-columns: repeat(5, 1fr);
+                    gap: 8px;
                     margin-top: 10px;
                 }
                 
                 .localizacao-item {
                     border: 1px dashed #999;
-                    padding: 8px;
-                    min-height: 60px;
+                    padding: 6px;
+                    min-height: 55px;
                 }
                 
                 .localizacao-item label {
