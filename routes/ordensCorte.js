@@ -41,4 +41,7 @@ router.post('/:id/voltar-planejamento', ordensController.voltarParaPlanejamento)
 // Arquivar plano finalizado
 router.post('/:id/arquivar', ordensController.arquivarPlano);
 
+// UTILIDADE: Limpar reservas órfãs (recalcular metragens reservadas)
+router.post('/admin/limpar-reservas', ordensController.limparReservasOrfas);
+
 module.exports = router;

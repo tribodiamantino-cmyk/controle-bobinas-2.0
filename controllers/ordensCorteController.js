@@ -475,10 +475,55 @@ exports.alocarOrigem = async (req, res) => {
         
         // Verificar se já existe alocação
         const [alocacoesExistentes] = await db.query(`
-            SELECT id FROM alocacoes_corte WHERE item_plano_corte_id = ?
+            SELECT * FROM alocacoes_corte WHERE item_plano_corte_id = ?
         `, [item_id]);
         
         if (alocacoesExistentes.length > 0) {
+            // IMPORTANTE: Se está trocando origem, precisa liberar reserva da origem antiga
+            const alocacaoAntiga = alocacoesExistentes[0];
+            
+            // Verificar se o plano está em produção (se sim, a metragem está reservada)
+            const [planoStatus] = await db.query(`
+                SELECT pc.status 
+                FROM planos_corte pc
+                JOIN itens_plano_corte ipc ON ipc.plano_corte_id = pc.id
+                WHERE ipc.id = ?
+            `, [item_id]);
+            
+            const planoEmProducao = planoStatus.length > 0 && planoStatus[0].status === 'em_producao';
+            
+            // Se o plano está em produção, liberar reserva da origem antiga
+            if (planoEmProducao) {
+                if (alocacaoAntiga.tipo_origem === 'bobina' && alocacaoAntiga.bobina_id) {
+                    await db.query(`
+                        UPDATE bobinas 
+                        SET metragem_reservada = GREATEST(0, metragem_reservada - ?)
+                        WHERE id = ?
+                    `, [alocacaoAntiga.metragem_alocada, alocacaoAntiga.bobina_id]);
+                } else if (alocacaoAntiga.tipo_origem === 'retalho' && alocacaoAntiga.retalho_id) {
+                    await db.query(`
+                        UPDATE retalhos 
+                        SET metragem_reservada = GREATEST(0, metragem_reservada - ?)
+                        WHERE id = ?
+                    `, [alocacaoAntiga.metragem_alocada, alocacaoAntiga.retalho_id]);
+                }
+                
+                // Reservar metragem na nova origem
+                if (tipo_origem === 'bobina') {
+                    await db.query(`
+                        UPDATE bobinas 
+                        SET metragem_reservada = metragem_reservada + ?
+                        WHERE id = ?
+                    `, [item.metragem, origem_id]);
+                } else {
+                    await db.query(`
+                        UPDATE retalhos 
+                        SET metragem_reservada = metragem_reservada + ?
+                        WHERE id = ?
+                    `, [item.metragem, origem_id]);
+                }
+            }
+            
             // Atualizar alocação existente
             await db.query(`
                 UPDATE alocacoes_corte 
@@ -906,12 +951,38 @@ exports.excluirPlano = async (req, res) => {
             });
         }
         
+        // IMPORTANTE: Liberar reservas de metragem antes de excluir
+        // Buscar todas as alocações deste plano
+        const [alocacoes] = await db.query(`
+            SELECT ac.*, ac.tipo_origem, ac.bobina_id, ac.retalho_id, ac.metragem_alocada
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
+            WHERE ipc.plano_corte_id = ?
+        `, [id]);
+        
+        // Liberar metragem reservada de cada origem
+        for (const alocacao of alocacoes) {
+            if (alocacao.tipo_origem === 'bobina' && alocacao.bobina_id) {
+                await db.query(`
+                    UPDATE bobinas 
+                    SET metragem_reservada = GREATEST(0, metragem_reservada - ?)
+                    WHERE id = ?
+                `, [alocacao.metragem_alocada, alocacao.bobina_id]);
+            } else if (alocacao.tipo_origem === 'retalho' && alocacao.retalho_id) {
+                await db.query(`
+                    UPDATE retalhos 
+                    SET metragem_reservada = GREATEST(0, metragem_reservada - ?)
+                    WHERE id = ?
+                `, [alocacao.metragem_alocada, alocacao.retalho_id]);
+            }
+        }
+        
         // Excluir plano (cascata exclui itens e alocações)
         await db.query(`DELETE FROM planos_corte WHERE id = ?`, [id]);
         
         res.json({ 
             success: true, 
-            message: 'Plano excluído com sucesso!' 
+            message: `Plano excluído com sucesso! ${alocacoes.length} reserva(s) liberada(s).` 
         });
         
     } catch (error) {
@@ -1145,6 +1216,53 @@ exports.arquivarPlano = async (req, res) => {
         
     } catch (error) {
         console.error('Erro ao arquivar plano:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
+// UTILIDADE: Limpar reservas órfãs (metragens reservadas sem alocação ativa)
+exports.limparReservasOrfas = async (req, res) => {
+    try {
+        // Buscar todas as alocações ativas em planos que estão em produção
+        const [alocacoesAtivas] = await db.query(`
+            SELECT ac.tipo_origem, ac.bobina_id, ac.retalho_id, ac.metragem_alocada
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
+            JOIN planos_corte pc ON pc.id = ipc.plano_corte_id
+            WHERE pc.status = 'em_producao'
+        `);
+        
+        // Resetar todas as metragens reservadas
+        await db.query(`UPDATE bobinas SET metragem_reservada = 0`);
+        await db.query(`UPDATE retalhos SET metragem_reservada = 0`);
+        
+        // Recalcular apenas as reservas ativas
+        for (const alocacao of alocacoesAtivas) {
+            if (alocacao.tipo_origem === 'bobina' && alocacao.bobina_id) {
+                await db.query(`
+                    UPDATE bobinas 
+                    SET metragem_reservada = metragem_reservada + ?
+                    WHERE id = ?
+                `, [alocacao.metragem_alocada, alocacao.bobina_id]);
+            } else if (alocacao.tipo_origem === 'retalho' && alocacao.retalho_id) {
+                await db.query(`
+                    UPDATE retalhos 
+                    SET metragem_reservada = metragem_reservada + ?
+                    WHERE id = ?
+                `, [alocacao.metragem_alocada, alocacao.retalho_id]);
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `Reservas recalculadas com sucesso! ${alocacoesAtivas.length} alocação(ões) ativa(s) reprocessada(s).` 
+        });
+        
+    } catch (error) {
+        console.error('Erro ao limpar reservas órfãs:', error);
         res.status(500).json({ 
             success: false, 
             error: error.message 
