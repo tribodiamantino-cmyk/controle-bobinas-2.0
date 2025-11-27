@@ -919,50 +919,6 @@ function gerarHtmlEtiqueta(bobina, tipo = 'completa') {
         </html>
     `;
 }
-            
-            <h3>Código ZPL (Zebra):</h3>
-            <textarea id="zpl-code" readonly>${zplCode}</textarea>
-            
-            <div style="margin-top: 20px;">
-                <button class="btn btn-primary" onclick="copiarZPL()">📋 Copiar Código ZPL</button>
-                <button class="btn btn-secondary" onclick="enviarParaImpressora()">🖨️ Enviar para Impressora</button>
-                <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimir Preview</button>
-                <button class="btn btn-secondary" onclick="window.close()">✖️ Fechar</button>
-            </div>
-            
-            <div id="mensagem" style="margin-top: 20px;"></div>
-            
-            <script>
-                // Gerar QR Code ao carregar a página
-                window.onload = function() {
-                    const qrData = ${JSON.stringify(qrData)};
-                    new QRCode(document.getElementById("qrcode"), {
-                        text: qrData,
-                        width: 80,
-                        height: 80,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                };
-                
-                function copiarZPL() {
-                    const zpl = document.getElementById('zpl-code');
-                    zpl.select();
-                    document.execCommand('copy');
-                    document.getElementById('mensagem').innerHTML = '<div style="color: green;">✅ Código ZPL copiado para área de transferência!</div>';
-                }
-                
-                function enviarParaImpressora() {
-                    // Aqui você pode implementar a lógica para enviar direto para a impressora Zebra
-                    // Por exemplo, usando uma biblioteca como qz-tray ou enviando para um endpoint
-                    alert('Para imprimir, copie o código ZPL e cole no software da impressora Zebra, ou use QZ Tray.');
-                }
-            </script>
-        </body>
-        </html>
-    `;
-}
 
 // Gerar código ZPL para impressora Zebra
 function gerarZPL(bobina, tipo = 'completa') {
