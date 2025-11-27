@@ -555,8 +555,8 @@ async function onScanSucesso(qrData, tipo) {
                 mostrarToast('⚠️ Para cortar retalho, use a tela de consulta', 'warning');
                 voltarScannerCorte();
             } else if (tipo === 'validacao') {
-                mostrarToast('⚠️ Retalhos não são usados em ordens de corte', 'warning');
-                cancelarValidacao();
+                // Retalhos SÃO usados em ordens de corte - processar validação
+                await processarValidacao(bobinaId);
             }
         }
     } catch (error) {
