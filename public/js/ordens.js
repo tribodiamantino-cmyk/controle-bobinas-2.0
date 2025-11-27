@@ -1424,14 +1424,14 @@ async function carregarTemplates() {
 }
 
 async function usarTemplate(templateId) {
-    // Armazenar o ID do template e abrir modal para pedir nome do plano
+    // Armazenar o ID do template e abrir modal para pedir cliente e aviário
     window.templateSelecionadoId = templateId;
     document.getElementById('modalCriarPlanoTemplate').style.display = 'flex';
     document.getElementById('formCriarPlanoTemplate').reset();
     
     // Focar no primeiro campo
     setTimeout(() => {
-        document.getElementById('nomePlanoTemplate').focus();
+        document.getElementById('clientePlanoTemplate').focus();
     }, 100);
 }
 
@@ -1442,12 +1442,11 @@ function fecharModalCriarPlanoTemplate() {
 
 async function confirmarCriarPlanoTemplate() {
     try {
-        const nomePlano = document.getElementById('nomePlanoTemplate').value.trim();
         const cliente = document.getElementById('clientePlanoTemplate').value.trim();
         const aviario = document.getElementById('aviarioPlanoTemplate').value.trim();
         
-        if (!nomePlano || !cliente || !aviario) {
-            showNotification('Preencha todos os campos obrigatórios', 'warning');
+        if (!cliente || !aviario) {
+            showNotification('Preencha Cliente e Aviário', 'warning');
             return;
         }
         

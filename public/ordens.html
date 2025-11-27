@@ -299,7 +299,7 @@
 
     <!-- Modal: Criar Plano do Template -->
     <div id="modalCriarPlanoTemplate" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content" style="min-width: 600px; max-width: 700px;">
             <div class="modal-header">
                 <h2>✨ Criar Plano do Template</h2>
                 <button class="btn-close" onclick="fecharModalCriarPlanoTemplate()">✕</button>
@@ -308,19 +308,12 @@
                 <p style="color: #666; margin-bottom: 20px;">Um novo plano será criado com todos os cortes deste template.</p>
                 <form id="formCriarPlanoTemplate" onsubmit="event.preventDefault(); confirmarCriarPlanoTemplate();">
                     <div class="form-group">
-                        <label>Nome do Plano *</label>
-                        <input type="text" id="nomePlanoTemplate" class="form-control" required placeholder="Ex: Aviário 3 - João Silva">
-                        <small style="color: #888;">Este nome identificará o plano de corte</small>
+                        <label>Cliente *</label>
+                        <input type="text" id="clientePlanoTemplate" class="form-control" required placeholder="Ex: João Silva">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Cliente *</label>
-                            <input type="text" id="clientePlanoTemplate" class="form-control" required placeholder="Ex: João Silva">
-                        </div>
-                        <div class="form-group">
-                            <label>Aviário *</label>
-                            <input type="text" id="aviarioPlanoTemplate" class="form-control" required placeholder="Ex: Aviário 3">
-                        </div>
+                    <div class="form-group">
+                        <label>Aviário *</label>
+                        <input type="text" id="aviarioPlanoTemplate" class="form-control" required placeholder="Ex: Aviário 3">
                     </div>
                     <div style="display: flex; gap: 12px; margin-top: 20px;">
                         <button type="button" class="btn btn-secondary" onclick="fecharModalCriarPlanoTemplate()">Cancelar</button>
