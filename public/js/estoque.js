@@ -6,11 +6,19 @@ let cores = [];
 let gramaturas = [];
 let filtrosVisiveis = false;
 
-// Funções com debounce para filtros
-const aplicarTodosFiltrosEstoqueDebounced = debounce(aplicarTodosFiltrosEstoque, 300);
+// Funções com debounce para filtros (será definida no DOMContentLoaded)
+let aplicarTodosFiltrosEstoqueDebounced;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
+    // Criar função debounced após garantir que utils.js foi carregado
+    if (typeof debounce !== 'undefined') {
+        aplicarTodosFiltrosEstoqueDebounced = debounce(aplicarTodosFiltrosEstoque, 300);
+    } else {
+        // Fallback se debounce não estiver disponível
+        aplicarTodosFiltrosEstoqueDebounced = aplicarTodosFiltrosEstoque;
+    }
+    
     carregarEstoque();
     carregarCoresGramaturas();
     
