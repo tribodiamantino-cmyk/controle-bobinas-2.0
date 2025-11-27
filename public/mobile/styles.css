@@ -466,3 +466,223 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* ========== ORDENS EM PRODUÇÃO ========== */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-light);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.ordem-card {
+    background: var(--surface);
+    border-radius: 1rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--primary);
+}
+
+.ordem-card:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.ordem-card:active {
+    transform: translateX(0);
+}
+
+.ordem-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.ordem-numero {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text);
+    font-family: monospace;
+}
+
+.ordem-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-em-produção,
+.status-em-andamento {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.status-pendente {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.status-concluída {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.ordem-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+.ordem-obs {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+/* ========== DETALHES DA ORDEM ========== */
+.ordem-detalhes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    padding: 1rem;
+    border-radius: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.ordem-detalhes-header h3 {
+    font-size: 1.25rem;
+    font-family: monospace;
+}
+
+.itens-lista {
+    background: var(--surface);
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.itens-lista h4 {
+    margin-bottom: 1rem;
+    color: var(--text);
+}
+
+.item-card {
+    background: var(--background);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.item-card:hover {
+    border-color: var(--primary);
+    background: white;
+}
+
+.item-card:last-child {
+    margin-bottom: 0;
+}
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.item-bobina {
+    font-weight: 700;
+    font-family: monospace;
+    color: var(--text);
+}
+
+.item-metragem {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.item-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.item-disponivel {
+    font-size: 0.875rem;
+    color: var(--success);
+    margin-bottom: 0.5rem;
+}
+
+.item-action {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--primary);
+    font-weight: 600;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border);
+}
+
+/* ========== CONFIRMAÇÃO DE CORTE ========== */
+.confirma-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.confirma-header h3 {
+    color: var(--success);
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.confirma-header p {
+    color: var(--text-light);
+}
+
+.confirma-ordem {
+    background: var(--background);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    font-family: monospace;
+}
+
+/* ========== HISTÓRICO TIPOS ========== */
+.historico-item.corte {
+    border-left-color: var(--danger);
+}
+
+.historico-item.corte .historico-tipo {
+    color: var(--danger);
+}
+
+.historico-item.corte .historico-metragem {
+    color: var(--danger);
+}
+
+.historico-item.entrada {
+    border-left-color: var(--success);
+}
+
+.historico-item.entrada .historico-tipo {
+    color: var(--success);
+}

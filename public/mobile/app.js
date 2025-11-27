@@ -2,6 +2,9 @@
 let scannerAtivo = null;
 let scannerTransicao = false; // evita start/stop concorrente
 let bobinaAtual = null;
+let ordensProducao = [];
+let ordemAtual = null;
+let itemValidando = null;
 
 // ========== NAVEGAÇÃO ENTRE TELAS ==========
 async function mostrarTela(telaId) {
@@ -51,6 +54,302 @@ async function voltarScannerConsulta() {
     iniciarScanner('consulta');
 }
 
+// ========== TELA DE ORDENS EM PRODUÇÃO ==========
+async function abrirTelaProducao() {
+    await mostrarTela('tela-producao');
+    mostrarPasso('passo-lista-ordens');
+    carregarOrdensProducao();
+}
+
+async function carregarOrdensProducao() {
+    mostrarLoading(true);
+    
+    try {
+        const response = await fetch('/api/mobile/ordens-producao');
+        const data = await response.json();
+        
+        if (data.success) {
+            ordensProducao = data.data;
+            renderizarOrdensProducao();
+        } else {
+            throw new Error(data.message || 'Erro ao carregar ordens');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar ordens:', error);
+        mostrarToast('Erro ao carregar ordens em produção', 'error');
+    } finally {
+        mostrarLoading(false);
+    }
+}
+
+function renderizarOrdensProducao() {
+    const container = document.getElementById('ordens-container');
+    
+    if (ordensProducao.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📋</div>
+                <p>Nenhuma ordem em produção no momento</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = ordensProducao.map(ordem => `
+        <div class="ordem-card" onclick="abrirOrdem(${ordem.id})">
+            <div class="ordem-header">
+                <span class="ordem-numero">${ordem.numero_ordem}</span>
+                <span class="ordem-status status-${ordem.status.toLowerCase().replace(' ', '-')}">${ordem.status}</span>
+            </div>
+            <div class="ordem-info">
+                <span>📦 ${ordem.qtd_itens} ${ordem.qtd_itens === 1 ? 'item' : 'itens'} pendente${ordem.qtd_itens === 1 ? '' : 's'}</span>
+                <span>📅 ${formatarData(ordem.data_criacao)}</span>
+            </div>
+            ${ordem.observacoes ? `<div class="ordem-obs">${ordem.observacoes}</div>` : ''}
+        </div>
+    `).join('');
+}
+
+function abrirOrdem(ordemId) {
+    ordemAtual = ordensProducao.find(o => o.id === ordemId);
+    if (!ordemAtual) return;
+    
+    renderizarDetalhesOrdem();
+    mostrarPasso('passo-ordem-detalhes');
+}
+
+function renderizarDetalhesOrdem() {
+    const container = document.getElementById('ordem-detalhes-container');
+    
+    container.innerHTML = `
+        <div class="ordem-detalhes-header">
+            <h3>${ordemAtual.numero_ordem}</h3>
+            <span class="ordem-status status-${ordemAtual.status.toLowerCase().replace(' ', '-')}">${ordemAtual.status}</span>
+        </div>
+        
+        <div class="itens-lista">
+            <h4>📦 Itens da Ordem</h4>
+            ${ordemAtual.itens.map(item => `
+                <div class="item-card" onclick="iniciarValidacaoItem(${item.item_id})">
+                    <div class="item-header">
+                        <span class="item-bobina">${item.bobina_codigo || 'Bobina #' + item.bobina_id}</span>
+                        <span class="item-metragem">${item.metragem_solicitada}m</span>
+                    </div>
+                    <div class="item-info">
+                        <span>${item.produto_codigo || ''} ${item.nome_cor ? '- ' + item.nome_cor : ''}</span>
+                        <span>📍 ${item.localizacao_atual || 'N/A'}</span>
+                    </div>
+                    <div class="item-disponivel">
+                        Disponível: <strong>${item.metragem_atual}m</strong>
+                    </div>
+                    <div class="item-action">
+                        👆 Toque para validar
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        
+        <button class="btn btn-secondary" onclick="voltarListaOrdens()" style="margin-top: 1rem;">
+            ← Voltar para Lista
+        </button>
+    `;
+}
+
+function voltarListaOrdens() {
+    ordemAtual = null;
+    itemValidando = null;
+    mostrarPasso('passo-lista-ordens');
+}
+
+async function iniciarValidacaoItem(itemId) {
+    itemValidando = ordemAtual.itens.find(i => i.item_id === itemId);
+    if (!itemValidando) return;
+    
+    // Atualizar instrução do scanner
+    document.getElementById('instrucao-validacao').innerHTML = `
+        📱 Escaneie a bobina <strong>${itemValidando.bobina_codigo || '#' + itemValidando.bobina_id}</strong>
+    `;
+    
+    mostrarPasso('passo-scanner-validacao');
+    await pararScanner();
+    iniciarScanner('validacao');
+}
+
+function cancelarValidacao() {
+    pararScanner();
+    itemValidando = null;
+    renderizarDetalhesOrdem();
+    mostrarPasso('passo-ordem-detalhes');
+}
+
+// ========== PROCESSAMENTO DA VALIDAÇÃO ==========
+async function processarValidacao(bobinaId) {
+    // Verificar se bobina escaneada corresponde ao item
+    if (itemValidando.bobina_id != bobinaId) {
+        mostrarToast('❌ Bobina incorreta! Escaneie a bobina ' + (itemValidando.bobina_codigo || '#' + itemValidando.bobina_id), 'error');
+        // Reiniciar scanner para tentar novamente
+        setTimeout(() => iniciarScanner('validacao'), 1500);
+        return;
+    }
+    
+    // Bobina correta - buscar dados atualizados
+    mostrarLoading(true);
+    
+    try {
+        const response = await fetch(`/api/mobile/bobina/${bobinaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            bobinaAtual = data.data;
+            mostrarConfirmacaoCorte();
+        } else {
+            throw new Error(data.message || 'Erro ao carregar bobina');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar bobina:', error);
+        mostrarToast('Erro ao carregar dados da bobina', 'error');
+        cancelarValidacao();
+    } finally {
+        mostrarLoading(false);
+    }
+}
+
+function mostrarConfirmacaoCorte() {
+    const container = document.getElementById('confirma-corte-container');
+    
+    const metragemReservada = Number(bobinaAtual.metragem_reservada || 0);
+    const metragemSolicitada = Number(itemValidando.metragem_solicitada || 0);
+    
+    container.innerHTML = `
+        <div class="confirma-header">
+            <h3>✅ Bobina Verificada</h3>
+            <p>Confirme o corte do item</p>
+        </div>
+        
+        <div class="confirma-ordem">
+            <strong>Ordem:</strong> ${ordemAtual.numero_ordem}
+        </div>
+        
+        <div class="bobina-info" style="margin: 1rem 0;">
+            <div class="bobina-info-codigo">${bobinaAtual.codigo_interno}</div>
+            <div class="bobina-info-grid">
+                <div class="bobina-info-item">
+                    <strong>Produto:</strong><br>${bobinaAtual.codigo}
+                </div>
+                <div class="bobina-info-item">
+                    <strong>Cor:</strong><br>${bobinaAtual.nome_cor}
+                </div>
+                <div class="bobina-info-item">
+                    <strong>Metragem Atual:</strong><br>${bobinaAtual.metragem_atual}m
+                </div>
+                <div class="bobina-info-item">
+                    <strong>Localização:</strong><br>${bobinaAtual.localizacao_atual || 'N/A'}
+                </div>
+                ${metragemReservada > 0 ? `
+                    <div class="bobina-info-item" style="background: #fef3c7; border-left: 3px solid #f59e0b;">
+                        <strong>⚠️ Reservada:</strong><br>${metragemReservada.toFixed(2)}m
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+        
+        <form id="form-validacao" onsubmit="confirmarValidacao(event)">
+            <div class="form-group">
+                <label for="metragem-validacao">Metragem Cortada (metros)</label>
+                <input type="number" id="metragem-validacao" step="0.01" min="0.01" 
+                       value="${metragemSolicitada}" 
+                       max="${bobinaAtual.metragem_atual}" required>
+                <small style="color: var(--text-light);">Solicitado: ${metragemSolicitada}m</small>
+            </div>
+
+            <div class="form-group">
+                <label for="observacoes-validacao">Observações (opcional)</label>
+                <textarea id="observacoes-validacao" rows="2"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="cancelarValidacao()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">✅ Confirmar Corte</button>
+            </div>
+        </form>
+    `;
+    
+    mostrarPasso('passo-confirma-corte');
+}
+
+async function confirmarValidacao(event) {
+    event.preventDefault();
+    
+    const metragemCortada = parseFloat(document.getElementById('metragem-validacao').value);
+    const observacoes = document.getElementById('observacoes-validacao').value;
+    
+    // Validar metragem
+    if (metragemCortada > bobinaAtual.metragem_atual) {
+        mostrarToast('Metragem cortada não pode ser maior que a disponível', 'error');
+        return;
+    }
+    
+    if (metragemCortada <= 0) {
+        mostrarToast('Metragem deve ser maior que zero', 'error');
+        return;
+    }
+    
+    mostrarLoading(true);
+    
+    try {
+        const response = await fetch('/api/mobile/validar-item', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                item_id: itemValidando.item_id,
+                bobina_id: bobinaAtual.id,
+                metragem_cortada: metragemCortada,
+                observacoes: observacoes || null
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.data.ordem_concluida) {
+                mostrarToast('✅ Item validado! Ordem concluída!', 'success');
+            } else {
+                mostrarToast('✅ Item validado com sucesso!', 'success');
+            }
+            
+            // Limpar estado
+            bobinaAtual = null;
+            itemValidando = null;
+            
+            // Recarregar ordens e voltar para lista
+            await carregarOrdensProducao();
+            
+            // Se ordem foi concluída ou não tem mais itens, voltar para lista
+            if (data.data.ordem_concluida) {
+                mostrarPasso('passo-lista-ordens');
+            } else {
+                // Atualizar ordem atual com dados atualizados
+                ordemAtual = ordensProducao.find(o => o.id === ordemAtual.id);
+                if (ordemAtual && ordemAtual.itens.length > 0) {
+                    renderizarDetalhesOrdem();
+                    mostrarPasso('passo-ordem-detalhes');
+                } else {
+                    mostrarPasso('passo-lista-ordens');
+                }
+            }
+        } else {
+            throw new Error(data.message || 'Erro ao validar item');
+        }
+    } catch (error) {
+        console.error('Erro ao validar item:', error);
+        mostrarToast(error.message || 'Erro ao validar item', 'error');
+    } finally {
+        mostrarLoading(false);
+    }
+}
+
 // ========== CONTROLE DE PASSOS ==========
 function mostrarPasso(passoId) {
     // Encontrar container pai
@@ -67,7 +366,14 @@ function mostrarPasso(passoId) {
 
 // ========== SCANNER QR CODE ==========
 function iniciarScanner(tipo) {
-    const readerId = tipo === 'corte' ? 'reader-corte' : 'reader-consulta';
+    let readerId;
+    if (tipo === 'corte') {
+        readerId = 'reader-corte';
+    } else if (tipo === 'consulta') {
+        readerId = 'reader-consulta';
+    } else if (tipo === 'validacao') {
+        readerId = 'reader-validacao';
+    }
     
     if (scannerTransicao || scannerAtivo) {
         // já em execução ou em transição; evita start duplicado
@@ -174,11 +480,19 @@ async function onScanSucesso(qrData, tipo) {
         
         if (tipoBobina === 'bobina') {
             console.log('📦 Carregando bobina ID:', bobinaId);
-            await carregarBobina(bobinaId, tipo);
+            
+            if (tipo === 'validacao') {
+                // Validar se é a bobina correta do item
+                await processarValidacao(bobinaId);
+            } else {
+                await carregarBobina(bobinaId, tipo);
+            }
         } else if (tipoBobina === 'retalho') {
             mostrarToast('Retalhos ainda não suportados no app mobile', 'warning');
             if (tipo === 'corte') {
                 voltarScannerCorte();
+            } else if (tipo === 'validacao') {
+                cancelarValidacao();
             } else {
                 voltarScannerConsulta();
             }
@@ -189,6 +503,8 @@ async function onScanSucesso(qrData, tipo) {
         mostrarToast('QR Code inválido: ' + qrData, 'error');
         if (tipo === 'corte') {
             voltarScannerCorte();
+        } else if (tipo === 'validacao') {
+            cancelarValidacao();
         } else {
             voltarScannerConsulta();
         }
@@ -230,6 +546,20 @@ async function carregarBobina(bobinaId, tipo) {
 // ========== MOSTRAR FORMULÁRIO DE CORTE ==========
 function mostrarFormCorte() {
     const container = document.getElementById('bobina-info-corte');
+    const metragemReservada = Number(bobinaAtual.metragem_reservada || 0);
+    const metragemLivre = Number(bobinaAtual.metragem_atual) - metragemReservada;
+    
+    let reservadoHtml = '';
+    if (metragemReservada > 0) {
+        reservadoHtml = `
+            <div class="bobina-info-item" style="background: #fef3c7; border-left: 3px solid #f59e0b;">
+                <strong>⚠️ Reservada:</strong><br>${metragemReservada.toFixed(2)}m
+            </div>
+            <div class="bobina-info-item" style="background: #d1fae5; border-left: 3px solid #10b981;">
+                <strong>Livre:</strong><br>${metragemLivre.toFixed(2)}m
+            </div>
+        `;
+    }
     
     container.innerHTML = `
         <div class="bobina-info-title">Bobina Escaneada</div>
@@ -247,6 +577,7 @@ function mostrarFormCorte() {
             <div class="bobina-info-item">
                 <strong>Localização:</strong><br>${bobinaAtual.localizacao_atual || 'N/A'}
             </div>
+            ${reservadoHtml}
         </div>
     `;
     
@@ -319,6 +650,23 @@ function mostrarDetalhesBobina() {
         .filter(h => h.tipo === 'CORTE')
         .reduce((sum, h) => sum + parseFloat(h.metragem || 0), 0);
     
+    const metragemReservada = Number(bobinaAtual.metragem_reservada || 0);
+    const metragemLivre = Number(bobinaAtual.metragem_atual) - metragemReservada;
+    
+    let reservadoHtml = '';
+    if (metragemReservada > 0) {
+        reservadoHtml = `
+            <div class="detalhes-item" style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 8px;">
+                <strong>⚠️ Reservada:</strong>
+                <span style="font-size: 1.1rem; color: #b45309;">${metragemReservada.toFixed(2)}m</span>
+            </div>
+            <div class="detalhes-item" style="background: #d1fae5; border-left: 3px solid #10b981; padding: 8px;">
+                <strong>Livre p/ Corte:</strong>
+                <span style="font-size: 1.1rem; color: #059669;">${metragemLivre.toFixed(2)}m</span>
+            </div>
+        `;
+    }
+    
     container.innerHTML = `
         <div class="bobina-detalhes-header">
             <div class="detalhes-codigo">${bobinaAtual.codigo_interno}</div>
@@ -355,6 +703,7 @@ function mostrarDetalhesBobina() {
                     <strong>Metragem Atual:</strong>
                     <span style="font-size: 1.25rem; color: #10b981;">${bobinaAtual.metragem_atual}m</span>
                 </div>
+                ${reservadoHtml}
                 <div class="detalhes-item">
                     <strong>Total Cortado:</strong>
                     ${totalCortado.toFixed(2)}m
@@ -370,10 +719,10 @@ function mostrarDetalhesBobina() {
             <h3>📜 Histórico de Movimentações</h3>
             ${bobinaAtual.historico.length > 0 ? 
                 bobinaAtual.historico.map(h => `
-                    <div class="historico-item">
-                        <div class="historico-tipo">${h.tipo}</div>
+                    <div class="historico-item ${h.tipo.toLowerCase()}">
+                        <div class="historico-tipo">${h.tipo === 'CORTE' ? '✂️ CORTE' : '📥 ' + h.tipo}</div>
                         <div class="historico-data">${formatarData(h.data_movimentacao)}</div>
-                        ${h.metragem ? `<div class="historico-metragem">${h.metragem}m</div>` : ''}
+                        ${h.metragem ? `<div class="historico-metragem">${h.tipo === 'CORTE' ? '-' : ''}${h.metragem}m</div>` : ''}
                         ${h.observacoes ? `<div style="font-size: 0.875rem; color: var(--text-light);">${h.observacoes}</div>` : ''}
                     </div>
                 `).join('') 

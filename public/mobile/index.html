@@ -43,6 +43,12 @@
                     <div class="card-desc">Escanear bobina e registrar metragem cortada</div>
                 </button>
 
+                <button class="menu-card" onclick="abrirTelaProducao()">
+                    <div class="card-icon">🏭</div>
+                    <div class="card-title">Ordens Produção</div>
+                    <div class="card-desc">Validar cortes de ordens em andamento</div>
+                </button>
+
                 <button class="menu-card" onclick="abrirTelaConsulta()">
                     <div class="card-icon">🔍</div>
                     <div class="card-title">Consultar Bobina</div>
@@ -118,6 +124,49 @@
                     <!-- Preenchido via JS -->
                 </div>
                 <button class="btn btn-secondary" onclick="voltarScannerConsulta()">Escanear Outra</button>
+            </div>
+        </div>
+
+        <!-- TELA: Ordens em Produção -->
+        <div id="tela-producao" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="voltarMenu()">← Voltar</button>
+                <h2>🏭 Ordens em Produção</h2>
+            </div>
+
+            <!-- Lista de Ordens -->
+            <div id="passo-lista-ordens" class="passo active">
+                <div id="ordens-container">
+                    <!-- Cards de ordens preenchidos via JS -->
+                </div>
+                <button class="btn btn-secondary" onclick="carregarOrdensProducao()" style="margin-top: 1rem;">
+                    🔄 Atualizar Lista
+                </button>
+            </div>
+
+            <!-- Detalhes da Ordem com itens -->
+            <div id="passo-ordem-detalhes" class="passo">
+                <div id="ordem-detalhes-container">
+                    <!-- Detalhes da ordem via JS -->
+                </div>
+            </div>
+
+            <!-- Scanner para validar item -->
+            <div id="passo-scanner-validacao" class="passo">
+                <div class="scanner-container">
+                    <div id="reader-validacao" class="qr-reader"></div>
+                    <div class="scanner-instrucao" id="instrucao-validacao">
+                        📱 Escaneie a bobina para validar o item
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="cancelarValidacao()">Cancelar</button>
+            </div>
+
+            <!-- Confirmação de corte -->
+            <div id="passo-confirma-corte" class="passo">
+                <div id="confirma-corte-container">
+                    <!-- Formulário de confirmação via JS -->
+                </div>
             </div>
         </div>
     </div>

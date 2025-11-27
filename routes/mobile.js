@@ -14,6 +14,7 @@ router.get('/bobina/:id', async (req, res) => {
                 b.codigo_interno,
                 b.metragem_inicial,
                 b.metragem_atual,
+                b.metragem_reservada,
                 b.localizacao_atual,
                 b.status,
                 b.data_entrada,
@@ -191,3 +192,190 @@ router.post('/corte', async (req, res) => {
 });
 
 module.exports = router;
+
+// ========== GET: Ordens Em Produção ==========
+// Retorna ordens com status 'Em Produção' para validação no chão de fábrica
+router.get('/ordens-producao', async (req, res) => {
+    try {
+        // Buscar ordens em produção (status: Em Produção ou Em Andamento)
+        const [ordens] = await db.query(
+            `SELECT 
+                oc.id,
+                oc.numero_ordem,
+                oc.status,
+                oc.criado_por,
+                oc.data_criacao,
+                oc.observacoes
+            FROM ordens_corte oc
+            WHERE oc.status IN ('Em Produção', 'Em Andamento', 'Pendente')
+            ORDER BY oc.data_criacao DESC
+            LIMIT 20`
+        );
+
+        // Para cada ordem, buscar os itens pendentes
+        for (let ordem of ordens) {
+            const [itens] = await db.query(
+                `SELECT 
+                    i.id AS item_id,
+                    i.bobina_id,
+                    i.produto_id,
+                    i.metragem_cortada AS metragem_solicitada,
+                    i.status AS item_status,
+                    i.observacoes AS item_obs,
+                    b.codigo_interno AS bobina_codigo,
+                    b.metragem_atual,
+                    b.localizacao_atual,
+                    p.codigo AS produto_codigo,
+                    c.nome_cor
+                FROM itens_ordem_corte i
+                LEFT JOIN bobinas b ON i.bobina_id = b.id
+                LEFT JOIN produtos p ON i.produto_id = p.id
+                LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                WHERE i.ordem_corte_id = ?
+                  AND (i.status IS NULL OR i.status != 'Concluído')
+                ORDER BY i.id`,
+                [ordem.id]
+            );
+            ordem.itens = itens;
+            ordem.qtd_itens = itens.length;
+        }
+
+        // Filtrar ordens que têm itens pendentes
+        const ordensComItens = ordens.filter(o => o.itens.length > 0);
+
+        return res.json({
+            success: true,
+            data: ordensComItens
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar ordens em produção:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Erro ao buscar ordens em produção',
+            error: error.message
+        });
+    }
+});
+
+// ========== POST: Validar Item de Ordem (confirmar corte) ==========
+router.post('/validar-item', async (req, res) => {
+    try {
+        const { item_id, bobina_id, metragem_cortada, observacoes } = req.body;
+
+        if (!item_id || !bobina_id || !metragem_cortada) {
+            return res.status(400).json({
+                success: false,
+                message: 'Item, bobina e metragem são obrigatórios'
+            });
+        }
+
+        // Buscar item da ordem
+        const [itens] = await db.query(
+            `SELECT i.*, oc.numero_ordem, oc.status AS ordem_status
+             FROM itens_ordem_corte i
+             JOIN ordens_corte oc ON i.ordem_corte_id = oc.id
+             WHERE i.id = ?`,
+            [item_id]
+        );
+
+        if (itens.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Item não encontrado'
+            });
+        }
+
+        const item = itens[0];
+
+        // Verificar se bobina corresponde
+        if (item.bobina_id != bobina_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Bobina escaneada não corresponde ao item da ordem'
+            });
+        }
+
+        // Buscar bobina
+        const [bobinas] = await db.query(
+            `SELECT id, metragem_atual, metragem_reservada FROM bobinas WHERE id = ?`,
+            [bobina_id]
+        );
+
+        if (bobinas.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bobina não encontrada'
+            });
+        }
+
+        const bobina = bobinas[0];
+        const metragem_disponivel = Number(bobina.metragem_atual);
+
+        if (metragem_cortada > metragem_disponivel) {
+            return res.status(400).json({
+                success: false,
+                message: `Metragem insuficiente. Disponível: ${metragem_disponivel.toFixed(2)}m`
+            });
+        }
+
+        // Atualizar item como concluído
+        await db.query(
+            `UPDATE itens_ordem_corte 
+             SET status = 'Concluído', 
+                 metragem_cortada = ?,
+                 data_corte = NOW(),
+                 observacoes = CONCAT(IFNULL(observacoes, ''), ' [Mobile: ', IFNULL(?, ''), ']')
+             WHERE id = ?`,
+            [metragem_cortada, observacoes, item_id]
+        );
+
+        // Atualizar metragem da bobina
+        const nova_metragem = metragem_disponivel - metragem_cortada;
+        const nova_reserva = Math.max(0, Number(bobina.metragem_reservada || 0) - metragem_cortada);
+
+        await db.query(
+            `UPDATE bobinas 
+             SET metragem_atual = ?,
+                 metragem_reservada = ?
+             WHERE id = ?`,
+            [nova_metragem, nova_reserva, bobina_id]
+        );
+
+        // Verificar se todos itens da ordem foram concluídos
+        const [pendentes] = await db.query(
+            `SELECT COUNT(*) as cnt FROM itens_ordem_corte 
+             WHERE ordem_corte_id = ? AND (status IS NULL OR status != 'Concluído')`,
+            [item.ordem_corte_id]
+        );
+
+        if (pendentes[0].cnt === 0) {
+            // Todos itens concluídos - atualizar status da ordem
+            await db.query(
+                `UPDATE ordens_corte 
+                 SET status = 'Concluída', data_conclusao = NOW()
+                 WHERE id = ?`,
+                [item.ordem_corte_id]
+            );
+        }
+
+        return res.json({
+            success: true,
+            message: 'Item validado com sucesso!',
+            data: {
+                ordem_numero: item.numero_ordem,
+                metragem_cortada,
+                metragem_restante: nova_metragem.toFixed(2),
+                ordem_concluida: pendentes[0].cnt === 0
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao validar item:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Erro ao validar item',
+            error: error.message
+        });
+    }
+});
