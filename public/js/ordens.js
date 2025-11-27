@@ -29,6 +29,11 @@ let planosCached = {
 document.addEventListener('DOMContentLoaded', () => {
     carregarProdutos();
     carregarPlanos();
+    
+    // Auto-refresh a cada 30 segundos para ver validações do app mobile
+    setInterval(() => {
+        carregarPlanos();
+    }, 30000);
 });
 
 // ========== CARREGAR DADOS ==========
@@ -107,6 +112,11 @@ function criarCardPlano(plano) {
     const itensAlocados = plano.itens_alocados || 0;
     const itensNaoAlocados = totalItens - itensAlocados;
     
+    // Indicadores de validação (cortes confirmados pelo app mobile)
+    const itensValidados = plano.alocacoes_confirmadas || 0;
+    const todosValidados = totalItens > 0 && itensValidados >= totalItens;
+    const temValidacoes = itensValidados > 0;
+    
     let badgeAlocacao = '';
     if (plano.status === 'planejamento' && totalItens > 0) {
         if (itensAlocados === totalItens) {
@@ -116,6 +126,26 @@ function criarCardPlano(plano) {
         } else {
             badgeAlocacao = '<span class="badge-alocacao badge-pendente">⏳ Pendente alocação</span>';
         }
+    }
+    
+    // Badge de validação para status em_producao
+    let badgeValidacao = '';
+    if (plano.status === 'em_producao' && totalItens > 0) {
+        if (todosValidados) {
+            badgeValidacao = '<span class="badge-validacao badge-validado-total">✅ PRONTO - Todos cortados</span>';
+        } else if (temValidacoes) {
+            badgeValidacao = `<span class="badge-validacao badge-validado-parcial">✂️ ${itensValidados}/${totalItens} cortados</span>`;
+        } else {
+            badgeValidacao = '<span class="badge-validacao badge-aguardando">📱 Aguardando cortes</span>';
+        }
+    }
+    
+    // Classe especial para card com tudo validado
+    let classeCard = 'plano-card';
+    if (plano.status === 'em_producao' && todosValidados) {
+        classeCard += ' plano-card-pronto';
+    } else if (plano.status === 'em_producao' && temValidacoes) {
+        classeCard += ' plano-card-em-corte';
     }
     
     let acoes = '';
@@ -171,10 +201,11 @@ function criarCardPlano(plano) {
     }
     
     return `
-        <div class="plano-card" onclick="abrirDetalhesPlano(${plano.id})">
+        <div class="${classeCard}" onclick="abrirDetalhesPlano(${plano.id})">
             <div class="plano-card-header">
                 <div class="plano-codigo">${plano.codigo_plano}</div>
                 ${badgeAlocacao}
+                ${badgeValidacao}
             </div>
             <div class="plano-card-body">
                 <div class="plano-info">
