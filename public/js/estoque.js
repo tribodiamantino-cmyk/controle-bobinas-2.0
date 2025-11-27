@@ -771,18 +771,6 @@ function gerarZPLRetalho(retalho, tipo = 'completa') {
     return zpl;
 }
 
-^FO10,85^A0N,18,18^FD${retalho.codigo_retalho}^FS
-
-^FO10,105^A0N,10,10^FD${retalho.loja} | ${retalho.fabricante}^FS
-^FO10,115^A0N,10,10^FD${retalho.codigo} | ${retalho.nome_cor}^FS
-^FO10,125^A0N,10,10^FD${retalho.metragem}m | ${retalho.localizacao_atual || 'Sem loc'}^FS
-
-^XZ
-`.trim();
-    
-    return zpl;
-}
-
 // Gerar HTML para visualização/impressão da etiqueta
 function gerarHtmlEtiqueta(bobina, tipo = 'completa') {
     const zplCode = gerarZPL(bobina, tipo);
