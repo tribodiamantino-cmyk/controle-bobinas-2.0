@@ -1418,24 +1418,52 @@ async function carregarTemplates() {
         `).join('');
         
     } catch (error) {
-        mostrarNotificacao('Erro ao carregar templates: ' + error.message, 'error');
+        showNotification('Erro ao carregar templates: ' + error.message, 'error');
         console.error(error);
     }
 }
 
 async function usarTemplate(templateId) {
+    // Armazenar o ID do template e abrir modal para pedir nome do plano
+    window.templateSelecionadoId = templateId;
+    document.getElementById('modalCriarPlanoTemplate').style.display = 'flex';
+    document.getElementById('formCriarPlanoTemplate').reset();
+    
+    // Focar no primeiro campo
+    setTimeout(() => {
+        document.getElementById('nomePlanoTemplate').focus();
+    }, 100);
+}
+
+function fecharModalCriarPlanoTemplate() {
+    document.getElementById('modalCriarPlanoTemplate').style.display = 'none';
+    window.templateSelecionadoId = null;
+}
+
+async function confirmarCriarPlanoTemplate() {
     try {
-        const cliente = document.getElementById('clientePlano').value;
-        const aviario = document.getElementById('aviarioPlano').value;
+        const nomePlano = document.getElementById('nomePlanoTemplate').value.trim();
+        const cliente = document.getElementById('clientePlanoTemplate').value.trim();
+        const aviario = document.getElementById('aviarioPlanoTemplate').value.trim();
         
-        if (!cliente || !aviario) {
-            mostrarNotificacao('Preencha Cliente e Aviário antes de usar o template', 'warning');
+        if (!nomePlano || !cliente || !aviario) {
+            showNotification('Preencha todos os campos obrigatórios', 'warning');
             return;
         }
         
-        const codigoPlano = `${cliente}-${aviario}-${Date.now()}`;
+        const templateId = window.templateSelecionadoId;
+        if (!templateId) {
+            showNotification('Template não selecionado', 'error');
+            return;
+        }
         
-        const response = await fetch('/api/obras-padrao/criar-plano', {
+        // Criar código do plano
+        const timestamp = Date.now();
+        const codigoPlano = `${cliente.substring(0, 3).toUpperCase()}-${aviario.substring(0, 3).toUpperCase()}-${timestamp}`;
+        
+        showNotification('Criando plano a partir do template...', 'info');
+        
+        const response = await fetch(`${API_BASE}/obras-padrao/criar-plano`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1452,13 +1480,13 @@ async function usarTemplate(templateId) {
             throw new Error(data.error || 'Erro ao criar plano do template');
         }
         
-        mostrarNotificacao('✨ Plano criado a partir do template!', 'success');
+        showNotification('✨ Plano criado a partir do template com sucesso!', 'success');
+        fecharModalCriarPlanoTemplate();
         fecharModalTemplates();
-        fecharModalNovoPlano();
         await carregarPlanos();
         
     } catch (error) {
-        mostrarNotificacao('Erro ao usar template: ' + error.message, 'error');
+        showNotification('Erro ao criar plano: ' + error.message, 'error');
         console.error(error);
     }
 }
@@ -1479,11 +1507,11 @@ async function excluirTemplate(templateId) {
             throw new Error(data.error || 'Erro ao excluir template');
         }
         
-        mostrarNotificacao('Template excluído com sucesso', 'success');
+        showNotification('Template excluído com sucesso', 'success');
         await carregarTemplates();
         
     } catch (error) {
-        mostrarNotificacao('Erro ao excluir template: ' + error.message, 'error');
+        showNotification('Erro ao excluir template: ' + error.message, 'error');
         console.error(error);
     }
 }
