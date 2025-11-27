@@ -446,15 +446,192 @@ function imprimirEtiqueta() {
     janelaEtiqueta.document.close();
 }
 
+// Imprimir etiqueta de bobina (função genérica)
+async function imprimirEtiquetaBobina(bobina) {
+    const janelaEtiqueta = window.open('', '_blank', 'width=400,height=600');
+    janelaEtiqueta.document.write(gerarHtmlEtiqueta(bobina));
+    janelaEtiqueta.document.close();
+}
+
+// Imprimir etiqueta de retalho
+async function imprimirEtiquetaRetalho(retalho) {
+    const janelaEtiqueta = window.open('', '_blank', 'width=400,height=600');
+    janelaEtiqueta.document.write(gerarHtmlEtiquetaRetalho(retalho));
+    janelaEtiqueta.document.close();
+}
+
+// Gerar HTML para etiqueta de retalho
+function gerarHtmlEtiquetaRetalho(retalho) {
+    const zplCode = gerarZPLRetalho(retalho);
+    const qrData = JSON.stringify({
+        tipo: 'retalho',
+        codigo: retalho.codigo_retalho,
+        id: retalho.id,
+        produto_id: retalho.produto_id
+    });
+    
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Etiqueta - ${retalho.codigo_retalho}</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                .etiqueta-preview {
+                    border: 2px solid #333;
+                    padding: 20px;
+                    margin: 20px 0;
+                    background: white;
+                    width: 60mm;
+                    height: 30mm;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    text-align: center;
+                }
+                .codigo-interno {
+                    font-size: 14px;
+                    font-weight: bold;
+                    margin: 10px 0;
+                    color: #FF6600;
+                }
+                .info {
+                    font-size: 10px;
+                    margin: 2px 0;
+                }
+                #qrcode {
+                    margin: 10px 0;
+                }
+                #qrcode img {
+                    width: 80px !important;
+                    height: 80px !important;
+                }
+                textarea {
+                    width: 100%;
+                    height: 200px;
+                    font-family: monospace;
+                    font-size: 12px;
+                }
+                .btn {
+                    padding: 10px 20px;
+                    margin: 5px;
+                    cursor: pointer;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 14px;
+                }
+                .btn-primary {
+                    background-color: #007bff;
+                    color: white;
+                }
+                .btn-secondary {
+                    background-color: #6c757d;
+                    color: white;
+                }
+            </style>
+        </head>
+        <body>
+            <h2>Etiqueta Retalho - ${retalho.codigo_retalho}</h2>
+            
+            <div class="etiqueta-preview">
+                <div class="info">📐 RETALHO</div>
+                <div id="qrcode"></div>
+                <div class="codigo-interno">${retalho.codigo_retalho}</div>
+                <div class="info">${retalho.loja} | ${retalho.fabricante}</div>
+                <div class="info">${retalho.codigo} | ${retalho.nome_cor}</div>
+                <div class="info">${retalho.metragem}m | Loc: ${retalho.localizacao_atual || 'N/A'}</div>
+            </div>
+            
+            <h3>Código ZPL (Zebra):</h3>
+            <textarea id="zpl-code" readonly>${zplCode}</textarea>
+            
+            <div style="margin-top: 20px;">
+                <button class="btn btn-primary" onclick="copiarZPL()">📋 Copiar Código ZPL</button>
+                <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimir Preview</button>
+                <button class="btn btn-secondary" onclick="window.close()">✖️ Fechar</button>
+            </div>
+            
+            <div id="mensagem" style="margin-top: 20px;"></div>
+            
+            <script>
+                // Gerar QR Code ao carregar a página
+                window.onload = function() {
+                    const qrData = ${JSON.stringify(qrData)};
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: qrData,
+                        width: 80,
+                        height: 80,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                };
+                
+                function copiarZPL() {
+                    const zpl = document.getElementById('zpl-code');
+                    zpl.select();
+                    document.execCommand('copy');
+                    document.getElementById('mensagem').innerHTML = '<div style="color: green;">✅ Código ZPL copiado!</div>';
+                }
+            </script>
+        </body>
+        </html>
+    `;
+}
+
+// Gerar código ZPL para retalho
+function gerarZPLRetalho(retalho) {
+    const qrData = JSON.stringify({
+        tipo: 'retalho',
+        codigo: retalho.codigo_retalho,
+        id: retalho.id,
+        produto_id: retalho.produto_id
+    });
+    
+    const zpl = `
+^XA
+^FO0,0^GB236,118,2^FS
+
+^FO10,5^A0N,15,15^FDRETALHO^FS
+
+^FO60,25^BQN,2,3^FDQA,${qrData}^FS
+
+^FO10,85^A0N,18,18^FD${retalho.codigo_retalho}^FS
+
+^FO10,105^A0N,10,10^FD${retalho.loja} | ${retalho.fabricante}^FS
+^FO10,115^A0N,10,10^FD${retalho.codigo} | ${retalho.nome_cor}^FS
+^FO10,125^A0N,10,10^FD${retalho.metragem}m | ${retalho.localizacao_atual || 'Sem loc'}^FS
+
+^XZ
+`.trim();
+    
+    return zpl;
+}
+
 // Gerar HTML para visualização/impressão da etiqueta
 function gerarHtmlEtiqueta(bobina) {
     const zplCode = gerarZPL(bobina);
+    // Criar dados do QR Code no formato JSON
+    const qrData = JSON.stringify({
+        tipo: 'bobina',
+        codigo: bobina.codigo_interno,
+        id: bobina.id,
+        produto_id: bobina.produto_id
+    });
     
     return `
         <!DOCTYPE html>
         <html>
         <head>
             <title>Etiqueta - ${bobina.codigo_interno}</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
             <style>
                 body {
                     font-family: Arial, sans-serif;
@@ -483,6 +660,13 @@ function gerarHtmlEtiqueta(bobina) {
                 .info {
                     font-size: 10px;
                     margin: 2px 0;
+                }
+                #qrcode {
+                    margin: 10px 0;
+                }
+                #qrcode img {
+                    width: 80px !important;
+                    height: 80px !important;
                 }
                 textarea {
                     width: 100%;
@@ -513,9 +697,7 @@ function gerarHtmlEtiqueta(bobina) {
             
             <div class="etiqueta-preview">
                 <div class="info">CONTROLE DE BOBINAS</div>
-                <div style="width: 80px; height: 80px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
-                    QR CODE
-                </div>
+                <div id="qrcode"></div>
                 <div class="codigo-interno">${bobina.codigo_interno}</div>
                 <div class="info">${bobina.loja} | ${bobina.fabricante}</div>
                 <div class="info">${bobina.codigo} | ${bobina.nome_cor}</div>
@@ -535,6 +717,19 @@ function gerarHtmlEtiqueta(bobina) {
             <div id="mensagem" style="margin-top: 20px;"></div>
             
             <script>
+                // Gerar QR Code ao carregar a página
+                window.onload = function() {
+                    const qrData = ${JSON.stringify(qrData)};
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: qrData,
+                        width: 80,
+                        height: 80,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                };
+                
                 function copiarZPL() {
                     const zpl = document.getElementById('zpl-code');
                     zpl.select();
@@ -555,6 +750,14 @@ function gerarHtmlEtiqueta(bobina) {
 
 // Gerar código ZPL para impressora Zebra (60x30mm = 236x118 dots a 200dpi)
 function gerarZPL(bobina) {
+    // Criar dados do QR Code no formato JSON
+    const qrData = JSON.stringify({
+        tipo: 'bobina',
+        codigo: bobina.codigo_interno,
+        id: bobina.id,
+        produto_id: bobina.produto_id
+    });
+    
     // Etiqueta 60x30mm a 200dpi
     const zpl = `
 ^XA
@@ -562,7 +765,7 @@ function gerarZPL(bobina) {
 
 ^FO10,5^A0N,15,15^FDCONTROLE DE BOBINAS^FS
 
-^FO60,25^BQN,2,3^FDQA,${bobina.codigo_interno}^FS
+^FO60,25^BQN,2,3^FDQA,${qrData}^FS
 
 ^FO10,85^A0N,20,20^FD${bobina.codigo_interno}^FS
 
