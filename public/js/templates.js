@@ -68,6 +68,9 @@ function renderizarTemplates() {
         
         return `
             <div class="template-card-wrapper">
+                <button class="btn-delete-template" onclick="event.stopPropagation(); excluirTemplate(${template.id})" title="Excluir template">
+                    ✕
+                </button>
                 <div class="template-card" onclick="abrirDetalhesTemplate(${template.id})">
                     <div class="template-card-header">
                         <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -121,9 +124,6 @@ function renderizarTemplates() {
                         </button>
                         <button class="btn btn-sm btn-outline-secondary" onclick="abrirDetalhesTemplate(${template.id})" title="Ver detalhes">
                             👁️ Detalhes
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="excluirTemplate(${template.id})" title="Excluir template">
-                            🗑️
                         </button>
                     </div>
                 </div>
@@ -471,8 +471,8 @@ function renderizarListaCortesTemplate() {
             <div class="produto-grupo-card">
                 <div class="produto-grupo-header">
                     <div>
-                        <strong>${produto.nome}</strong>
-                        <small style="color: #666; margin-left: 8px;">${produto.codigo}</small>
+                        <strong>${produto.nome || 'Produto não encontrado'}</strong>
+                        <small style="color: #666; margin-left: 8px;">${produto.codigo || ''}</small>
                     </div>
                     <div style="display: flex; align-items: center; gap: 15px;">
                         <span class="badge badge-info">${cortes.length} cortes • ${metragemTotal.toFixed(2)}m total</span>

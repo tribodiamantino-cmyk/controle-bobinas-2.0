@@ -1967,6 +1967,43 @@ body {
 
 .template-card-wrapper {
     height: 100%;
+    position: relative;
+}
+
+.btn-delete-template {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #ff4444;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(255, 68, 68, 0.3);
+    opacity: 0;
+}
+
+.template-card-wrapper:hover .btn-delete-template {
+    opacity: 1;
+}
+
+.btn-delete-template:hover {
+    background: #cc0000;
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(255, 68, 68, 0.5);
+}
+
+.btn-delete-template:active {
+    transform: scale(0.95);
 }
 
 .template-card {

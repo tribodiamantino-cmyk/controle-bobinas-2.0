@@ -1424,9 +1424,10 @@ function abrirModalSalvarTemplate(planoId) {
     if (modal) {
         modal.style.display = 'flex';
         document.getElementById('formSalvarTemplate').reset();
+        console.log('Modal aberto para plano:', planoId);
     } else {
         console.error('Modal modalSalvarTemplate não encontrado');
-        mostrarNotificacao('Erro ao abrir modal de template', 'error');
+        showNotification('Erro ao abrir modal de template', 'error');
     }
 }
 
@@ -1449,9 +1450,11 @@ window.addEventListener('DOMContentLoaded', () => {
             const descricao = document.getElementById('descricaoTemplate').value;
             
             if (!planoParaSalvarComoTemplate) {
-                mostrarNotificacao('Nenhum plano selecionado', 'error');
+                showNotification('Nenhum plano selecionado', 'error');
                 return;
             }
+            
+            console.log('Salvando template do plano:', planoParaSalvarComoTemplate);
             
             try {
                 const response = await fetch('/api/obras-padrao/criar-de-plano', {
@@ -1466,17 +1469,21 @@ window.addEventListener('DOMContentLoaded', () => {
                 
                 const data = await response.json();
                 
+                console.log('Resposta da API:', data);
+                
                 if (!response.ok) {
                     throw new Error(data.error || 'Erro ao salvar template');
                 }
                 
-                mostrarNotificacao('💾 Obra padrão salva com sucesso!', 'success');
+                showNotification('💾 Obra padrão salva com sucesso!', 'success');
                 fecharModalSalvarTemplate();
                 
             } catch (error) {
-                mostrarNotificacao('Erro ao salvar template: ' + error.message, 'error');
-                console.error(error);
+                showNotification('Erro ao salvar template: ' + error.message, 'error');
+                console.error('Erro detalhado:', error);
             }
         });
+    } else {
+        console.error('Formulário formSalvarTemplate não encontrado');
     }
 });
