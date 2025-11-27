@@ -112,12 +112,30 @@ async function onScanSucesso(qrData, tipo) {
     }
     
     try {
-        // Parsear dados do QR Code
-        const dados = JSON.parse(qrData);
+        // Novo formato simplificado: B-123 ou R-456
+        let bobinaId = null;
+        let tipoBobina = null;
         
-        if (dados.tipo === 'bobina') {
-            await carregarBobina(dados.id, tipo);
-        } else if (dados.tipo === 'retalho') {
+        if (qrData.startsWith('B-')) {
+            tipoBobina = 'bobina';
+            bobinaId = qrData.substring(2); // Remove "B-"
+        } else if (qrData.startsWith('R-')) {
+            tipoBobina = 'retalho';
+            bobinaId = qrData.substring(2); // Remove "R-"
+        } else {
+            // Tentar formato antigo (JSON)
+            try {
+                const dados = JSON.parse(qrData);
+                tipoBobina = dados.tipo;
+                bobinaId = dados.id;
+            } catch {
+                throw new Error('QR Code inválido');
+            }
+        }
+        
+        if (tipoBobina === 'bobina') {
+            await carregarBobina(bobinaId, tipo);
+        } else if (tipoBobina === 'retalho') {
             mostrarToast('Retalhos ainda não suportados no app mobile', 'warning');
             if (tipo === 'corte') {
                 voltarScannerCorte();
@@ -127,7 +145,7 @@ async function onScanSucesso(qrData, tipo) {
         }
     } catch (error) {
         console.error('Erro ao processar QR Code:', error);
-        mostrarToast('QR Code inválido', 'error');
+        mostrarToast('QR Code inválido: ' + qrData, 'error');
         if (tipo === 'corte') {
             voltarScannerCorte();
         } else {

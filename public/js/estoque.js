@@ -574,12 +574,8 @@ function mostrarModalEscolhaEtiqueta(item, tipo) {
 // Gerar HTML para etiqueta de retalho
 function gerarHtmlEtiquetaRetalho(retalho, tipo = 'completa') {
     const zplCode = gerarZPLRetalho(retalho, tipo);
-    const qrData = JSON.stringify({
-        tipo: 'retalho',
-        codigo: retalho.codigo_retalho,
-        id: retalho.id,
-        produto_id: retalho.produto_id
-    });
+    // QR Code simplificado: apenas o ID da bobina/retalho
+    const qrData = `R-${retalho.id}`;
     
     const isSimples = tipo === 'simples';
     // 60x30mm - pode ser paisagem ou retrato
@@ -721,12 +717,8 @@ function gerarHtmlEtiquetaRetalho(retalho, tipo = 'completa') {
 
 // Gerar código ZPL para retalho
 function gerarZPLRetalho(retalho, tipo = 'completa') {
-    const qrData = JSON.stringify({
-        tipo: 'retalho',
-        codigo: retalho.codigo_retalho,
-        id: retalho.id,
-        produto_id: retalho.produto_id
-    });
+    // QR Code simplificado: apenas o ID
+    const qrData = `R-${retalho.id}`;
     
     const isSimples = tipo === 'simples';
     
@@ -774,12 +766,8 @@ function gerarZPLRetalho(retalho, tipo = 'completa') {
 // Gerar HTML para visualização/impressão da etiqueta
 function gerarHtmlEtiqueta(bobina, tipo = 'completa') {
     const zplCode = gerarZPL(bobina, tipo);
-    const qrData = JSON.stringify({
-        tipo: 'bobina',
-        codigo: bobina.codigo_interno,
-        id: bobina.id,
-        produto_id: bobina.produto_id
-    });
+    // QR Code simplificado: apenas o ID da bobina
+    const qrData = `B-${bobina.id}`;
     
     // Estilos e conteúdo diferentes para cada tipo
     const isSimples = tipo === 'simples';
@@ -922,13 +910,8 @@ function gerarHtmlEtiqueta(bobina, tipo = 'completa') {
 
 // Gerar código ZPL para impressora Zebra
 function gerarZPL(bobina, tipo = 'completa') {
-    // Criar dados do QR Code no formato JSON
-    const qrData = JSON.stringify({
-        tipo: 'bobina',
-        codigo: bobina.codigo_interno,
-        id: bobina.id,
-        produto_id: bobina.produto_id
-    });
+    // QR Code simplificado: apenas o ID
+    const qrData = `B-${bobina.id}`;
     
     const isSimples = tipo === 'simples';
     

@@ -15,14 +15,11 @@ router.get('/bobina/:id', async (req, res) => {
                 p.loja,
                 p.fabricante,
                 c.nome as nome_cor,
-                p.gramatura,
-                (b.metragem_inicial - COALESCE(SUM(oc.metragem_utilizada), 0)) as metragem_atual
+                p.gramatura
             FROM bobinas b
             JOIN produtos p ON b.produto_id = p.id
             LEFT JOIN cores c ON p.cor_id = c.id
-            LEFT JOIN ordens_corte oc ON b.id = oc.bobina_id
             WHERE b.id = ?
-            GROUP BY b.id
         `, [bobinaId]);
         
         if (bobinas.length === 0) {
@@ -33,6 +30,15 @@ router.get('/bobina/:id', async (req, res) => {
         }
         
         const bobina = bobinas[0];
+        
+        // Calcular metragem atual
+        const [totalCortado] = await db.query(`
+            SELECT COALESCE(SUM(metragem_utilizada), 0) as total_cortado
+            FROM ordens_corte
+            WHERE bobina_id = ?
+        `, [bobinaId]);
+        
+        bobina.metragem_atual = bobina.metragem_inicial - totalCortado[0].total_cortado;
         
         // Buscar histórico de movimentações
         const [movimentacoes] = await db.query(`
