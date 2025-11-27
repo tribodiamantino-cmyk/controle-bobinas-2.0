@@ -993,8 +993,20 @@ async function imprimirEtiquetaBobina(codigoInterno) {
         const data = await response.json();
         
         if (data.success) {
-            bobinaCriada = data.data;
-            imprimirEtiqueta();
+            const bobina = data.data;
+            
+            // Mostrar preview da etiqueta
+            const confirmar = confirm(
+                `🖨️ Imprimir etiqueta da bobina?\n\n` +
+                `Código: ${bobina.codigo_interno}\n` +
+                `Produto: ${bobina.produto_codigo}\n` +
+                `Metragem: ${bobina.metragem_inicial}m\n\n` +
+                `Certifique-se de que a impressora está ligada e com papel.`
+            );
+            
+            if (confirmar) {
+                await imprimirEtiquetaBobina(bobina);
+            }
         } else {
             mostrarAlerta('Bobina não encontrada', 'danger');
         }
@@ -1002,6 +1014,37 @@ async function imprimirEtiquetaBobina(codigoInterno) {
     } catch (error) {
         console.error('Erro ao buscar bobina:', error);
         mostrarAlerta('Erro ao buscar bobina', 'danger');
+    }
+}
+
+// Imprimir etiqueta de um retalho específico
+async function imprimirEtiquetaRetalho(codigoRetalho) {
+    try {
+        const response = await fetch(`/api/retalhos/codigo/${codigoRetalho}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const retalho = data.data;
+            
+            // Mostrar preview da etiqueta
+            const confirmar = confirm(
+                `🖨️ Imprimir etiqueta do retalho?\n\n` +
+                `Código: ${retalho.codigo_retalho}\n` +
+                `Produto: ${retalho.produto_codigo}\n` +
+                `Metragem: ${retalho.metragem}m\n\n` +
+                `Certifique-se de que a impressora está ligada e com papel.`
+            );
+            
+            if (confirmar) {
+                await imprimirEtiquetaRetalho(retalho);
+            }
+        } else {
+            mostrarAlerta('Retalho não encontrado', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao buscar retalho:', error);
+        mostrarAlerta('Erro ao buscar retalho', 'danger');
     }
 }
 
