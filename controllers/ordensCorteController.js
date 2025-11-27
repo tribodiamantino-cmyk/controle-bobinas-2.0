@@ -237,16 +237,24 @@ exports.sugerirAlocacoes = async (req, res) => {
             SELECT * FROM itens_plano_corte WHERE plano_corte_id = ? ORDER BY ordem
         `, [id]);
         
+        // AGRUPAR CORTES POR PRODUTO (otimização: priorizar mesma bobina)
+        const cortesPorProduto = {};
+        itens.forEach(item => {
+            if (!cortesPorProduto[item.produto_id]) {
+                cortesPorProduto[item.produto_id] = [];
+            }
+            cortesPorProduto[item.produto_id].push(item);
+        });
+        
         const sugestoes = [];
         
-        for (const item of itens) {
-            const sugestao = await sugerirOrigemParaCorte(item.produto_id, item.metragem);
-            sugestoes.push({
-                item_id: item.id,
-                produto_id: item.produto_id,
-                metragem_corte: item.metragem,
-                sugestao: sugestao
-            });
+        // Processar cada grupo de produto
+        for (const produtoId in cortesPorProduto) {
+            const cortesGrupo = cortesPorProduto[produtoId];
+            
+            // Tentar alocar todos os cortes do mesmo produto em UMA bobina
+            const sugestoesGrupo = await sugerirOrigemParaGrupo(produtoId, cortesGrupo);
+            sugestoes.push(...sugestoesGrupo);
         }
         
         res.json({ 
@@ -262,6 +270,62 @@ exports.sugerirAlocacoes = async (req, res) => {
         });
     }
 };
+
+// Função auxiliar: sugerir origens para um GRUPO de cortes do mesmo produto
+// PRIORIZA usar a MESMA bobina para todos os cortes, minimizando trocas
+async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
+    const metragemTotal = cortesGrupo.reduce((sum, item) => sum + parseFloat(item.metragem), 0);
+    
+    // 1. TENTAR ENCONTRAR UMA BOBINA que atenda TODOS os cortes
+    const [bobinaUnica] = await db.query(`
+        SELECT 
+            b.*,
+            'bobina' as tipo_origem,
+            (b.metragem_atual - COALESCE(b.metragem_reservada, 0)) as metragem_disponivel
+        FROM bobinas b
+        WHERE b.produto_id = ?
+            AND b.status = 'Disponível'
+            AND b.convertida_em_retalho = FALSE
+            AND (b.metragem_atual - COALESCE(b.metragem_reservada, 0)) >= ?
+        ORDER BY b.metragem_atual ASC
+        LIMIT 1
+    `, [produtoId, metragemTotal]);
+    
+    if (bobinaUnica.length > 0) {
+        // SUCESSO: Alocar todos os cortes na MESMA bobina
+        return cortesGrupo.map(item => ({
+            item_id: item.id,
+            produto_id: item.produto_id,
+            metragem_corte: parseFloat(item.metragem),
+            sugestao: {
+                tipo: 'bobina',
+                id: bobinaUnica[0].id,
+                codigo: bobinaUnica[0].codigo_interno,
+                metragem_total: parseFloat(bobinaUnica[0].metragem_atual),
+                metragem_disponivel: parseFloat(bobinaUnica[0].metragem_disponivel),
+                nota_fiscal: bobinaUnica[0].nota_fiscal,
+                localizacao: bobinaUnica[0].localizacao_atual,
+                motivo: '✨ MESMA BOBINA para todos os cortes deste produto',
+                prioridade: 'otima',
+                estrategia: 'bobina_unica'
+            }
+        }));
+    }
+    
+    // 2. NÃO ENCONTROU BOBINA ÚNICA: alocar individualmente (fallback)
+    const sugestoes = [];
+    for (const item of cortesGrupo) {
+        const sugestao = await sugerirOrigemParaCorte(item.produto_id, item.metragem);
+        sugestoes.push({
+            item_id: item.id,
+            produto_id: item.produto_id,
+            metragem_corte: parseFloat(item.metragem),
+            sugestao: sugestao
+        });
+    }
+    
+    return sugestoes;
+}
 
 // Função auxiliar: sugerir melhor origem para um corte
 async function sugerirOrigemParaCorte(produtoId, metragem) {
