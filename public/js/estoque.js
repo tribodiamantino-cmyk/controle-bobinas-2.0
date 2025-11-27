@@ -639,8 +639,34 @@ function renderizarEstoque(produtos) {
                     📦 <strong>${produto.tipo_tecido || 'Normal'}</strong>
                 </div>
                 ${medidasHtml}
-                <div class="produto-resumo">
-                    📊 ${produto.total_bobinas} bobina(s) | ${parseFloat(produto.metragem_disponivel || 0).toFixed(2)}m disponível
+                <div class="produto-resumo-estoque">
+                    <div class="resumo-estoque-item">
+                        <span class="resumo-estoque-icon">🎞️</span>
+                        <span class="resumo-estoque-label">Bobinas:</span>
+                        <span class="resumo-estoque-valor">${produto.total_bobinas || 0}</span>
+                    </div>
+                    <div class="resumo-estoque-item">
+                        <span class="resumo-estoque-icon">📐</span>
+                        <span class="resumo-estoque-label">Retalhos:</span>
+                        <span class="resumo-estoque-valor">${produto.total_retalhos || 0}</span>
+                    </div>
+                    <div class="resumo-estoque-item resumo-estoque-total">
+                        <span class="resumo-estoque-icon">📦</span>
+                        <span class="resumo-estoque-label">Total:</span>
+                        <span class="resumo-estoque-valor">${parseFloat(produto.metragem_total || 0).toFixed(2)}m</span>
+                    </div>
+                    <div class="resumo-estoque-item resumo-estoque-disponivel">
+                        <span class="resumo-estoque-icon">✅</span>
+                        <span class="resumo-estoque-label">Disponível:</span>
+                        <span class="resumo-estoque-valor">${parseFloat(produto.metragem_disponivel || 0).toFixed(2)}m</span>
+                    </div>
+                    ${parseFloat(produto.metragem_reservada || 0) > 0 ? `
+                        <div class="resumo-estoque-item resumo-estoque-reservado">
+                            <span class="resumo-estoque-icon">🔒</span>
+                            <span class="resumo-estoque-label">Reservado:</span>
+                            <span class="resumo-estoque-valor">${parseFloat(produto.metragem_reservada).toFixed(2)}m</span>
+                        </div>
+                    ` : ''}
                 </div>
                 <div class="bobinas-lista" id="bobinas-${produto.id}" style="display: none;">
                     <div class="loading">Carregando bobinas...</div>

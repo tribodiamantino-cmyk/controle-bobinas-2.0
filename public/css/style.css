@@ -647,6 +647,63 @@ body {
     border-top: 1px solid #f0f0f0;
 }
 
+.produto-resumo-estoque {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(to bottom, #f8f9fa, #fff);
+    border-top: 1px solid #e9ecef;
+}
+
+.resumo-estoque-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.resumo-estoque-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.resumo-estoque-total {
+    border-left: 3px solid #007bff;
+    font-weight: 600;
+}
+
+.resumo-estoque-disponivel {
+    border-left: 3px solid #28a745;
+    font-weight: 600;
+}
+
+.resumo-estoque-reservado {
+    border-left: 3px solid #ffc107;
+    font-weight: 600;
+}
+
+.resumo-estoque-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.resumo-estoque-label {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.resumo-estoque-valor {
+    margin-left: auto;
+    font-weight: 700;
+    color: #212529;
+}
+
 .btn-expand {
     background: none;
     border: none;

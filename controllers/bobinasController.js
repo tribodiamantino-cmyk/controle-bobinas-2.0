@@ -114,16 +114,24 @@ exports.listarProdutosComBobinas = async (req, res) => {
                 p.largura_y,
                 c.nome_cor,
                 g.gramatura,
-                COUNT(b.id) as total_bobinas,
-                SUM(b.metragem_atual) as metragem_total,
-                SUM(CASE WHEN b.status = 'Disponível' THEN b.metragem_atual ELSE 0 END) as metragem_disponivel
+                COUNT(DISTINCT b.id) as total_bobinas,
+                COUNT(DISTINCT r.id) as total_retalhos,
+                COALESCE(SUM(b.metragem_atual), 0) as metragem_bobinas,
+                COALESCE(SUM(r.metragem), 0) as metragem_retalhos,
+                COALESCE(SUM(b.metragem_atual), 0) + COALESCE(SUM(r.metragem), 0) as metragem_total,
+                COALESCE(SUM(b.metragem_reservada), 0) as reservada_bobinas,
+                COALESCE(SUM(r.metragem_reservada), 0) as reservada_retalhos,
+                COALESCE(SUM(b.metragem_reservada), 0) + COALESCE(SUM(r.metragem_reservada), 0) as metragem_reservada,
+                (COALESCE(SUM(b.metragem_atual), 0) + COALESCE(SUM(r.metragem), 0)) - 
+                (COALESCE(SUM(b.metragem_reservada), 0) + COALESCE(SUM(r.metragem_reservada), 0)) as metragem_disponivel
             FROM produtos p
-            LEFT JOIN bobinas b ON p.id = b.produto_id AND b.status != 'Esgotada'
+            LEFT JOIN bobinas b ON p.id = b.produto_id AND b.status != 'Esgotada' AND b.convertida_em_retalho = FALSE
+            LEFT JOIN retalhos r ON p.id = r.produto_id AND r.status != 'Esgotado'
             LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
             LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
             WHERE p.ativo = 1
             GROUP BY p.id
-            HAVING total_bobinas > 0
+            HAVING (total_bobinas > 0 OR total_retalhos > 0)
             ORDER BY p.loja, p.codigo`
         );
         
