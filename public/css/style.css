@@ -1409,97 +1409,95 @@ body {
     background-color: #138496;
 }
 
-/* Resumo de Estoque */
-.resumo-estoque-grid {
+/* Resumo dentro de cada Produto */
+.resumo-produto-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
 }
 
-.resumo-card {
+.resumo-produto-card {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    transition: transform 0.2s, box-shadow 0.2s;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
 }
 
-.resumo-card:hover {
+.resumo-produto-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
-.resumo-card-bobinas {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+.resumo-produto-bobinas {
+    border-left: 4px solid #667eea;
 }
 
-.resumo-card-retalhos {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
+.resumo-produto-retalhos {
+    border-left: 4px solid #f5576c;
 }
 
-.resumo-card-total {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: white;
+.resumo-produto-total {
+    border-left: 4px solid #4facfe;
 }
 
-.resumo-icon {
-    font-size: 3rem;
-    opacity: 0.9;
+.resumo-produto-icon {
+    font-size: 2rem;
     line-height: 1;
 }
 
-.resumo-content {
+.resumo-produto-content {
     flex: 1;
 }
 
-.resumo-label {
-    font-size: 0.9rem;
+.resumo-produto-label {
+    font-size: 0.75rem;
     font-weight: 600;
-    opacity: 0.9;
-    margin-bottom: 0.5rem;
+    color: #666;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
 }
 
-.resumo-valores {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.resumo-valor-principal {
-    font-size: 2rem;
+.resumo-produto-valor {
+    font-size: 1.5rem;
     font-weight: 700;
-    line-height: 1;
+    color: #333;
+    line-height: 1.2;
 }
 
-.resumo-valor-secundario {
+.resumo-produto-detalhes {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    font-size: 0.85rem;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
 }
 
-.badge-disponivel,
-.badge-reservado {
-    padding: 0.3rem 0.7rem;
-    border-radius: 20px;
+.badge-mini {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(10px);
     white-space: nowrap;
 }
 
-.badge-disponivel {
-    border: 1px solid rgba(255, 255, 255, 0.3);
+.badge-mini.badge-disponivel {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
 }
 
-.badge-reservado {
-    border: 1px solid rgba(255, 255, 255, 0.3);
+.badge-mini.badge-reservado {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
 }
 
 /* Badge de Prioridade */
