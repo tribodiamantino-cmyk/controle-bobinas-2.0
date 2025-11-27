@@ -1014,20 +1014,26 @@ async function alocarAutomaticamente(planoId) {
         const comEstoque = sugestoes.filter(s => s.origem);
         const semEstoque = sugestoes.filter(s => !s.origem);
         
-        // Montar mensagem de confirmação com detalhes
-        let mensagem = 'Deseja alocar automaticamente as origens para este plano?\n\n';
-        mensagem += `✅ ${comEstoque.length} corte(s) COM tecido disponível\n`;
-        if (semEstoque.length > 0) {
-            mensagem += `⚠️ ${semEstoque.length} corte(s) SEM tecido disponível\n`;
+        // Se não houver NENHUM item com estoque, avisar
+        if (comEstoque.length === 0) {
+            showNotification(`❌ Nenhum corte tem estoque disponível. Total sem estoque: ${semEstoque.length}`, 'error');
+            return;
         }
-        mensagem += '\nO sistema irá:\n✓ Priorizar retalhos\n✓ Escolher as menores bobinas disponíveis\n✓ Substituir alocações existentes';
+        
+        // Montar mensagem de confirmação com detalhes
+        let mensagem = 'Alocar automaticamente as origens disponíveis?\n\n';
+        mensagem += `✅ ${comEstoque.length} corte(s) serão alocados\n`;
+        if (semEstoque.length > 0) {
+            mensagem += `⚠️ ${semEstoque.length} corte(s) ficarão pendentes (sem estoque)\n`;
+        }
+        mensagem += '\nO sistema irá:\n✓ Priorizar retalhos\n✓ Escolher as menores bobinas disponíveis\n✓ Deixar marcados os itens sem estoque';
         
         if (!confirm(mensagem)) {
             return;
         }
         
         // Mostrar loading
-        showNotification('Alocando origens automaticamente...', 'info');
+        showNotification('Alocando origens disponíveis...', 'info');
         
         let sucessos = 0;
         let erros = 0;
@@ -1060,17 +1066,18 @@ async function alocarAutomaticamente(planoId) {
             }
         }
         
-        // Mostrar resultado
+        // Mostrar resultado detalhado
         if (sucessos > 0 && erros === 0 && semEstoque.length === 0) {
-            showNotification(`✅ ${sucessos} corte(s) alocado(s) automaticamente com sucesso!`, 'success');
-        } else if (sucessos > 0) {
-            let msg = `${sucessos} corte(s) alocado(s)`;
-            if (erros > 0) msg += `, ${erros} com erro`;
-            if (semEstoque.length > 0) msg += `, ${semEstoque.length} sem estoque`;
-            showNotification(`⚠️ ${msg}. Veja os detalhes no card.`, 'warning');
+            showNotification(`✅ Todos os ${sucessos} corte(s) foram alocados com sucesso!`, 'success');
+        } else if (sucessos > 0 && semEstoque.length === 0) {
+            showNotification(`⚠️ ${sucessos} alocado(s), mas ${erros} tiveram erro. Veja o console.`, 'warning');
+            if (errosDetalhes.length > 0) console.warn('Erros de alocação:', errosDetalhes);
+        } else if (sucessos > 0 && semEstoque.length > 0) {
+            showNotification(`✅ ${sucessos} corte(s) alocados. ${semEstoque.length} ficaram pendentes (sem estoque). Abra os detalhes para ver.`, 'success');
             if (errosDetalhes.length > 0) console.warn('Erros de alocação:', errosDetalhes);
         } else {
-            showNotification(`❌ Não foi possível alocar nenhum corte. ${semEstoque.length > 0 ? 'Falta estoque.' : ''}`, 'error');
+            showNotification(`❌ Erro ao alocar. Veja os detalhes no console.`, 'error');
+            console.error('Erros de alocação:', errosDetalhes);
         }
         
         // Recarregar planos
