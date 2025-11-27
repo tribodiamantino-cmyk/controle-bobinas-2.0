@@ -46,7 +46,7 @@ router.get('/bobina/:id', async (req, res) => {
                 'ENTRADA' as tipo,
                 b.data_entrada as data_movimentacao,
                 b.metragem_inicial as metragem,
-                CONCAT('Entrada - NF: ', b.nota_fiscal) as observacoes
+                CONCAT('Entrada - NF: ', COALESCE(b.nota_fiscal, 'S/N')) as observacoes
             FROM bobinas b
             WHERE b.id = ?
             
@@ -56,7 +56,7 @@ router.get('/bobina/:id', async (req, res) => {
                 'CORTE' as tipo,
                 oc.data_criacao as data_movimentacao,
                 oc.metragem_utilizada as metragem,
-                oc.observacoes
+                COALESCE(oc.observacoes, '') as observacoes
             FROM ordens_corte oc
             WHERE oc.bobina_id = ?
             
@@ -71,10 +71,13 @@ router.get('/bobina/:id', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Erro ao buscar bobina:', error);
+        console.error('❌ Erro ao buscar bobina ID:', req.params.id);
+        console.error('❌ Detalhes do erro:', error.message);
+        console.error('❌ Stack:', error.stack);
         res.status(500).json({
             success: false,
-            message: 'Erro ao buscar dados da bobina'
+            message: 'Erro ao buscar dados da bobina',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });
