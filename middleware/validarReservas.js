@@ -5,11 +5,14 @@ const db = require('../config/database');
  * Roda ao iniciar o servidor e pode ser chamado periodicamente
  */
 async function validarECorrigirReservas() {
+    let connection;
     try {
+        // Verificar se o banco está disponível
+        connection = await db.promise();
         console.log('🔍 Verificando consistência de metragens reservadas...');
         
         // 1. Buscar todas as alocações ativas (planos em produção)
-        const [alocacoesAtivas] = await db.query(`
+        const [alocacoesAtivas] = await connection.query(`
             SELECT ac.tipo_origem, ac.bobina_id, ac.retalho_id, ac.metragem_alocada
             FROM alocacoes_corte ac
             JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
@@ -34,13 +37,13 @@ async function validarECorrigirReservas() {
         });
         
         // 3. Buscar valores ATUAIS do banco
-        const [bobinasAtuais] = await db.query(`
+        const [bobinasAtuais] = await connection.query(`
             SELECT id, metragem_reservada 
             FROM bobinas 
             WHERE metragem_reservada > 0
         `);
         
-        const [retalhosAtuais] = await db.query(`
+        const [retalhosAtuais] = await connection.query(`
             SELECT id, metragem_reservada 
             FROM retalhos 
             WHERE metragem_reservada > 0
@@ -50,12 +53,12 @@ async function validarECorrigirReservas() {
         let correcoes = 0;
         
         // Resetar todas as reservas primeiro
-        await db.query(`UPDATE bobinas SET metragem_reservada = 0`);
-        await db.query(`UPDATE retalhos SET metragem_reservada = 0`);
+        await connection.query(`UPDATE bobinas SET metragem_reservada = 0`);
+        await connection.query(`UPDATE retalhos SET metragem_reservada = 0`);
         
         // Aplicar apenas as reservas corretas
         for (const [bobinaId, metragemCorreta] of Object.entries(reservasCorretas.bobinas)) {
-            await db.query(`
+            await connection.query(`
                 UPDATE bobinas 
                 SET metragem_reservada = ? 
                 WHERE id = ?
@@ -64,7 +67,7 @@ async function validarECorrigirReservas() {
         }
         
         for (const [retalhoId, metragemCorreta] of Object.entries(reservasCorretas.retalhos)) {
-            await db.query(`
+            await connection.query(`
                 UPDATE retalhos 
                 SET metragem_reservada = ? 
                 WHERE id = ?
@@ -90,6 +93,15 @@ async function validarECorrigirReservas() {
         };
         
     } catch (error) {
+        // Se o erro for de conexão, apenas reportar silenciosamente
+        if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+            console.log('⚠️  Banco de dados não disponível para validação (será tentado novamente)');
+            return {
+                success: false,
+                error: 'Banco de dados não disponível'
+            };
+        }
+        
         console.error('❌ Erro ao validar reservas:', error);
         return {
             success: false,
@@ -115,15 +127,18 @@ function middlewareValidacao(req, res, next) {
 function iniciarValidacaoPeriodica() {
     const INTERVALO = 60 * 60 * 1000; // 1 hora
     
-    // Executar imediatamente ao iniciar
-    validarECorrigirReservas();
+    console.log('🔄 Sistema de validação automática iniciado (intervalo: 1 hora)');
+    
+    // Aguardar 5 segundos antes da primeira validação para garantir que o banco está pronto
+    setTimeout(() => {
+        console.log('🔍 Executando primeira validação de metragens reservadas...');
+        validarECorrigirReservas();
+    }, 5000);
     
     // Executar periodicamente
     setInterval(() => {
         validarECorrigirReservas();
     }, INTERVALO);
-    
-    console.log('🔄 Validação automática de reservas iniciada (intervalo: 1 hora)');
 }
 
 module.exports = {
