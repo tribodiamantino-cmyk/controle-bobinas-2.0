@@ -118,6 +118,10 @@ function criarCardPlano(plano) {
         `;
     } else if (plano.status === 'em_producao') {
         acoes = `
+            <button class="btn-kanban btn-kanban-info" onclick="event.stopPropagation(); imprimirOrdemProducao(${plano.id})" title="Imprimir ordem de produção">
+                <span class="btn-kanban-icon">🖨️</span>
+                <span class="btn-kanban-text">Imprimir</span>
+            </button>
             <button class="btn-kanban btn-kanban-warning" onclick="event.stopPropagation(); voltarParaPlanejamento(${plano.id})">
                 <span class="btn-kanban-icon">◀</span>
                 <span class="btn-kanban-text">Voltar</span>
