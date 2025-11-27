@@ -61,7 +61,7 @@ exports.buscarObraPadrao = async (req, res) => {
 };
 
 // Criar obra padrão a partir de um plano existente
-exports.criarObraPadraoDeплano = async (req, res) => {
+exports.criarObraPadraoDePlano = async (req, res) => {
     const connection = await db.getConnection();
     
     try {
