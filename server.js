@@ -8,6 +8,9 @@ const db = require('./config/database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Importar middleware de validação de reservas
+const { iniciarValidacaoPeriodica } = require('./middleware/validarReservas');
+
 // Função para executar migrations automaticamente
 async function runMigrations() {
     try {
@@ -128,5 +131,8 @@ runMigrations().then(() => {
     app.listen(PORT, () => {
         console.log(`🚀 Servidor rodando na porta ${PORT}`);
         console.log(`📍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+        
+        // Iniciar validação automática de reservas
+        iniciarValidacaoPeriodica();
     });
 });
