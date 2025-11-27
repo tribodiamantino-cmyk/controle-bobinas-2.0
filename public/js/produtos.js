@@ -3,22 +3,12 @@ let produtos = [];
 let cores = [];
 let gramaturas = [];
 
-// Funções com debounce para filtros (serão definidas no DOMContentLoaded)
-let filtrarProdutosDebounced;
-let aplicarFiltrosDebounced;
+// Funções com debounce para filtros
+const filtrarProdutosDebounced = debounce(filtrarProdutos, 300);
+const aplicarFiltrosDebounced = debounce(aplicarFiltros, 300);
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
-    // Criar funções debounced após garantir que utils.js foi carregado
-    if (typeof debounce !== 'undefined') {
-        filtrarProdutosDebounced = debounce(filtrarProdutos, 300);
-        aplicarFiltrosDebounced = debounce(aplicarFiltros, 300);
-    } else {
-        // Fallback se debounce não estiver disponível
-        filtrarProdutosDebounced = filtrarProdutos;
-        aplicarFiltrosDebounced = aplicarFiltros;
-    }
-    
     carregarCores();
     carregarGramaturas();
     carregarProdutos();

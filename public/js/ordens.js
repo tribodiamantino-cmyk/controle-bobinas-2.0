@@ -1587,4 +1587,113 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ========== FIM DAS FUNÇÕES ==========
+// ========== DEBUG AUTO-ALOCAR ==========
+async function debugAutoAlocar() {
+    console.log('🔍 DEBUG AUTO-ALOCAR - Iniciando análise...\n');
+    
+    try {
+        // 1. Buscar planos em planejamento
+        const responsePlanos = await fetch(`${API_BASE}/ordens-corte`);
+        const dataPlanos = await responsePlanos.json();
+        
+        const planosEmPlanejamento = dataPlanos.data.filter(p => p.status === 'planejamento');
+        
+        console.log(`📋 Planos em planejamento: ${planosEmPlanejamento.length}`);
+        
+        if (planosEmPlanejamento.length === 0) {
+            console.log('⚠️  Nenhum plano em planejamento encontrado');
+            showNotification('Nenhum plano em planejamento para debugar', 'warning');
+            return;
+        }
+        
+        const plano = planosEmPlanejamento[0];
+        console.log(`\n🎯 Analisando plano: ${plano.codigo_plano} (ID: ${plano.id})`);
+        
+        // 2. Buscar detalhes do plano
+        const responseDetalhes = await fetch(`${API_BASE}/ordens-corte/${plano.id}`);
+        const dataDetalhes = await responseDetalhes.json();
+        
+        const itens = dataDetalhes.data.itens;
+        console.log(`\n📦 Itens do plano: ${itens.length}`);
+        
+        itens.forEach((item, idx) => {
+            console.log(`   ${idx + 1}. ${item.produto_nome} - ${item.metragem}m`);
+            if (item.alocacao) {
+                console.log(`      ✅ JÁ ALOCADO: ${item.alocacao.tipo_origem} ${item.alocacao.origem_codigo}`);
+            } else {
+                console.log(`      ❌ NÃO ALOCADO`);
+            }
+        });
+        
+        // 3. Buscar sugestões
+        console.log(`\n\n🔍 BUSCANDO SUGESTÕES DE ALOCAÇÃO...`);
+        console.log('━'.repeat(80));
+        
+        showNotification('Analisando estoque... Veja o console (F12)', 'info');
+        
+        const responseSugestoes = await fetch(`${API_BASE}/ordens-corte/${plano.id}/sugestoes`);
+        const dataSugestoes = await responseSugestoes.json();
+        
+        if (!dataSugestoes.success) {
+            console.error('❌ Erro ao buscar sugestões:', dataSugestoes.error);
+            showNotification('Erro ao buscar sugestões: ' + dataSugestoes.error, 'error');
+            return;
+        }
+        
+        const sugestoes = dataSugestoes.data;
+        console.log(`\n📊 Sugestões retornadas: ${sugestoes.length}`);
+        
+        sugestoes.forEach((sug, idx) => {
+            console.log(`\n${idx + 1}. Item #${sug.item_id} - ${sug.metragem_corte}m`);
+            
+            // Verificar se tem origem E se o tipo não é null
+            if (sug.origem && sug.origem.tipo) {
+                // TEM ESTOQUE
+                const tipo = sug.origem.tipo === 'bobina' ? '🎯' : '📦';
+                console.log(`   ${tipo} ORIGEM ENCONTRADA: ${sug.origem.tipo.toUpperCase()} ${sug.origem.codigo}`);
+                console.log(`      Metragem disponível: ${sug.origem.metragem_disponivel}m`);
+                console.log(`      Metragem total: ${sug.origem.metragem_total}m`);
+                console.log(`      Localização: ${sug.origem.localizacao || 'N/A'}`);
+                console.log(`      Motivo: ${sug.origem.motivo}`);
+                console.log(`      Prioridade: ${sug.origem.prioridade}`);
+            } else {
+                // SEM ESTOQUE
+                console.log(`   ❌ SEM ESTOQUE DISPONÍVEL`);
+                if (sug.origem) {
+                    console.log(`      Erro: ${sug.origem.erro || 'Desconhecido'}`);
+                    console.log(`      Metragem solicitada: ${sug.origem.metragem_solicitada}m`);
+                    console.log(`      Máximo disponível: ${sug.origem.metragem_maxima_disponivel || 0}m`);
+                }
+            }
+        });
+        
+        const comEstoque = sugestoes.filter(s => s.origem && s.origem.tipo);
+        const semEstoque = sugestoes.filter(s => !s.origem || !s.origem.tipo);
+        
+        console.log(`\n\n📈 RESUMO:`);
+        console.log(`   ✅ Com estoque: ${comEstoque.length}`);
+        console.log(`   ❌ Sem estoque: ${semEstoque.length}`);
+        
+        if (semEstoque.length > 0) {
+            console.log(`\n⚠️  PROBLEMA IDENTIFICADO: ${semEstoque.length} item(ns) sem estoque`);
+            console.log(`\n💡 POSSÍVEIS CAUSAS:`);
+            console.log(`   1. Metragens reservadas órfãs (veja logs do servidor)`);
+            console.log(`   2. Estoque realmente insuficiente`);
+            console.log(`   3. Execute: Configurações > Manutenção > Limpeza de Reservas`);
+            
+            showNotification(
+                `⚠️ ${semEstoque.length} item(ns) sem estoque. Veja detalhes no console (F12)`,
+                'warning'
+            );
+        } else {
+            console.log(`\n✅ Todos os itens têm estoque disponível!`);
+            showNotification('✅ Todos os itens têm estoque disponível!', 'success');
+        }
+        
+        console.log(`\n✅ Debug concluído! Veja também os logs do servidor para mais detalhes.`);
+        
+    } catch (error) {
+        console.error('❌ Erro no debug:', error);
+        showNotification('Erro no debug: ' + error.message, 'error');
+    }
+}
