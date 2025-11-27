@@ -818,40 +818,11 @@ body {
     justify-content: space-between;
     align-items: center;
     transition: all 0.2s;
-    gap: 12px;
 }
 
 .bobina-item:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transform: translateX(5px);
-}
-
-/* Modo seleção */
-.bobina-item.modo-selecao {
-    padding-left: 8px;
-}
-
-.checkbox-selecao-bobina,
-.checkbox-selecao-retalho {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.checkbox-selecao-bobina:checked,
-.checkbox-selecao-retalho:checked {
-    accent-color: var(--success-color);
-}
-
-#btn-modo-selecao.active {
-    background: var(--success-color);
-    border-color: var(--success-color);
-}
-
-#btn-modo-selecao.active:hover {
-    background: #45a049;
-    border-color: #45a049;
 }
 
 .retalho-item {
