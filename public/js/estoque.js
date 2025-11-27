@@ -1115,6 +1115,10 @@ function toggleSelecaoRetalho(retalhoId, selecionada) {
 // Imprimir etiquetas dos itens selecionados
 async function imprimirEtiquetasSelecionadas() {
     try {
+        console.log('🖨️ Iniciando impressão de etiquetas selecionadas...');
+        console.log('Bobinas selecionadas:', bobinaSelecionadas);
+        console.log('Retalhos selecionados:', retalhosSelecionados);
+        
         const totalSelecionados = bobinaSelecionadas.length + retalhosSelecionados.length;
         
         if (totalSelecionados === 0) {
@@ -1126,23 +1130,35 @@ async function imprimirEtiquetasSelecionadas() {
         
         // Buscar dados das bobinas selecionadas
         for (const bobinaId of bobinaSelecionadas) {
+            console.log('Buscando bobina ID:', bobinaId);
             const response = await fetch(`/api/bobinas/${bobinaId}`);
             const data = await response.json();
+            console.log('Dados da bobina:', data);
             if (data.success) {
-                etiquetas.push(gerarConteudoEtiquetaBobina(data.data));
+                const conteudo = gerarConteudoEtiquetaBobina(data.data);
+                console.log('Conteúdo gerado:', conteudo);
+                etiquetas.push(conteudo);
             }
         }
         
         // Buscar dados dos retalhos selecionados
         for (const retalhoId of retalhosSelecionados) {
+            console.log('Buscando retalho ID:', retalhoId);
             const response = await fetch(`/api/retalhos/${retalhoId}`);
             const data = await response.json();
+            console.log('Dados do retalho:', data);
             if (data.success) {
-                etiquetas.push(gerarConteudoEtiquetaRetalho(data.data));
+                const conteudo = gerarConteudoEtiquetaRetalho(data.data);
+                console.log('Conteúdo gerado:', conteudo);
+                etiquetas.push(conteudo);
             }
         }
         
+        console.log('Total de etiquetas geradas:', etiquetas.length);
+        console.log('Etiquetas:', etiquetas);
+        
         if (etiquetas.length > 0) {
+            console.log('Abrindo página de etiquetas...');
             abrirPaginaEtiquetas(etiquetas);
             mostrarNotificacao(`✅ ${etiquetas.length} etiqueta${etiquetas.length > 1 ? 's' : ''} pronta${etiquetas.length > 1 ? 's' : ''} para impressão!`, 'success');
             
@@ -1162,8 +1178,8 @@ async function imprimirEtiquetasSelecionadas() {
         }
         
     } catch (error) {
-        console.error('Erro:', error);
-        mostrarNotificacao('❌ Erro ao preparar impressão', 'error');
+        console.error('❌ Erro:', error);
+        mostrarNotificacao('❌ Erro ao preparar impressão: ' + error.message, 'error');
     }
 }
 
