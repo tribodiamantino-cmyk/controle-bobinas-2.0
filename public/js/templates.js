@@ -264,27 +264,34 @@ function fecharModalCriarPlano() {
 document.getElementById('formCriarPlano')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const nomePlano = document.getElementById('nome-plano-template').value.trim();
+    const cliente = document.getElementById('cliente-plano-template').value.trim();
+    const aviario = document.getElementById('aviario-plano-template').value.trim();
     
     if (!templateSelecionado) {
         mostrarNotificacao('Nenhum template selecionado', 'error');
         return;
     }
     
-    if (!nomePlano) {
-        mostrarNotificacao('Digite um nome para o plano', 'error');
+    if (!cliente || !aviario) {
+        mostrarNotificacao('Preencha Cliente e Aviário', 'error');
         return;
     }
     
     try {
+        // Criar código do plano
+        const timestamp = Date.now();
+        const codigoPlano = `${cliente.substring(0, 3).toUpperCase()}-${aviario.substring(0, 3).toUpperCase()}-${timestamp}`;
+        
+        mostrarNotificacao('Criando plano a partir do template...', 'info');
+        
         const response = await fetch('/api/obras-padrao/criar-plano', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 obra_padrao_id: templateSelecionado.id,
-                codigo_plano: nomePlano,
-                cliente: nomePlano,
-                aviario: ''
+                codigo_plano: codigoPlano,
+                cliente: cliente,
+                aviario: aviario
             })
         });
         
