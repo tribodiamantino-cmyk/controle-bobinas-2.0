@@ -31,64 +31,85 @@ function editarCampo(campoId) {
 
 // Função genérica para salvar campo
 async function salvarCampo(tipo, id, campo) {
-    let valor, displayId, editId;
-    
     if (tipo === 'cor') {
         if (campo === 'nome') {
-            editId = `cor-nome-${id}`;
-            displayId = `cor-nome-${id}-display`;
-            valor = document.getElementById(editId).value;
+            const inputElement = document.getElementById(`cor-nome-${id}`);
+            const displayElement = document.getElementById(`cor-nome-${id}-display`);
+            const valor = inputElement.value;
+            
+            if (!valor.trim()) {
+                alert('Nome da cor não pode estar vazio');
+                carregarCores();
+                return;
+            }
             
             // Atualizar display
-            document.getElementById(displayId).textContent = valor;
+            displayElement.textContent = valor;
             
             // Salvar no backend
             await atualizarCor(id, { nome_cor: valor });
+            
+            // Voltar para modo display
+            displayElement.style.display = 'inline-block';
+            inputElement.style.display = 'none';
         } else if (campo === 'ativo') {
-            editId = `cor-ativo-${id}`;
-            displayId = `cor-ativo-${id}-display`;
-            const ativoValue = document.getElementById(editId).value;
-            valor = ativoValue === '1';
+            const selectElement = document.getElementById(`cor-ativo-${id}`);
+            const displayElement = document.getElementById(`cor-ativo-${id}-display`);
+            const ativoValue = selectElement.value;
+            const valor = ativoValue === '1';
             
             // Atualizar display
-            document.getElementById(displayId).innerHTML = valor ? 
+            displayElement.innerHTML = valor ? 
                 '<span class="badge badge-success">Ativo</span>' : 
                 '<span class="badge badge-danger">Inativo</span>';
             
             // Salvar no backend
             await atualizarCor(id, { ativo: valor });
+            
+            // Voltar para modo display
+            displayElement.style.display = 'inline-block';
+            selectElement.style.display = 'none';
         }
     } else if (tipo === 'gramatura') {
         if (campo === 'numero') {
-            editId = `gramatura-numero-${id}`;
-            displayId = `gramatura-numero-${id}-display`;
-            const numero = document.getElementById(`${editId}-input`).value;
-            valor = numero + ' g/m²';
+            const inputElement = document.getElementById(`gramatura-numero-${id}`);
+            const displayElement = document.getElementById(`gramatura-numero-${id}-display`);
+            const valor = inputElement.value;
+            
+            if (!valor.trim()) {
+                alert('Gramatura não pode estar vazia');
+                carregarGramaturas();
+                return;
+            }
             
             // Atualizar display
-            document.getElementById(displayId).innerHTML = `<strong>${valor}</strong>`;
+            displayElement.innerHTML = `<strong>${valor}</strong>`;
             
             // Salvar no backend
             await atualizarGramatura(id, { gramatura: valor });
+            
+            // Voltar para modo display
+            displayElement.style.display = 'inline-block';
+            inputElement.style.display = 'none';
         } else if (campo === 'ativo') {
-            editId = `gramatura-ativo-${id}`;
-            displayId = `gramatura-ativo-${id}-display`;
-            const ativoValue = document.getElementById(editId).value;
-            valor = ativoValue === '1';
+            const selectElement = document.getElementById(`gramatura-ativo-${id}`);
+            const displayElement = document.getElementById(`gramatura-ativo-${id}-display`);
+            const ativoValue = selectElement.value;
+            const valor = ativoValue === '1';
             
             // Atualizar display
-            document.getElementById(displayId).innerHTML = valor ? 
+            displayElement.innerHTML = valor ? 
                 '<span class="badge badge-success">Ativo</span>' : 
                 '<span class="badge badge-danger">Inativo</span>';
             
             // Salvar no backend
             await atualizarGramatura(id, { ativo: valor });
+            
+            // Voltar para modo display
+            displayElement.style.display = 'inline-block';
+            selectElement.style.display = 'none';
         }
     }
-    
-    // Voltar para modo display
-    document.getElementById(displayId).style.display = 'inline-block';
-    document.getElementById(editId).style.display = 'none';
 }
 
 // Funções auxiliares para atualizar no backend

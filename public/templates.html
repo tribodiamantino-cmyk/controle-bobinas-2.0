@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obras Padrão - Controle de Bobinas 2.0</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">🎯 Controle de Bobinas 2.0</a>
+        <ul class="navbar-menu">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/produtos.html">Produtos</a></li>
+            <li><a href="/estoque.html">Estoque</a></li>
+            <li><a href="/ordens.html">Ordens de Corte</a></li>
+            <li><a href="/templates.html" class="active">Obras Padrão</a></li>
+            <li><a href="/configuracoes.html">Configurações</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📋 Obras Padrão (Templates)</h1>
+            <p style="color: #666; margin-top: 8px;">
+                Reutilize padrões de corte comuns e economize tempo na criação de planos
+            </p>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="stats-grid" style="margin-bottom: 30px;">
+            <div class="stat-card">
+                <div class="stat-icon">📋</div>
+                <div class="stat-info">
+                    <span class="stat-label">Total de Templates</span>
+                    <span class="stat-value" id="stat-total">0</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔄</div>
+                <div class="stat-info">
+                    <span class="stat-label">Mais Usado</span>
+                    <span class="stat-value" id="stat-mais-usado">-</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📏</div>
+                <div class="stat-info">
+                    <span class="stat-label">Metragem Total Salva</span>
+                    <span class="stat-value" id="stat-metragem-total">0m</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-info">
+                    <span class="stat-label">Tempo Economizado</span>
+                    <span class="stat-value" id="stat-tempo-economizado">0min</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Templates -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Templates Salvos</h2>
+            </div>
+
+            <div id="loading-templates" style="text-align: center; padding: 40px; display: none;">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px; color: #666;">Carregando templates...</p>
+            </div>
+
+            <div id="lista-templates" class="templates-grid">
+                <!-- Templates serão inseridos aqui -->
+            </div>
+
+            <div id="empty-templates" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📋</div>
+                <h3>Nenhum template salvo ainda</h3>
+                <p>Vá para <a href="/ordens.html">Ordens de Corte</a> e salve um plano como obra padrão!</p>
+                <br>
+                <div style="background: #f0f8ff; padding: 20px; border-radius: 8px; border-left: 4px solid var(--primary-color); text-align: left; max-width: 500px; margin: 0 auto;">
+                    <h4 style="margin-top: 0;">💡 Como criar templates:</h4>
+                    <ol style="margin: 10px 0; padding-left: 20px;">
+                        <li>Crie um plano de corte em "Ordens de Corte"</li>
+                        <li>Clique no botão <strong>"💾 Salvar Template"</strong> no card</li>
+                        <li>Dê um nome descritivo (ex: "Aviário Padrão 100x12m")</li>
+                        <li>O template aparecerá aqui e poderá ser reutilizado!</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ver Detalhes do Template -->
+    <div id="modalDetalhesTemplate" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="modal-template-titulo">📋 Detalhes da Obra Padrão</h2>
+                <button class="btn-close" onclick="fecharModalDetalhes()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="conteudo-detalhes-template">
+                    <!-- Conteúdo será inserido dinamicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="fecharModalDetalhes()">Fechar</button>
+                <button class="btn btn-primary" onclick="usarTemplateAtual()">
+                    ✨ Criar Plano deste Template
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Criar Plano do Template -->
+    <div id="modalCriarPlano" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✨ Criar Plano do Template</h2>
+                <button class="btn-close" onclick="fecharModalCriarPlano()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px; color: #666;">
+                    Um novo plano será criado com todos os cortes deste template.
+                </p>
+                <form id="formCriarPlano">
+                    <div class="form-group">
+                        <label>Cliente *</label>
+                        <input type="text" id="cliente-template" class="form-control" required placeholder="Nome do cliente">
+                    </div>
+                    <div class="form-group">
+                        <label>Aviário *</label>
+                        <input type="text" id="aviario-template" class="form-control" required placeholder="Nome do aviário">
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalCriarPlano()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">✨ Criar Plano</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/templates.js"></script>
+</body>
+</html>
