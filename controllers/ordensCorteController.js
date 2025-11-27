@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { validarECorrigirReservas } = require('../middleware/validarReservas');
 
 // Gerar código único para plano de corte: PC-2025-00001
 async function gerarCodigoPlano() {
@@ -330,6 +331,8 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
 
 // Função auxiliar: sugerir melhor origem para um corte
 async function sugerirOrigemParaCorte(produtoId, metragem) {
+    console.log(`\n🔍 [DEBUG] Buscando origem para produto ${produtoId}, metragem ${metragem}m`);
+    
     // 1. PRIORIDADE: RETALHOS (aproveitar sobras)
     const [retalhos] = await db.query(`
         SELECT 
@@ -343,6 +346,11 @@ async function sugerirOrigemParaCorte(produtoId, metragem) {
         ORDER BY (r.metragem - ?) ASC
         LIMIT 1
     `, [produtoId, metragem, metragem]);
+    
+    console.log(`   📦 Retalhos encontrados: ${retalhos.length}`);
+    if (retalhos.length > 0) {
+        console.log(`   ✅ Retalho selecionado: ${retalhos[0].codigo_retalho} - Disponível: ${retalhos[0].metragem_disponivel}m`);
+    }
     
     if (retalhos.length > 0) {
         return {
@@ -372,6 +380,11 @@ async function sugerirOrigemParaCorte(produtoId, metragem) {
         LIMIT 1
     `, [produtoId, metragem]);
     
+    console.log(`   🎯 Bobinas encontradas: ${bobinas.length}`);
+    if (bobinas.length > 0) {
+        console.log(`   ✅ Bobina selecionada: ${bobinas[0].codigo_interno} - Disponível: ${bobinas[0].metragem_disponivel}m (Total: ${bobinas[0].metragem_atual}m, Reservada: ${bobinas[0].metragem_reservada || 0}m)`);
+    }
+    
     if (bobinas.length > 0) {
         return {
             tipo: 'bobina',
@@ -386,7 +399,46 @@ async function sugerirOrigemParaCorte(produtoId, metragem) {
         };
     }
     
-    // 3. SEM ESTOQUE SUFICIENTE
+    // 3. SEM ESTOQUE SUFICIENTE - INVESTIGAR
+    console.log(`   ❌ Nenhuma origem encontrada. Investigando estoque total...`);
+    
+    // Buscar TODOS os retalhos e bobinas deste produto para debug
+    const [todosRetalhos] = await db.query(`
+        SELECT 
+            codigo_retalho,
+            metragem,
+            metragem_reservada,
+            (metragem - COALESCE(metragem_reservada, 0)) as disponivel,
+            status
+        FROM retalhos 
+        WHERE produto_id = ?
+        ORDER BY disponivel DESC
+    `, [produtoId]);
+    
+    const [todasBobinas] = await db.query(`
+        SELECT 
+            codigo_interno,
+            metragem_atual,
+            metragem_reservada,
+            (metragem_atual - COALESCE(metragem_reservada, 0)) as disponivel,
+            status,
+            convertida_em_retalho
+        FROM bobinas 
+        WHERE produto_id = ?
+        ORDER BY disponivel DESC
+    `, [produtoId]);
+    
+    console.log(`\n   📊 DEBUG - Estoque completo do produto ${produtoId}:`);
+    console.log(`   📦 Retalhos (${todosRetalhos.length} total):`);
+    todosRetalhos.forEach(r => {
+        console.log(`      - ${r.codigo_retalho}: ${r.metragem}m total, ${r.metragem_reservada || 0}m reservada, ${r.disponivel}m disponível [${r.status}]`);
+    });
+    console.log(`   🎯 Bobinas (${todasBobinas.length} total):`);
+    todasBobinas.forEach(b => {
+        console.log(`      - ${b.codigo_interno}: ${b.metragem_atual}m total, ${b.metragem_reservada || 0}m reservada, ${b.disponivel}m disponível [${b.status}] ${b.convertida_em_retalho ? '(convertida)' : ''}`);
+    });
+    console.log(`   ⚠️  Metragem solicitada: ${metragem}m\n`);
+    
     const [maxDisponivel] = await db.query(`
         SELECT MAX(metragem_disponivel) as max_metragem
         FROM (
@@ -572,6 +624,10 @@ exports.alocarOrigem = async (req, res) => {
 exports.enviarParaProducao = async (req, res) => {
     try {
         const { id } = req.params;
+        
+        // VALIDAR RESERVAS ANTES DE ENVIAR PARA PRODUÇÃO
+        console.log('🔍 Validando reservas antes de enviar plano para produção...');
+        await validarECorrigirReservas();
         
         // Verificar se plano existe
         const [planos] = await db.query(`
@@ -760,6 +816,10 @@ exports.voltarParaPlanejamento = async (req, res) => {
         await db.query(`
             UPDATE planos_corte SET status = 'planejamento' WHERE id = ?
         `, [id]);
+        
+        // VALIDAR RESERVAS APÓS VOLTAR PARA PLANEJAMENTO
+        console.log('🔍 Validando reservas após voltar plano para planejamento...');
+        await validarECorrigirReservas();
         
         res.json({ 
             success: true, 
