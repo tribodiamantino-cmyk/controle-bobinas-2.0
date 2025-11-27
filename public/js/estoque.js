@@ -406,10 +406,18 @@ async function registrarBobina(e) {
         const data = await response.json();
         
         if (response.ok) {
-            bobinaCriada = data.data;
-            mostrarModalSucesso(data.data);
+            // Mostrar alerta de sucesso
+            mostrarAlerta(`✅ Bobina ${data.data.codigo_interno} registrada com sucesso! NF: ${data.data.nota_fiscal}`, 'success');
+            
+            // Limpar formulário
             limparFormulario();
+            
+            // Recarregar estoque
             carregarEstoque();
+            
+            // Reabilitar botão
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = btnTextOriginal;
         } else {
             mostrarAlerta(data.error || 'Erro ao registrar bobina', 'danger');
             // Reabilitar botão em caso de erro

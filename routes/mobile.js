@@ -40,30 +40,43 @@ router.get('/bobina/:id', async (req, res) => {
         
         bobina.metragem_atual = bobina.metragem_inicial - totalCortado[0].total_cortado;
         
-        // Buscar histórico de movimentações
-        const [movimentacoes] = await db.query(`
-            SELECT 
-                'ENTRADA' as tipo,
-                b.data_entrada as data_movimentacao,
-                b.metragem_inicial as metragem,
-                CONCAT('Entrada - NF: ', COALESCE(b.nota_fiscal, 'S/N')) as observacoes
-            FROM bobinas b
-            WHERE b.id = ?
-            
-            UNION ALL
-            
-            SELECT 
-                'CORTE' as tipo,
-                oc.data_criacao as data_movimentacao,
-                oc.metragem_utilizada as metragem,
-                COALESCE(oc.observacoes, '') as observacoes
-            FROM ordens_corte oc
-            WHERE oc.bobina_id = ?
-            
-            ORDER BY data_movimentacao DESC
-        `, [bobinaId, bobinaId]);
+        // Buscar histórico de movimentações (simplificado para evitar erros)
+        const historico = [];
         
-        bobina.historico = movimentacoes;
+        // Adicionar entrada
+        historico.push({
+            tipo: 'ENTRADA',
+            data_movimentacao: bobina.data_entrada,
+            metragem: bobina.metragem_inicial,
+            observacoes: `Entrada - NF: ${bobina.nota_fiscal || 'S/N'}`
+        });
+        
+        // Buscar cortes
+        try {
+            const [cortes] = await db.query(`
+                SELECT 
+                    data_criacao,
+                    metragem_utilizada,
+                    observacoes
+                FROM ordens_corte
+                WHERE bobina_id = ?
+                ORDER BY data_criacao DESC
+            `, [bobinaId]);
+            
+            cortes.forEach(corte => {
+                historico.push({
+                    tipo: 'CORTE',
+                    data_movimentacao: corte.data_criacao,
+                    metragem: corte.metragem_utilizada,
+                    observacoes: corte.observacoes || ''
+                });
+            });
+        } catch (err) {
+            console.error('⚠️ Erro ao buscar cortes:', err.message);
+            // Continua sem histórico de cortes
+        }
+        
+        bobina.historico = historico;
         
         res.json({
             success: true,
