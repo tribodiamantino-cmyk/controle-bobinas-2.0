@@ -94,6 +94,10 @@ function criarCardPlano(plano) {
     
     if (plano.status === 'planejamento') {
         acoes = `
+            <button class="btn-kanban btn-kanban-primary" onclick="event.stopPropagation(); alocarAutomaticamente(${plano.id})" title="Aloca automaticamente todas as origens">
+                <span class="btn-kanban-icon">🤖</span>
+                <span class="btn-kanban-text">Auto-Alocar</span>
+            </button>
             <button class="btn-kanban btn-kanban-success" onclick="event.stopPropagation(); enviarParaProducao(${plano.id})">
                 <span class="btn-kanban-icon">▶</span>
                 <span class="btn-kanban-text">Produzir</span>
@@ -924,6 +928,87 @@ async function confirmarAlocacao(origemId, tipoOrigem) {
 
 function fecharModalAlocacao() {
     document.getElementById('modalAlocacao').style.display = 'none';
+}
+
+// ========== ALOCAÇÃO AUTOMÁTICA ==========
+async function alocarAutomaticamente(planoId) {
+    if (!confirm('Deseja alocar automaticamente todas as origens para este plano?\n\nO sistema irá:\n✓ Priorizar retalhos\n✓ Escolher as menores bobinas disponíveis\n✓ Substituir alocações existentes')) {
+        return;
+    }
+    
+    try {
+        // Mostrar loading
+        showNotification('Alocando origens automaticamente...', 'info');
+        
+        const response = await fetch(`${API_BASE}/ordens-corte/${planoId}/sugestoes`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            showNotification('Erro ao buscar sugestões: ' + data.error, 'error');
+            return;
+        }
+        
+        const sugestoes = data.data;
+        let sucessos = 0;
+        let erros = 0;
+        let errosDetalhes = [];
+        
+        // Alocar cada sugestão
+        for (const sugestao of sugestoes) {
+            if (!sugestao.origem) {
+                erros++;
+                errosDetalhes.push(`Item ${sugestao.item_id}: ${sugestao.erro || 'Sem estoque'}`);
+                continue;
+            }
+            
+            try {
+                const alocResponse = await fetch(`${API_BASE}/ordens-corte/alocar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_id: sugestao.item_id,
+                        tipo_origem: sugestao.origem.tipo,
+                        origem_id: sugestao.origem.id
+                    })
+                });
+                
+                const alocData = await alocResponse.json();
+                
+                if (alocData.success) {
+                    sucessos++;
+                } else {
+                    erros++;
+                    errosDetalhes.push(`Item ${sugestao.item_id}: ${alocData.error}`);
+                }
+            } catch (error) {
+                erros++;
+                errosDetalhes.push(`Item ${sugestao.item_id}: Erro ao alocar`);
+            }
+        }
+        
+        // Mostrar resultado
+        if (sucessos > 0 && erros === 0) {
+            showNotification(`✅ ${sucessos} corte(s) alocado(s) automaticamente com sucesso!`, 'success');
+        } else if (sucessos > 0 && erros > 0) {
+            showNotification(`⚠️ ${sucessos} alocado(s), ${erros} com problema(s). Veja os detalhes no console.`, 'warning');
+            console.warn('Erros de alocação:', errosDetalhes);
+        } else {
+            showNotification(`❌ Não foi possível alocar nenhum corte. ${errosDetalhes[0] || ''}`, 'error');
+            console.error('Erros de alocação:', errosDetalhes);
+        }
+        
+        // Recarregar planos
+        carregarPlanos();
+        
+        // Se o modal de detalhes estiver aberto, atualizar
+        if (planoAtual && planoAtual.id === planoId) {
+            abrirDetalhesPlano(planoId);
+        }
+        
+    } catch (error) {
+        console.error('Erro na alocação automática:', error);
+        showNotification('Erro na alocação automática', 'error');
+    }
 }
 
 // ========== ENVIAR PARA PRODUÇÃO ==========

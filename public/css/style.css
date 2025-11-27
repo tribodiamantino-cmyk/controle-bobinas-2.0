@@ -1351,7 +1351,9 @@ body {
 
 .plano-actions {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
 }
 
 .btn-icon {
@@ -1464,6 +1466,15 @@ body {
 
 .btn-kanban-info:hover {
     background-color: #138496;
+}
+
+.btn-kanban-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-kanban-primary:hover {
+    background-color: #0056b3;
 }
 
 /* Resumo dentro de cada Produto */
