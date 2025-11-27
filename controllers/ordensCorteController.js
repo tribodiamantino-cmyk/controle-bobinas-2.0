@@ -275,11 +275,59 @@ exports.sugerirAlocacoes = async (req, res) => {
 };
 
 // Função auxiliar: sugerir origens para um GRUPO de cortes do mesmo produto
-// PRIORIZA usar a MESMA bobina para todos os cortes, minimizando trocas
+// PRIORIZA: 1º Retalhos individuais, 2º Bobina única, 3º Bobinas individuais
 async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
     const metragemTotal = cortesGrupo.reduce((sum, item) => sum + parseFloat(item.metragem), 0);
     
-    // 1. TENTAR ENCONTRAR UMA BOBINA que atenda TODOS os cortes
+    // ETAPA 1: Verificar se TODOS os cortes podem ser atendidos por RETALHOS
+    const sugestoesComRetalhos = [];
+    let todosTemRetalho = true;
+    
+    for (const item of cortesGrupo) {
+        const [retalhos] = await db.query(`
+            SELECT 
+                r.*,
+                (r.metragem - COALESCE(r.metragem_reservada, 0)) as metragem_disponivel
+            FROM retalhos r
+            WHERE r.produto_id = ?
+                AND r.status = 'Disponível'
+                AND (r.metragem - COALESCE(r.metragem_reservada, 0)) >= ?
+            ORDER BY (r.metragem - ?) ASC
+            LIMIT 1
+        `, [produtoId, item.metragem, item.metragem]);
+        
+        if (retalhos.length > 0) {
+            sugestoesComRetalhos.push({
+                item_id: item.id,
+                produto_id: item.produto_id,
+                metragem_corte: parseFloat(item.metragem),
+                origem: {
+                    tipo: 'retalho',
+                    id: retalhos[0].id,
+                    codigo: retalhos[0].codigo_retalho,
+                    metragem_total: parseFloat(retalhos[0].metragem),
+                    metragem_disponivel: parseFloat(retalhos[0].metragem_disponivel),
+                    localizacao: retalhos[0].localizacao_atual,
+                    motivo: '📦 Retalho disponível (prioridade)',
+                    prioridade: 'alta',
+                    estrategia: 'retalho_individual'
+                }
+            });
+        } else {
+            todosTemRetalho = false;
+            break; // Se um não tem retalho, já para de procurar
+        }
+    }
+    
+    // Se TODOS os cortes têm retalhos disponíveis, usar retalhos!
+    if (todosTemRetalho && sugestoesComRetalhos.length === cortesGrupo.length) {
+        console.log(`   ✅ Usando ${sugestoesComRetalhos.length} retalho(s) individuais para produto ${produtoId}`);
+        return sugestoesComRetalhos;
+    }
+    
+    console.log(`   ⚠️  Nem todos os cortes têm retalhos. Tentando bobina única...`);
+    
+    // ETAPA 2: Tentar encontrar UMA BOBINA que atenda TODOS os cortes
     const [bobinaUnica] = await db.query(`
         SELECT 
             b.*,
@@ -295,12 +343,13 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
     `, [produtoId, metragemTotal]);
     
     if (bobinaUnica.length > 0) {
+        console.log(`   ✅ Usando bobina única ${bobinaUnica[0].codigo_interno} para ${cortesGrupo.length} cortes do produto ${produtoId}`);
         // SUCESSO: Alocar todos os cortes na MESMA bobina
         return cortesGrupo.map(item => ({
             item_id: item.id,
             produto_id: item.produto_id,
             metragem_corte: parseFloat(item.metragem),
-            origem: {  // ← MUDADO de "sugestao" para "origem"
+            origem: {
                 tipo: 'bobina',
                 id: bobinaUnica[0].id,
                 codigo: bobinaUnica[0].codigo_interno,
@@ -308,14 +357,16 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
                 metragem_disponivel: parseFloat(bobinaUnica[0].metragem_disponivel),
                 nota_fiscal: bobinaUnica[0].nota_fiscal,
                 localizacao: bobinaUnica[0].localizacao_atual,
-                motivo: '✨ MESMA BOBINA para todos os cortes deste produto',
-                prioridade: 'otima',
+                motivo: '✨ MESMA BOBINA para todos os cortes (sem retalhos disponíveis)',
+                prioridade: 'media',
                 estrategia: 'bobina_unica'
             }
         }));
     }
     
-    // 2. NÃO ENCONTROU BOBINA ÚNICA: alocar individualmente (fallback)
+    console.log(`   ⚠️  Sem bobina única. Alocando individualmente...`);
+    
+    // ETAPA 3: Alocar individualmente (fallback - tenta retalho, senão bobina individual)
     const sugestoes = [];
     for (const item of cortesGrupo) {
         const origem = await sugerirOrigemParaCorte(item.produto_id, item.metragem);
