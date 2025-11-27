@@ -5,6 +5,12 @@ let produtos = [];
 let cortesAgrupadosTemplate = {}; // { produto_id: [{ metragem, observacoes }, ...] }
 let produtoAtualSelecionadoTemplate = null;
 
+// Helper para criar nome descritivo do produto
+function getNomeProduto(produto) {
+    if (!produto) return 'Produto não encontrado';
+    return `${produto.codigo} - ${produto.nome_cor || ''} ${produto.gramatura || ''}`.trim();
+}
+
 // Carregar templates ao iniciar
 document.addEventListener('DOMContentLoaded', () => {
     carregarTemplates();
@@ -202,8 +208,8 @@ async function abrirDetalhesTemplate(templateId) {
                         <div class="corte-numero">#${index + 1}</div>
                         <div class="corte-info">
                             <div class="corte-produto">
-                                <strong>${item.produto_nome}</strong>
-                                <small style="color: #666;">${item.produto_codigo}</small>
+                                <strong>${item.produto_codigo}</strong>
+                                <small style="color: #666;">${item.produto_loja || ''} ${item.produto_tipo ? '• ' + item.produto_tipo : ''}</small>
                             </div>
                             <div class="corte-metragem">
                                 <span class="badge badge-info">${parseFloat(item.metragem).toFixed(2)}m</span>
@@ -363,7 +369,7 @@ async function carregarProdutosParaTemplate() {
     try {
         const response = await fetch('/api/produtos');
         const data = await response.json();
-        produtos = data;
+        produtos = data.data || data; // Pega o array de produtos
     } catch (error) {
         console.error('Erro ao carregar produtos:', error);
     }
@@ -395,7 +401,7 @@ function popularSelectProdutosTemplate() {
     produtos.forEach(produto => {
         const option = document.createElement('option');
         option.value = produto.id;
-        option.textContent = `${produto.nome} (${produto.codigo})`;
+        option.textContent = getNomeProduto(produto);
         select.appendChild(option);
     });
 }
@@ -471,8 +477,8 @@ function renderizarListaCortesTemplate() {
             <div class="produto-grupo-card">
                 <div class="produto-grupo-header">
                     <div>
-                        <strong>${produto.nome || 'Produto não encontrado'}</strong>
-                        <small style="color: #666; margin-left: 8px;">${produto.codigo || ''}</small>
+                        <strong>${getNomeProduto(produto)}</strong>
+                        <small style="color: #666; margin-left: 8px;">${produto.loja || ''}</small>
                     </div>
                     <div style="display: flex; align-items: center; gap: 15px;">
                         <span class="badge badge-info">${cortes.length} cortes • ${metragemTotal.toFixed(2)}m total</span>

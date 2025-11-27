@@ -8,7 +8,7 @@ exports.listarObrasPadrao = async (req, res) => {
                 op.*,
                 COUNT(opi.id) as total_itens,
                 SUM(opi.metragem) as metragem_total,
-                GROUP_CONCAT(DISTINCT p.nome SEPARATOR ', ') as produtos
+                GROUP_CONCAT(DISTINCT p.codigo SEPARATOR ', ') as produtos
             FROM obras_padrao op
             LEFT JOIN obra_padrao_itens opi ON opi.obra_padrao_id = op.id
             LEFT JOIN produtos p ON p.id = opi.produto_id
@@ -42,9 +42,9 @@ exports.buscarObraPadrao = async (req, res) => {
         const [itens] = await db.query(`
             SELECT 
                 opi.*,
-                p.nome as produto_nome,
                 p.codigo as produto_codigo,
-                p.cor as produto_cor
+                p.loja as produto_loja,
+                p.tipo_tecido as produto_tipo
             FROM obra_padrao_itens opi
             INNER JOIN produtos p ON p.id = opi.produto_id
             WHERE opi.obra_padrao_id = ?
