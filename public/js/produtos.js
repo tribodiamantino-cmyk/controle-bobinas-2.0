@@ -3,6 +3,10 @@ let produtos = [];
 let cores = [];
 let gramaturas = [];
 
+// Funções com debounce para filtros
+const filtrarProdutosDebounced = debounce(filtrarProdutos, 300);
+const aplicarFiltrosDebounced = debounce(aplicarFiltros, 300);
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     carregarCores();

@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs').promises;
 const db = require('./config/database');
@@ -10,6 +12,41 @@ const PORT = process.env.PORT || 3000;
 
 // Importar middleware de validação de reservas
 const { iniciarValidacaoPeriodica } = require('./middleware/validarReservas');
+
+// SEGURANÇA: Helmet para headers HTTP seguros
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"], // Permite inline styles do Bootstrap
+            scriptSrc: ["'self'", "'unsafe-inline'"], // Permite inline scripts
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'", "data:"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: []
+        }
+    },
+    crossOriginEmbedderPolicy: false // Para permitir recursos externos
+}));
+
+// SEGURANÇA: Rate Limiting para APIs
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // Máximo 100 requisições por IP
+    message: 'Muitas requisições deste IP, tente novamente em 15 minutos.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// SEGURANÇA: Rate Limiting mais restritivo para operações críticas
+const criticalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 50, // Máximo 50 requisições
+    message: 'Limite de operações críticas excedido, tente novamente em 15 minutos.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // Função para executar migrations automaticamente
 async function runMigrations() {
@@ -73,10 +110,17 @@ async function runMigrations() {
 }
 
 // Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || '*', // Configurável via .env
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    credentials: true
+}));
+app.use(express.json({ limit: '10mb' })); // Limite de payload
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('public'));
+
+// Aplicar rate limiting nas rotas de API
+app.use('/api/', apiLimiter);
 
 // Rotas
 app.get('/', (req, res) => {
@@ -110,10 +154,10 @@ app.use('/api/produtos', produtosRoutes);
 app.use('/api/bobinas', bobinasRoutes);
 app.use('/api/retalhos', retalhosRoutes);
 app.use('/api/localizacao', localizacaoRoutes);
-app.use('/api/ordens-corte', ordensCorteRoutes);
+app.use('/api/ordens-corte', criticalLimiter, ordensCorteRoutes); // Rate limit mais restritivo
 app.use('/api/obras-padrao', obrasPadraoRoutes);
-app.use('/api/database', setupRoutes);
-app.use('/api/database', migrateRoutes);
+app.use('/api/database', criticalLimiter, setupRoutes); // Rate limit mais restritivo
+app.use('/api/database', criticalLimiter, migrateRoutes); // Rate limit mais restritivo
 
 // Tratamento de erro 404
 app.use((req, res) => {

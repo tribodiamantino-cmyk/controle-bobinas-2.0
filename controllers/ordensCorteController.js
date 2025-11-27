@@ -166,7 +166,7 @@ exports.buscarPlanoPorId = async (req, res) => {
         
         const plano = planos[0];
         
-        // Buscar itens com dados do produto
+        // Buscar itens com dados do produto E alocações em UMA ÚNICA QUERY (otimizado!)
         const [itens] = await db.query(`
             SELECT 
                 ipc.*,
@@ -175,46 +175,62 @@ exports.buscarPlanoPorId = async (req, res) => {
                 CONCAT(p.codigo, ' - ', c.nome_cor, ' ', g.gramatura, 'g/m²') as produto_nome,
                 c.nome_cor,
                 g.gramatura,
-                p.tipo_tecido
+                p.tipo_tecido,
+                ac.id as alocacao_id,
+                ac.tipo_origem as alocacao_tipo_origem,
+                ac.metragem_alocada as alocacao_metragem_alocada,
+                ac.bobina_id as alocacao_bobina_id,
+                ac.retalho_id as alocacao_retalho_id,
+                CASE 
+                    WHEN ac.tipo_origem = 'bobina' THEN b.codigo_interno
+                    WHEN ac.tipo_origem = 'retalho' THEN r.codigo_retalho
+                END as alocacao_codigo_origem,
+                CASE 
+                    WHEN ac.tipo_origem = 'bobina' THEN b.metragem_atual
+                    WHEN ac.tipo_origem = 'retalho' THEN r.metragem
+                END as alocacao_metragem_origem,
+                CASE 
+                    WHEN ac.tipo_origem = 'bobina' THEN b.localizacao_atual
+                    WHEN ac.tipo_origem = 'retalho' THEN r.localizacao_atual
+                END as alocacao_localizacao_origem,
+                b.nota_fiscal as alocacao_nota_fiscal
             FROM itens_plano_corte ipc
             JOIN produtos p ON p.id = ipc.produto_id
             JOIN configuracoes_cores c ON c.id = p.cor_id
             JOIN configuracoes_gramaturas g ON g.id = p.gramatura_id
+            LEFT JOIN alocacoes_corte ac ON ac.item_plano_corte_id = ipc.id
+            LEFT JOIN bobinas b ON b.id = ac.bobina_id
+            LEFT JOIN retalhos r ON r.id = ac.retalho_id
             WHERE ipc.plano_corte_id = ?
             ORDER BY ipc.ordem
         `, [id]);
         
-        // Para cada item, buscar alocação se existir
-        for (let item of itens) {
-            const [alocacoes] = await db.query(`
-                SELECT 
-                    ac.*,
-                    CASE 
-                        WHEN ac.tipo_origem = 'bobina' THEN b.codigo_interno
-                        WHEN ac.tipo_origem = 'retalho' THEN r.codigo_retalho
-                    END as codigo_origem,
-                    CASE 
-                        WHEN ac.tipo_origem = 'bobina' THEN b.metragem_atual
-                        WHEN ac.tipo_origem = 'retalho' THEN r.metragem
-                    END as metragem_origem,
-                    CASE 
-                        WHEN ac.tipo_origem = 'bobina' THEN b.localizacao_atual
-                        WHEN ac.tipo_origem = 'retalho' THEN r.localizacao_atual
-                    END as localizacao_origem,
-                    CASE 
-                        WHEN ac.tipo_origem = 'bobina' THEN b.nota_fiscal
-                        ELSE NULL
-                    END as nota_fiscal
-                FROM alocacoes_corte ac
-                LEFT JOIN bobinas b ON b.id = ac.bobina_id
-                LEFT JOIN retalhos r ON r.id = ac.retalho_id
-                WHERE ac.item_plano_corte_id = ?
-            `, [item.id]);
-            
-            item.alocacao = alocacoes[0] || null;
-        }
-        
-        plano.itens = itens;
+        // Transformar resultado flat em estrutura aninhada
+        plano.itens = itens.map(item => ({
+            id: item.id,
+            plano_corte_id: item.plano_corte_id,
+            produto_id: item.produto_id,
+            metragem: item.metragem,
+            observacoes: item.observacoes,
+            ordem: item.ordem,
+            codigo: item.codigo,
+            loja: item.loja,
+            produto_nome: item.produto_nome,
+            nome_cor: item.nome_cor,
+            gramatura: item.gramatura,
+            tipo_tecido: item.tipo_tecido,
+            alocacao: item.alocacao_id ? {
+                id: item.alocacao_id,
+                tipo_origem: item.alocacao_tipo_origem,
+                metragem_alocada: item.alocacao_metragem_alocada,
+                bobina_id: item.alocacao_bobina_id,
+                retalho_id: item.alocacao_retalho_id,
+                codigo_origem: item.alocacao_codigo_origem,
+                metragem_origem: item.alocacao_metragem_origem,
+                localizacao_origem: item.alocacao_localizacao_origem,
+                nota_fiscal: item.alocacao_nota_fiscal
+            } : null
+        }));
         
         res.json({ 
             success: true, 
