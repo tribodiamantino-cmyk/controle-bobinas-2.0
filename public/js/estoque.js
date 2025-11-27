@@ -582,9 +582,10 @@ function gerarHtmlEtiquetaRetalho(retalho, tipo = 'completa') {
     });
     
     const isSimples = tipo === 'simples';
-    const largura = '40mm';
-    const altura = isSimples ? '60mm' : '100mm';
-    const qrSize = isSimples ? 120 : 100;
+    // 60x30mm - pode ser paisagem ou retrato
+    const largura = isSimples ? '30mm' : '60mm';  // Simples: retrato 30x60mm, Completa: paisagem 60x30mm
+    const altura = isSimples ? '60mm' : '30mm';
+    const qrSize = isSimples ? 90 : 70;
     
     return `
         <!DOCTYPE html>
@@ -728,41 +729,40 @@ function gerarZPLRetalho(retalho, tipo = 'completa') {
     });
     
     const isSimples = tipo === 'simples';
-    const altura = isSimples ? 472 : 787;
-    const largura = 315;
+    
+    // Etiqueta 60x30mm a 203dpi
+    // Simples: RETRATO 30x60mm (236 x 472 dots)
+    // Completa: PAISAGEM 60x30mm (472 x 236 dots)
+    const largura = isSimples ? 236 : 472;
+    const altura = isSimples ? 472 : 236;
     
     let zpl;
     
     if (isSimples) {
-        // ETIQUETA SIMPLIFICADA: Apenas QR Code grande + Código
+        // ETIQUETA SIMPLIFICADA RETRATO (30x60mm): QR Code grande + Código
         zpl = `
 ^XA
 ^FO0,0^GB${largura},${altura},2^FS
 
-^FO90,80^BQN,2,8^FDQA,${qrData}^FS
+^FO68,80^BQN,2,5^FDQA,${qrData}^FS
 
-^FO50,380^A0N,30,30^FD${retalho.codigo_retalho}^FS
+^FO25,340^A0N,28,28^FD${retalho.codigo_retalho}^FS
 
 ^XZ
 `.trim();
     } else {
-        // ETIQUETA COMPLETA: Todos os dados
+        // ETIQUETA COMPLETA PAISAGEM (60x30mm): QR + dados compactos
         zpl = `
 ^XA
 ^FO0,0^GB${largura},${altura},2^FS
 
-^FO105,10^A0N,18,18^FDRETALHO^FS
+^FO10,10^BQN,2,4^FDQA,${qrData}^FS
 
-^FO90,50^BQN,2,6^FDQA,${qrData}^FS
-
-^FO35,320^A0N,28,28^FD${retalho.codigo_retalho}^FS
-
-^FO20,365^A0N,14,14^FD${retalho.loja} | ${retalho.fabricante}^FS
-^FO20,390^A0N,14,14^FD${retalho.codigo}^FS
-^FO20,415^A0N,14,14^FD${retalho.nome_cor}^FS
-^FO20,440^A0N,14,14^FD${retalho.gramatura}^FS
-^FO20,465^A0N,14,14^FD${retalho.metragem}m^FS
-^FO20,490^A0N,14,14^FDLoc: ${retalho.localizacao_atual || 'N/A'}^FS
+^FO170,15^A0N,20,20^FD${retalho.codigo_retalho}^FS
+^FO170,40^A0N,10,10^FD${retalho.loja}^FS
+^FO170,52^A0N,10,10^FD${retalho.codigo}^FS
+^FO170,64^A0N,10,10^FD${retalho.nome_cor}^FS
+^FO170,76^A0N,10,10^FD${retalho.metragem}m^FS
 
 ^XZ
 `.trim();
@@ -783,9 +783,10 @@ function gerarHtmlEtiqueta(bobina, tipo = 'completa') {
     
     // Estilos e conteúdo diferentes para cada tipo
     const isSimples = tipo === 'simples';
-    const largura = '40mm';
-    const altura = isSimples ? '60mm' : '100mm';
-    const qrSize = isSimples ? 120 : 100;
+    // 60x30mm - pode ser paisagem (60mm width x 30mm height) ou retrato (30mm width x 60mm height)
+    const largura = isSimples ? '30mm' : '60mm';  // Simples: retrato 30x60mm, Completa: paisagem 60x30mm
+    const altura = isSimples ? '60mm' : '30mm';
+    const qrSize = isSimples ? 90 : 70;
     
     return `
         <!DOCTYPE html>
@@ -975,43 +976,39 @@ function gerarZPL(bobina, tipo = 'completa') {
     
     const isSimples = tipo === 'simples';
     
-    // Etiqueta VERTICAL 40x100mm (completa) ou 40x60mm (simples) a 203dpi
-    // 40mm = ~315 dots, 100mm = ~787 dots, 60mm = ~472 dots
-    const altura = isSimples ? 472 : 787;
-    const largura = 315;
+    // Etiqueta 60x30mm a 203dpi
+    // Simples: RETRATO 30x60mm (236 x 472 dots)
+    // Completa: PAISAGEM 60x30mm (472 x 236 dots)
+    const largura = isSimples ? 236 : 472;
+    const altura = isSimples ? 472 : 236;
     
     let zpl;
     
     if (isSimples) {
-        // ETIQUETA SIMPLIFICADA: Apenas QR Code grande + Código
+        // ETIQUETA SIMPLIFICADA RETRATO (30x60mm): QR Code grande + Código
         zpl = `
 ^XA
 ^FO0,0^GB${largura},${altura},2^FS
 
-^FO90,80^BQN,2,8^FDQA,${qrData}^FS
+^FO68,80^BQN,2,5^FDQA,${qrData}^FS
 
-^FO50,380^A0N,35,35^FD${bobina.codigo_interno}^FS
+^FO25,340^A0N,28,28^FD${bobina.codigo_interno}^FS
 
 ^XZ
 `.trim();
     } else {
-        // ETIQUETA COMPLETA: Todos os dados
+        // ETIQUETA COMPLETA PAISAGEM (60x30mm): QR + dados compactos
         zpl = `
 ^XA
 ^FO0,0^GB${largura},${altura},2^FS
 
-^FO65,10^A0N,18,18^FDCONTROLE DE BOBINAS^FS
+^FO10,10^BQN,2,4^FDQA,${qrData}^FS
 
-^FO90,50^BQN,2,6^FDQA,${qrData}^FS
-
-^FO40,320^A0N,30,30^FD${bobina.codigo_interno}^FS
-
-^FO20,365^A0N,14,14^FD${bobina.loja} | ${bobina.fabricante}^FS
-^FO20,390^A0N,14,14^FD${bobina.codigo}^FS
-^FO20,415^A0N,14,14^FD${bobina.nome_cor}^FS
-^FO20,440^A0N,14,14^FD${bobina.gramatura}^FS
-^FO20,465^A0N,14,14^FD${bobina.metragem_inicial}m | NF: ${bobina.nota_fiscal}^FS
-^FO20,490^A0N,14,14^FDLoc: ${bobina.localizacao_atual || 'N/A'}^FS
+^FO170,15^A0N,20,20^FD${bobina.codigo_interno}^FS
+^FO170,40^A0N,10,10^FD${bobina.loja}^FS
+^FO170,52^A0N,10,10^FD${bobina.codigo}^FS
+^FO170,64^A0N,10,10^FD${bobina.nome_cor}^FS
+^FO170,76^A0N,10,10^FD${bobina.metragem_inicial}m^FS
 
 ^XZ
 `.trim();
