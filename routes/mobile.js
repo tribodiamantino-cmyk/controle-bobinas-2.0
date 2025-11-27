@@ -7,27 +7,30 @@ router.get('/bobina/:id', async (req, res) => {
     try {
         const bobinaId = req.params.id;
 
-        // Tentar buscar dados completos via view consolidada
-        // Compatível com o schema atual (codigo_produto, cor, gramatura, id_interno etc.)
+        // Query direta nas tabelas (não depende de view que pode não existir)
         const [rows] = await db.query(
             `SELECT 
-                v.id,
-                v.id_interno AS codigo_interno,
-                v.metragem_inicial,
-                v.metragem_atual,
-                v.locacao AS localizacao_atual,
-                v.status,
-                v.data_entrada,
-                v.observacoes,
-                v.produto_id,
-                v.loja,
-                v.codigo_produto AS codigo,
-                v.cor AS nome_cor,
-                v.gramatura,
-                v.fabricante,
-                v.largura_final
-            FROM vw_bobinas_detalhadas v
-            WHERE v.id = ?`,
+                b.id,
+                b.codigo_interno,
+                b.metragem_inicial,
+                b.metragem_atual,
+                b.localizacao_atual,
+                b.status,
+                b.data_entrada,
+                b.nota_fiscal,
+                b.observacoes,
+                b.produto_id,
+                b.loja,
+                p.codigo,
+                p.fabricante,
+                p.largura_final,
+                c.nome_cor,
+                g.gramatura
+            FROM bobinas b
+            JOIN produtos p ON b.produto_id = p.id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            WHERE b.id = ?`,
             [bobinaId]
         );
 
@@ -37,22 +40,22 @@ router.get('/bobina/:id', async (req, res) => {
 
         const bobina = rows[0];
 
-        // Calcular total cortado com base em metragens (evita dependência de outra tabela)
-        const total_cortado = Number(bobina.metragem_inicial) - Number(bobina.metragem_atual);
+        // Calcular total cortado
+        const total_cortado = Number(bobina.metragem_inicial || 0) - Number(bobina.metragem_atual || 0);
         bobina.total_cortado = Number(total_cortado.toFixed(2));
 
-        // Historico simplificado: Entrada + cortes (se existir tabela itens_ordem_corte)
+        // Historico simplificado: Entrada + cortes
         const historico = [];
 
         historico.push({
             tipo: 'ENTRADA',
             data_movimentacao: bobina.data_entrada,
             metragem: bobina.metragem_inicial,
-            observacoes: `Entrada${bobina.nota_fiscal ? ' - NF: ' + bobina.nota_fiscal : ''}`
+            observacoes: bobina.nota_fiscal ? `Entrada - NF: ${bobina.nota_fiscal}` : 'Entrada'
         });
 
+        // Tentar buscar cortes (tabela itens_ordem_corte)
         try {
-            // Tentar buscar cortes no schema atual (itens_ordem_corte)
             const [cortes] = await db.query(
                 `SELECT 
                     i.data_corte AS data_movimentacao,
@@ -73,7 +76,7 @@ router.get('/bobina/:id', async (req, res) => {
                 });
             });
         } catch (err) {
-            console.warn('⚠️ Histórico de cortes não disponível no schema atual:', err.message);
+            console.warn('⚠️ Histórico de cortes não disponível:', err.message);
         }
 
         bobina.historico = historico;
@@ -86,7 +89,7 @@ router.get('/bobina/:id', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Erro ao buscar dados da bobina',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: error.message
         });
     }
 });
