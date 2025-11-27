@@ -110,6 +110,7 @@ exports.listarPlanos = async (req, res) => {
                 pc.*,
                 COUNT(DISTINCT ipc.id) as total_itens,
                 SUM(ipc.metragem) as metragem_total,
+                COUNT(DISTINCT CASE WHEN ac.id IS NOT NULL THEN ipc.id END) as itens_alocados,
                 COUNT(DISTINCT ac.id) as total_alocacoes,
                 SUM(CASE WHEN ac.confirmado = TRUE THEN 1 ELSE 0 END) as alocacoes_confirmadas
             FROM planos_corte pc

@@ -90,6 +90,21 @@ function criarCardPlano(plano) {
     const totalItens = plano.total_itens || 0;
     const metragemTotal = parseFloat(plano.metragem_total || 0).toFixed(2);
     
+    // Indicadores de alocação
+    const itensAlocados = plano.itens_alocados || 0;
+    const itensNaoAlocados = totalItens - itensAlocados;
+    
+    let badgeAlocacao = '';
+    if (plano.status === 'planejamento' && totalItens > 0) {
+        if (itensAlocados === totalItens) {
+            badgeAlocacao = '<span class="badge-alocacao badge-completo">✅ Tudo alocado</span>';
+        } else if (itensAlocados > 0) {
+            badgeAlocacao = `<span class="badge-alocacao badge-parcial">⚠️ ${itensAlocados}/${totalItens} alocados</span>`;
+        } else {
+            badgeAlocacao = '<span class="badge-alocacao badge-pendente">⏳ Pendente alocação</span>';
+        }
+    }
+    
     let acoes = '';
     
     // Botão de salvar como template (disponível em todos os status)
@@ -146,6 +161,7 @@ function criarCardPlano(plano) {
         <div class="plano-card" onclick="abrirDetalhesPlano(${plano.id})">
             <div class="plano-card-header">
                 <div class="plano-codigo">${plano.codigo_plano}</div>
+                ${badgeAlocacao}
             </div>
             <div class="plano-card-body">
                 <div class="plano-info">
@@ -474,6 +490,29 @@ async function abrirDetalhesPlano(planoId) {
         
         if (data.success) {
             planoAtual = data.data;
+            
+            // Se estiver em planejamento, buscar sugestões de estoque
+            if (planoAtual.status === 'planejamento') {
+                try {
+                    const sugestoesResponse = await fetch(`${API_BASE}/ordens-corte/${planoId}/sugestoes`);
+                    const sugestoesData = await sugestoesResponse.json();
+                    
+                    if (sugestoesData.success) {
+                        // Criar um mapa de disponibilidade por item_id
+                        const disponibilidade = {};
+                        sugestoesData.data.forEach(sug => {
+                            disponibilidade[sug.item_id] = {
+                                temEstoque: !!sug.origem,
+                                erro: sug.erro
+                            };
+                        });
+                        planoAtual.disponibilidade = disponibilidade;
+                    }
+                } catch (error) {
+                    console.warn('Erro ao buscar sugestões:', error);
+                }
+            }
+            
             renderizarDetalhesPlano(planoAtual);
             document.getElementById('modalDetalhesPlano').style.display = 'flex';
         }
@@ -518,7 +557,21 @@ function renderizarDetalhesPlano(plano) {
     
     plano.itens.forEach((item, index) => {
         const origem = item.alocacao;
+        const disp = plano.disponibilidade ? plano.disponibilidade[item.id] : null;
+        
         let origemTexto = '<span style="color: #999;">Não alocada</span>';
+        let classeLinha = '';
+        
+        // Verificar disponibilidade de estoque
+        if (plano.status === 'planejamento' && disp) {
+            if (!disp.temEstoque && !origem) {
+                classeLinha = 'linha-sem-estoque';
+                origemTexto = `<span style="color: #dc3545; font-weight: 600;">❌ SEM ESTOQUE</span><br>
+                              <small style="color: #666;">${disp.erro || 'Produto indisponível'}</small>`;
+            } else if (disp.temEstoque && !origem) {
+                origemTexto = '<span style="color: #28a745; font-weight: 600;">✅ Disponível</span>';
+            }
+        }
         
         if (origem) {
             const badge = origem.tipo_origem === 'retalho' 
@@ -541,7 +594,7 @@ function renderizarDetalhesPlano(plano) {
             : '';
         
         conteudoHTML += `
-            <tr>
+            <tr class="${classeLinha}">
                 <td>${index + 1}</td>
                 <td>
                     <strong>${item.codigo}</strong><br>
@@ -947,14 +1000,8 @@ function fecharModalAlocacao() {
 
 // ========== ALOCAÇÃO AUTOMÁTICA ==========
 async function alocarAutomaticamente(planoId) {
-    if (!confirm('Deseja alocar automaticamente todas as origens para este plano?\n\nO sistema irá:\n✓ Priorizar retalhos\n✓ Escolher as menores bobinas disponíveis\n✓ Substituir alocações existentes')) {
-        return;
-    }
-    
     try {
-        // Mostrar loading
-        showNotification('Alocando origens automaticamente...', 'info');
-        
+        // Buscar sugestões primeiro para verificar disponibilidade
         const response = await fetch(`${API_BASE}/ordens-corte/${planoId}/sugestoes`);
         const data = await response.json();
         
@@ -964,18 +1011,30 @@ async function alocarAutomaticamente(planoId) {
         }
         
         const sugestoes = data.data;
+        const comEstoque = sugestoes.filter(s => s.origem);
+        const semEstoque = sugestoes.filter(s => !s.origem);
+        
+        // Montar mensagem de confirmação com detalhes
+        let mensagem = 'Deseja alocar automaticamente as origens para este plano?\n\n';
+        mensagem += `✅ ${comEstoque.length} corte(s) COM tecido disponível\n`;
+        if (semEstoque.length > 0) {
+            mensagem += `⚠️ ${semEstoque.length} corte(s) SEM tecido disponível\n`;
+        }
+        mensagem += '\nO sistema irá:\n✓ Priorizar retalhos\n✓ Escolher as menores bobinas disponíveis\n✓ Substituir alocações existentes';
+        
+        if (!confirm(mensagem)) {
+            return;
+        }
+        
+        // Mostrar loading
+        showNotification('Alocando origens automaticamente...', 'info');
+        
         let sucessos = 0;
         let erros = 0;
         let errosDetalhes = [];
         
-        // Alocar cada sugestão
-        for (const sugestao of sugestoes) {
-            if (!sugestao.origem) {
-                erros++;
-                errosDetalhes.push(`Item ${sugestao.item_id}: ${sugestao.erro || 'Sem estoque'}`);
-                continue;
-            }
-            
+        // Alocar cada sugestão que tem origem disponível
+        for (const sugestao of comEstoque) {
             try {
                 const alocResponse = await fetch(`${API_BASE}/ordens-corte/alocar`, {
                     method: 'POST',
@@ -1002,14 +1061,16 @@ async function alocarAutomaticamente(planoId) {
         }
         
         // Mostrar resultado
-        if (sucessos > 0 && erros === 0) {
+        if (sucessos > 0 && erros === 0 && semEstoque.length === 0) {
             showNotification(`✅ ${sucessos} corte(s) alocado(s) automaticamente com sucesso!`, 'success');
-        } else if (sucessos > 0 && erros > 0) {
-            showNotification(`⚠️ ${sucessos} alocado(s), ${erros} com problema(s). Veja os detalhes no console.`, 'warning');
-            console.warn('Erros de alocação:', errosDetalhes);
+        } else if (sucessos > 0) {
+            let msg = `${sucessos} corte(s) alocado(s)`;
+            if (erros > 0) msg += `, ${erros} com erro`;
+            if (semEstoque.length > 0) msg += `, ${semEstoque.length} sem estoque`;
+            showNotification(`⚠️ ${msg}. Veja os detalhes no card.`, 'warning');
+            if (errosDetalhes.length > 0) console.warn('Erros de alocação:', errosDetalhes);
         } else {
-            showNotification(`❌ Não foi possível alocar nenhum corte. ${errosDetalhes[0] || ''}`, 'error');
-            console.error('Erros de alocação:', errosDetalhes);
+            showNotification(`❌ Não foi possível alocar nenhum corte. ${semEstoque.length > 0 ? 'Falta estoque.' : ''}`, 'error');
         }
         
         // Recarregar planos
