@@ -111,7 +111,12 @@ async function onScanSucesso(qrData, tipo) {
         navigator.vibrate(200);
     }
     
+    console.log('🔍 QR Code lido:', qrData);
+    
     try {
+        // Limpar espaços em branco
+        qrData = qrData.trim();
+        
         // Novo formato simplificado: B-123 ou R-456
         let bobinaId = null;
         let tipoBobina = null;
@@ -119,21 +124,27 @@ async function onScanSucesso(qrData, tipo) {
         if (qrData.startsWith('B-')) {
             tipoBobina = 'bobina';
             bobinaId = qrData.substring(2); // Remove "B-"
+            console.log('✅ Formato bobina detectado. ID:', bobinaId);
         } else if (qrData.startsWith('R-')) {
             tipoBobina = 'retalho';
             bobinaId = qrData.substring(2); // Remove "R-"
+            console.log('✅ Formato retalho detectado. ID:', bobinaId);
         } else {
             // Tentar formato antigo (JSON)
+            console.log('⚠️ Formato não reconhecido. Tentando JSON...');
             try {
                 const dados = JSON.parse(qrData);
                 tipoBobina = dados.tipo;
                 bobinaId = dados.id;
-            } catch {
-                throw new Error('QR Code inválido');
+                console.log('✅ JSON parseado:', dados);
+            } catch (e) {
+                console.error('❌ Não é JSON válido:', e);
+                throw new Error('QR Code inválido - formato desconhecido');
             }
         }
         
         if (tipoBobina === 'bobina') {
+            console.log('📦 Carregando bobina ID:', bobinaId);
             await carregarBobina(bobinaId, tipo);
         } else if (tipoBobina === 'retalho') {
             mostrarToast('Retalhos ainda não suportados no app mobile', 'warning');
@@ -144,7 +155,8 @@ async function onScanSucesso(qrData, tipo) {
             }
         }
     } catch (error) {
-        console.error('Erro ao processar QR Code:', error);
+        console.error('❌ Erro ao processar QR Code:', error);
+        console.error('❌ Dados recebidos:', qrData);
         mostrarToast('QR Code inválido: ' + qrData, 'error');
         if (tipo === 'corte') {
             voltarScannerCorte();

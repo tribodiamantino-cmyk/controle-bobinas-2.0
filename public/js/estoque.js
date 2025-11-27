@@ -692,9 +692,8 @@ function gerarHtmlEtiquetaRetalho(retalho, tipo = 'completa') {
             
             <script>
                 window.onload = function() {
-                    const qrData = ${JSON.stringify(qrData)};
                     new QRCode(document.getElementById("qrcode"), {
-                        text: qrData,
+                        text: ${JSON.stringify(qrData)},
                         width: ${qrSize},
                         height: ${qrSize},
                         colorDark: "#000000",
@@ -885,9 +884,8 @@ function gerarHtmlEtiqueta(bobina, tipo = 'completa') {
             
             <script>
                 window.onload = function() {
-                    const qrData = ${JSON.stringify(qrData)};
                     new QRCode(document.getElementById("qrcode"), {
-                        text: qrData,
+                        text: ${JSON.stringify(qrData)},
                         width: ${qrSize},
                         height: ${qrSize},
                         colorDark: "#000000",
