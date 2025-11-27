@@ -369,6 +369,8 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    position: relative;
+    z-index: 1100; /* Acima do modal (z-index: 1000) */
 }
 
 .alert-success {
@@ -2386,7 +2388,7 @@ body {
 }
 
 
-/* CARIMBO DE VERSÃO */
+/* CARIMBO DE VERSï¿½O */
 .version-stamp {
     position: fixed;
     bottom: 10px;

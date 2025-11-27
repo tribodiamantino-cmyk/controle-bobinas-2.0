@@ -382,6 +382,12 @@ async function registrarBobina(e) {
         return;
     }
     
+    // Desabilitar botão para evitar cliques múltiplos
+    const btnSalvar = document.getElementById('btn-salvar');
+    const btnTextOriginal = btnSalvar.innerHTML;
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '⏳ Salvando...';
+    
     const bobina = {
         nota_fiscal: document.getElementById('nota_fiscal').value,
         loja: document.getElementById('loja').value,
@@ -406,11 +412,17 @@ async function registrarBobina(e) {
             carregarEstoque();
         } else {
             mostrarAlerta(data.error || 'Erro ao registrar bobina', 'danger');
+            // Reabilitar botão em caso de erro
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = btnTextOriginal;
         }
         
     } catch (error) {
         console.error('Erro ao registrar bobina:', error);
         mostrarAlerta('Erro ao registrar bobina: ' + error.message, 'danger');
+        // Reabilitar botão em caso de erro
+        btnSalvar.disabled = false;
+        btnSalvar.innerHTML = btnTextOriginal;
     }
 }
 
