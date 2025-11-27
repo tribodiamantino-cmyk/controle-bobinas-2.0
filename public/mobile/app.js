@@ -90,24 +90,29 @@ function renderizarOrdensProducao() {
             <div class="empty-state">
                 <div class="empty-icon">📋</div>
                 <p>Nenhuma ordem em produção no momento</p>
+                <small style="color: var(--text-light);">Ordens com status "Em Andamento" ou "Pendente" aparecerão aqui</small>
             </div>
         `;
         return;
     }
     
-    container.innerHTML = ordensProducao.map(ordem => `
-        <div class="ordem-card" onclick="abrirOrdem(${ordem.id})">
-            <div class="ordem-header">
-                <span class="ordem-numero">${ordem.numero_ordem}</span>
-                <span class="ordem-status status-${ordem.status.toLowerCase().replace(' ', '-')}">${ordem.status}</span>
+    container.innerHTML = ordensProducao.map(ordem => {
+        const temItensPendentes = ordem.qtd_itens > 0;
+        return `
+            <div class="ordem-card ${!temItensPendentes ? 'ordem-sem-itens' : ''}" onclick="${temItensPendentes ? `abrirOrdem(${ordem.id})` : 'mostrarToast(\"Todos os itens desta ordem já foram concluídos\", \"info\")'}">
+                <div class="ordem-header">
+                    <span class="ordem-numero">${ordem.numero_ordem}</span>
+                    <span class="ordem-status status-${ordem.status.toLowerCase().replace(' ', '-')}">${ordem.status}</span>
+                </div>
+                <div class="ordem-info">
+                    <span>📦 ${ordem.qtd_itens}/${ordem.qtd_total || ordem.qtd_itens} ${ordem.qtd_itens === 1 ? 'item pendente' : 'itens pendentes'}</span>
+                    <span>📅 ${formatarData(ordem.data_criacao)}</span>
+                </div>
+                ${ordem.observacoes ? `<div class="ordem-obs">${ordem.observacoes}</div>` : ''}
+                ${!temItensPendentes ? '<div class="ordem-completa">✅ Todos itens concluídos</div>' : ''}
             </div>
-            <div class="ordem-info">
-                <span>📦 ${ordem.qtd_itens} ${ordem.qtd_itens === 1 ? 'item' : 'itens'} pendente${ordem.qtd_itens === 1 ? '' : 's'}</span>
-                <span>📅 ${formatarData(ordem.data_criacao)}</span>
-            </div>
-            ${ordem.observacoes ? `<div class="ordem-obs">${ordem.observacoes}</div>` : ''}
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function abrirOrdem(ordemId) {
@@ -127,26 +132,31 @@ function renderizarDetalhesOrdem() {
             <span class="ordem-status status-${ordemAtual.status.toLowerCase().replace(' ', '-')}">${ordemAtual.status}</span>
         </div>
         
+        ${ordemAtual.observacoes ? `<div class="ordem-cliente">${ordemAtual.observacoes}</div>` : ''}
+        
         <div class="itens-lista">
-            <h4>📦 Itens da Ordem</h4>
-            ${ordemAtual.itens.map(item => `
-                <div class="item-card" onclick="iniciarValidacaoItem(${item.item_id})">
-                    <div class="item-header">
-                        <span class="item-bobina">${item.bobina_codigo || 'Bobina #' + item.bobina_id}</span>
-                        <span class="item-metragem">${item.metragem_solicitada}m</span>
+            <h4>📦 Itens com Alocação Pendente</h4>
+            ${ordemAtual.itens.length === 0 ? 
+                '<p style="color: var(--text-light);">Nenhum item pendente nesta ordem</p>' :
+                ordemAtual.itens.map(item => `
+                    <div class="item-card" onclick="iniciarValidacaoItem(${item.alocacao_id || item.item_id})">
+                        <div class="item-header">
+                            <span class="item-bobina">${item.bobina_codigo || 'Bobina #' + item.bobina_id}</span>
+                            <span class="item-metragem">${item.metragem_alocada || item.metragem_solicitada}m</span>
+                        </div>
+                        <div class="item-info">
+                            <span>${item.produto_codigo || ''} ${item.nome_cor ? '- ' + item.nome_cor : ''}</span>
+                            <span>📍 ${item.localizacao_atual || 'N/A'}</span>
+                        </div>
+                        <div class="item-disponivel">
+                            Disponível: <strong>${item.metragem_atual}m</strong>
+                        </div>
+                        <div class="item-action">
+                            👆 Toque para validar corte
+                        </div>
                     </div>
-                    <div class="item-info">
-                        <span>${item.produto_codigo || ''} ${item.nome_cor ? '- ' + item.nome_cor : ''}</span>
-                        <span>📍 ${item.localizacao_atual || 'N/A'}</span>
-                    </div>
-                    <div class="item-disponivel">
-                        Disponível: <strong>${item.metragem_atual}m</strong>
-                    </div>
-                    <div class="item-action">
-                        👆 Toque para validar
-                    </div>
-                </div>
-            `).join('')}
+                `).join('')
+            }
         </div>
         
         <button class="btn btn-secondary" onclick="voltarListaOrdens()" style="margin-top: 1rem;">
@@ -161,8 +171,8 @@ function voltarListaOrdens() {
     mostrarPasso('passo-lista-ordens');
 }
 
-async function iniciarValidacaoItem(itemId) {
-    itemValidando = ordemAtual.itens.find(i => i.item_id === itemId);
+async function iniciarValidacaoItem(alocacaoId) {
+    itemValidando = ordemAtual.itens.find(i => (i.alocacao_id || i.item_id) === alocacaoId);
     if (!itemValidando) return;
     
     // Atualizar instrução do scanner
@@ -218,7 +228,7 @@ function mostrarConfirmacaoCorte() {
     const container = document.getElementById('confirma-corte-container');
     
     const metragemReservada = Number(bobinaAtual.metragem_reservada || 0);
-    const metragemSolicitada = Number(itemValidando.metragem_solicitada || 0);
+    const metragemSolicitada = Number(itemValidando.metragem_alocada || itemValidando.metragem_solicitada || 0);
     
     container.innerHTML = `
         <div class="confirma-header">
@@ -303,7 +313,7 @@ async function confirmarValidacao(event) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                item_id: itemValidando.item_id,
+                item_id: itemValidando.alocacao_id || itemValidando.item_id,
                 bobina_id: bobinaAtual.id,
                 metragem_cortada: metragemCortada,
                 observacoes: observacoes || null
@@ -488,13 +498,17 @@ async function onScanSucesso(qrData, tipo) {
                 await carregarBobina(bobinaId, tipo);
             }
         } else if (tipoBobina === 'retalho') {
-            mostrarToast('Retalhos ainda não suportados no app mobile', 'warning');
-            if (tipo === 'corte') {
+            console.log('🧵 Carregando retalho ID:', bobinaId);
+            
+            if (tipo === 'consulta') {
+                // Retalhos podem ser consultados
+                await carregarRetalho(bobinaId);
+            } else if (tipo === 'corte') {
+                mostrarToast('⚠️ Para cortar retalho, use a tela de consulta', 'warning');
                 voltarScannerCorte();
             } else if (tipo === 'validacao') {
+                mostrarToast('⚠️ Retalhos não são usados em ordens de corte', 'warning');
                 cancelarValidacao();
-            } else {
-                voltarScannerConsulta();
             }
         }
     } catch (error) {
@@ -541,6 +555,94 @@ async function carregarBobina(bobinaId, tipo) {
     } finally {
         mostrarLoading(false);
     }
+}
+
+// ========== CARREGAR DADOS DO RETALHO ==========
+let retalhoAtual = null;
+
+async function carregarRetalho(retalhoId) {
+    mostrarLoading(true);
+    
+    try {
+        const response = await fetch(`/api/mobile/retalho/${retalhoId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            retalhoAtual = data.data;
+            mostrarDetalhesRetalho();
+        } else {
+            throw new Error(data.message || 'Erro ao carregar retalho');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar retalho:', error);
+        mostrarToast('Erro ao carregar dados do retalho', 'error');
+        voltarScannerConsulta();
+    } finally {
+        mostrarLoading(false);
+    }
+}
+
+function mostrarDetalhesRetalho() {
+    const container = document.getElementById('bobina-detalhes');
+    
+    container.innerHTML = `
+        <div class="bobina-detalhes-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+            <div class="detalhes-codigo">🧵 ${retalhoAtual.codigo_retalho}</div>
+            <div class="detalhes-grid">
+                <div class="detalhes-item">
+                    <strong>Tipo:</strong>
+                    RETALHO
+                </div>
+                <div class="detalhes-item">
+                    <strong>Status:</strong>
+                    ${retalhoAtual.status}
+                </div>
+                <div class="detalhes-item">
+                    <strong>Produto:</strong>
+                    ${retalhoAtual.produto_codigo || 'N/A'}
+                </div>
+                <div class="detalhes-item">
+                    <strong>Cor:</strong>
+                    ${retalhoAtual.nome_cor || 'N/A'}
+                </div>
+                <div class="detalhes-item">
+                    <strong>Gramatura:</strong>
+                    ${retalhoAtual.gramatura || 'N/A'}
+                </div>
+                <div class="detalhes-item">
+                    <strong>Fabricante:</strong>
+                    ${retalhoAtual.fabricante || 'N/A'}
+                </div>
+                <div class="detalhes-item">
+                    <strong>Metragem:</strong>
+                    <span style="font-size: 1.25rem; color: #fff;">${retalhoAtual.metragem}m</span>
+                </div>
+                <div class="detalhes-item">
+                    <strong>Localização:</strong>
+                    ${retalhoAtual.localizacao_atual || 'N/A'}
+                </div>
+                ${retalhoAtual.bobina_codigo ? `
+                <div class="detalhes-item">
+                    <strong>Origem:</strong>
+                    Bobina ${retalhoAtual.bobina_codigo}
+                </div>
+                ` : ''}
+                <div class="detalhes-item">
+                    <strong>Data Criação:</strong>
+                    ${formatarData(retalhoAtual.data_entrada)}
+                </div>
+            </div>
+        </div>
+        
+        ${retalhoAtual.observacoes ? `
+        <div class="historico-section">
+            <h3>📝 Observações</h3>
+            <p>${retalhoAtual.observacoes}</p>
+        </div>
+        ` : ''}
+    `;
+    
+    mostrarPasso('passo-detalhes');
 }
 
 // ========== MOSTRAR FORMULÁRIO DE CORTE ==========
@@ -718,14 +820,21 @@ function mostrarDetalhesBobina() {
         <div class="historico-section">
             <h3>📜 Histórico de Movimentações</h3>
             ${bobinaAtual.historico.length > 0 ? 
-                bobinaAtual.historico.map(h => `
-                    <div class="historico-item ${h.tipo.toLowerCase()}">
-                        <div class="historico-tipo">${h.tipo === 'CORTE' ? '✂️ CORTE' : '📥 ' + h.tipo}</div>
-                        <div class="historico-data">${formatarData(h.data_movimentacao)}</div>
-                        ${h.metragem ? `<div class="historico-metragem">${h.tipo === 'CORTE' ? '-' : ''}${h.metragem}m</div>` : ''}
-                        ${h.observacoes ? `<div style="font-size: 0.875rem; color: var(--text-light);">${h.observacoes}</div>` : ''}
-                    </div>
-                `).join('') 
+                bobinaAtual.historico.map(h => {
+                    let icone = '📥';
+                    if (h.tipo === 'CORTE') icone = '✂️';
+                    else if (h.tipo === 'RESERVA') icone = '🔒';
+                    else if (h.tipo === 'ENTRADA') icone = '📥';
+                    
+                    return `
+                        <div class="historico-item ${h.tipo.toLowerCase()}">
+                            <div class="historico-tipo">${icone} ${h.tipo}</div>
+                            <div class="historico-data">${formatarData(h.data_movimentacao)}</div>
+                            ${h.metragem ? `<div class="historico-metragem">${h.tipo === 'CORTE' || h.tipo === 'RESERVA' ? '-' : '+'}${h.metragem}m</div>` : ''}
+                            ${h.observacoes ? `<div style="font-size: 0.875rem; color: var(--text-light);">${h.observacoes}</div>` : ''}
+                        </div>
+                    `;
+                }).join('') 
                 : '<p style="color: var(--text-light);">Nenhuma movimentação registrada</p>'
             }
         </div>
