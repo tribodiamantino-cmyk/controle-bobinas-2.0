@@ -6,11 +6,6 @@ let cores = [];
 let gramaturas = [];
 let filtrosVisiveis = false;
 
-// Seleção múltipla para impressão
-let modoSelecaoAtivo = false;
-let bobinaSelecionadas = [];
-let retalhosSelecionados = [];
-
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     carregarEstoque();
@@ -875,15 +870,8 @@ function renderizarItemBobina(bobina) {
         ? `📏 <strong>${metragemAtual.toFixed(2)}m</strong> (${metragemDisponivel.toFixed(2)}m disponível, ${metragemReservada.toFixed(2)}m reservada) de ${metragemInicial.toFixed(2)}m`
         : `📏 ${metragemAtual.toFixed(2)}m de ${metragemInicial.toFixed(2)}m`;
     
-    const checkboxHTML = modoSelecaoAtivo 
-        ? `<input type="checkbox" class="checkbox-selecao-bobina" data-bobina-id="${bobina.id}" 
-                  onchange="toggleSelecaoBobina(${bobina.id}, this.checked)" 
-                  ${bobinaSelecionadas.includes(bobina.id) ? 'checked' : ''}>` 
-        : '';
-    
     return `
-        <div class="bobina-item ${modoSelecaoAtivo ? 'modo-selecao' : ''}" id="bobina-item-${bobina.id}">
-            ${checkboxHTML}
+        <div class="bobina-item" id="bobina-item-${bobina.id}">
             <div class="bobina-info">
                 <div class="bobina-codigo">
                     <strong>🏷️ ${bobina.codigo_interno}</strong> | 📄 NF: ${bobina.nota_fiscal}
@@ -951,15 +939,8 @@ function renderizarItemRetalho(retalho) {
         ? `<strong>${metragem.toFixed(2)}m</strong> (${metragemDisponivel.toFixed(2)}m disponível, ${metragemReservada.toFixed(2)}m reservada)`
         : `${metragem.toFixed(2)}m`;
     
-    const checkboxHTML = modoSelecaoAtivo 
-        ? `<input type="checkbox" class="checkbox-selecao-retalho" data-retalho-id="${retalho.id}" 
-                  onchange="toggleSelecaoRetalho(${retalho.id}, this.checked)" 
-                  ${retalhosSelecionados.includes(retalho.id) ? 'checked' : ''}>` 
-        : '';
-    
     return `
-        <div class="bobina-item retalho-item ${modoSelecaoAtivo ? 'modo-selecao' : ''}" id="retalho-item-${retalho.id}">
-            ${checkboxHTML}
+        <div class="bobina-item retalho-item" id="retalho-item-${retalho.id}">
             <div class="bobina-info">
                 <div class="bobina-codigo">
                     <strong>🏷️ ${retalho.codigo_retalho}</strong>
@@ -1048,140 +1029,6 @@ async function imprimirEtiquetaRetalhoUnica(codigoRetalho) {
 // ===============================================
 
 // Ativar/desativar modo de seleção
-function toggleModoSelecao() {
-    modoSelecaoAtivo = !modoSelecaoAtivo;
-    
-    if (!modoSelecaoAtivo) {
-        bobinaSelecionadas = [];
-        retalhosSelecionados = [];
-    }
-    
-    // Recarregar estoque para mostrar/ocultar checkboxes
-    const produtoAtual = produtosEstoque.find(p => p.expanded);
-    if (produtoAtual) {
-        produtoAtual.expanded = false;
-        toggleProduto(produtoAtual.id);
-    }
-    
-    atualizarBotaoSelecao();
-}
-
-// Atualizar visual do botão de seleção
-function atualizarBotaoSelecao() {
-    const btnSelecao = document.getElementById('btn-modo-selecao');
-    const btnImprimirSelecionados = document.getElementById('btn-imprimir-selecionados');
-    
-    if (btnSelecao) {
-        if (modoSelecaoAtivo) {
-            btnSelecao.textContent = '✅ Concluir Seleção';
-            btnSelecao.classList.add('active');
-        } else {
-            btnSelecao.textContent = '☑️ Selecionar Múltiplos';
-            btnSelecao.classList.remove('active');
-        }
-    }
-    
-    if (btnImprimirSelecionados) {
-        const totalSelecionados = bobinaSelecionadas.length + retalhosSelecionados.length;
-        btnImprimirSelecionados.style.display = totalSelecionados > 0 ? 'inline-block' : 'none';
-        btnImprimirSelecionados.textContent = `🖨️ Imprimir ${totalSelecionados} Etiqueta${totalSelecionados > 1 ? 's' : ''}`;
-    }
-}
-
-// Toggle seleção de bobina
-function toggleSelecaoBobina(bobinaId, selecionada) {
-    if (selecionada) {
-        if (!bobinaSelecionadas.includes(bobinaId)) {
-            bobinaSelecionadas.push(bobinaId);
-        }
-    } else {
-        bobinaSelecionadas = bobinaSelecionadas.filter(id => id !== bobinaId);
-    }
-    atualizarBotaoSelecao();
-}
-
-// Toggle seleção de retalho
-function toggleSelecaoRetalho(retalhoId, selecionada) {
-    if (selecionada) {
-        if (!retalhosSelecionados.includes(retalhoId)) {
-            retalhosSelecionados.push(retalhoId);
-        }
-    } else {
-        retalhosSelecionados = retalhosSelecionados.filter(id => id !== retalhoId);
-    }
-    atualizarBotaoSelecao();
-}
-
-// Imprimir etiquetas dos itens selecionados
-async function imprimirEtiquetasSelecionadas() {
-    try {
-        console.log('🖨️ Iniciando impressão de etiquetas selecionadas...');
-        console.log('Bobinas selecionadas:', bobinaSelecionadas);
-        console.log('Retalhos selecionados:', retalhosSelecionados);
-        
-        const totalSelecionados = bobinaSelecionadas.length + retalhosSelecionados.length;
-        
-        if (totalSelecionados === 0) {
-            mostrarNotificacao('⚠️ Nenhum item selecionado', 'warning');
-            return;
-        }
-        
-        const etiquetas = [];
-        
-        // Buscar dados das bobinas selecionadas
-        for (const bobinaId of bobinaSelecionadas) {
-            console.log('Buscando bobina ID:', bobinaId);
-            const response = await fetch(`/api/bobinas/${bobinaId}`);
-            const data = await response.json();
-            console.log('Dados da bobina:', data);
-            if (data.success) {
-                const conteudo = gerarConteudoEtiquetaBobina(data.data);
-                console.log('Conteúdo gerado:', conteudo);
-                etiquetas.push(conteudo);
-            }
-        }
-        
-        // Buscar dados dos retalhos selecionados
-        for (const retalhoId of retalhosSelecionados) {
-            console.log('Buscando retalho ID:', retalhoId);
-            const response = await fetch(`/api/retalhos/${retalhoId}`);
-            const data = await response.json();
-            console.log('Dados do retalho:', data);
-            if (data.success) {
-                const conteudo = gerarConteudoEtiquetaRetalho(data.data);
-                console.log('Conteúdo gerado:', conteudo);
-                etiquetas.push(conteudo);
-            }
-        }
-        
-        console.log('Total de etiquetas geradas:', etiquetas.length);
-        console.log('Etiquetas:', etiquetas);
-        
-        if (etiquetas.length > 0) {
-            console.log('Abrindo página de etiquetas...');
-            abrirPaginaEtiquetas(etiquetas);
-            mostrarNotificacao(`✅ ${etiquetas.length} etiqueta${etiquetas.length > 1 ? 's' : ''} pronta${etiquetas.length > 1 ? 's' : ''} para impressão!`, 'success');
-            
-            // Desativar modo seleção e limpar
-            modoSelecaoAtivo = false;
-            bobinaSelecionadas = [];
-            retalhosSelecionados = [];
-            
-            // Recarregar visualização
-            const produtoAtual = produtosEstoque.find(p => p.expanded);
-            if (produtoAtual) {
-                produtoAtual.expanded = false;
-                toggleProduto(produtoAtual.id);
-            }
-            
-            atualizarBotaoSelecao();
-        }
-        
-    } catch (error) {
-        console.error('❌ Erro:', error);
-        mostrarNotificacao('❌ Erro ao preparar impressão: ' + error.message, 'error');
-    }
-}
 
 // Excluir bobina
 async function excluirBobina(id) {

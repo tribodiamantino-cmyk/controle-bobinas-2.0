@@ -23,17 +23,9 @@
     <div class="container">
         <div class="page-header">
             <h1>📦 Estoque de Bobinas</h1>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-secondary btn-lg" onclick="toggleModoSelecao()" id="btn-modo-selecao">
-                    ☑️ Selecionar Múltiplos
-                </button>
-                <button class="btn btn-success btn-lg" onclick="imprimirEtiquetasSelecionadas()" id="btn-imprimir-selecionados" style="display: none;">
-                    🖨️ Imprimir Etiquetas
-                </button>
-                <button class="btn btn-primary btn-lg" onclick="abrirModalNovaBobina()">
-                    ➕ Nova Entrada de Bobina
-                </button>
-            </div>
+            <button class="btn btn-primary btn-lg" onclick="abrirModalNovaBobina()">
+                ➕ Nova Entrada de Bobina
+            </button>
         </div>
         
         <div id="alerta-container"></div>
