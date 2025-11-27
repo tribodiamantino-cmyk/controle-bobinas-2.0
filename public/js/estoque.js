@@ -588,6 +588,7 @@ function gerarHtmlEtiquetaRetalho(retalho, tipo = 'completa') {
     const zplCode = gerarZPLRetalho(retalho, tipo);
     // QR Code simplificado: apenas o ID da bobina/retalho
     const qrData = `R-${retalho.id}`;
+    console.log('📝 QR Code Retalho gerado:', qrData);
     
     const isSimples = tipo === 'simples';
     // 60x30mm - pode ser paisagem ou retrato
@@ -779,6 +780,7 @@ function gerarHtmlEtiqueta(bobina, tipo = 'completa') {
     const zplCode = gerarZPL(bobina, tipo);
     // QR Code simplificado: apenas o ID da bobina
     const qrData = `B-${bobina.id}`;
+    console.log('📝 QR Code Bobina gerado:', qrData, 'para bobina ID:', bobina.id);
     
     // Estilos e conteúdo diferentes para cada tipo
     const isSimples = tipo === 'simples';
