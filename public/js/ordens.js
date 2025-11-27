@@ -1011,8 +1011,8 @@ async function alocarAutomaticamente(planoId) {
         }
         
         const sugestoes = data.data;
-        const comEstoque = sugestoes.filter(s => s.origem);
-        const semEstoque = sugestoes.filter(s => !s.origem);
+        const comEstoque = sugestoes.filter(s => s.origem && s.origem.tipo);
+        const semEstoque = sugestoes.filter(s => !s.origem || !s.origem.tipo);
         
         // Se não houver NENHUM item com estoque, avisar
         if (comEstoque.length === 0) {
@@ -1646,7 +1646,8 @@ async function debugAutoAlocar() {
         sugestoes.forEach((sug, idx) => {
             console.log(`\n${idx + 1}. Item #${sug.item_id} - ${sug.metragem_corte}m`);
             
-            if (sug.origem) {
+            // Verificar se tem origem E se o tipo não é null
+            if (sug.origem && sug.origem.tipo) {
                 // TEM ESTOQUE
                 const tipo = sug.origem.tipo === 'bobina' ? '🎯' : '📦';
                 console.log(`   ${tipo} ORIGEM ENCONTRADA: ${sug.origem.tipo.toUpperCase()} ${sug.origem.codigo}`);
@@ -1658,16 +1659,16 @@ async function debugAutoAlocar() {
             } else {
                 // SEM ESTOQUE
                 console.log(`   ❌ SEM ESTOQUE DISPONÍVEL`);
-                if (sug.sugestao) {
-                    console.log(`      Erro: ${sug.sugestao.erro || 'Desconhecido'}`);
-                    console.log(`      Metragem solicitada: ${sug.sugestao.metragem_solicitada}m`);
-                    console.log(`      Máximo disponível: ${sug.sugestao.metragem_maxima_disponivel || 0}m`);
+                if (sug.origem) {
+                    console.log(`      Erro: ${sug.origem.erro || 'Desconhecido'}`);
+                    console.log(`      Metragem solicitada: ${sug.origem.metragem_solicitada}m`);
+                    console.log(`      Máximo disponível: ${sug.origem.metragem_maxima_disponivel || 0}m`);
                 }
             }
         });
         
-        const comEstoque = sugestoes.filter(s => s.origem);
-        const semEstoque = sugestoes.filter(s => !s.origem);
+        const comEstoque = sugestoes.filter(s => s.origem && s.origem.tipo);
+        const semEstoque = sugestoes.filter(s => !s.origem || !s.origem.tipo);
         
         console.log(`\n\n📈 RESUMO:`);
         console.log(`   ✅ Com estoque: ${comEstoque.length}`);

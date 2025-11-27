@@ -299,7 +299,7 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
             item_id: item.id,
             produto_id: item.produto_id,
             metragem_corte: parseFloat(item.metragem),
-            sugestao: {
+            origem: {  // ← MUDADO de "sugestao" para "origem"
                 tipo: 'bobina',
                 id: bobinaUnica[0].id,
                 codigo: bobinaUnica[0].codigo_interno,
@@ -317,12 +317,12 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
     // 2. NÃO ENCONTROU BOBINA ÚNICA: alocar individualmente (fallback)
     const sugestoes = [];
     for (const item of cortesGrupo) {
-        const sugestao = await sugerirOrigemParaCorte(item.produto_id, item.metragem);
+        const origem = await sugerirOrigemParaCorte(item.produto_id, item.metragem);
         sugestoes.push({
             item_id: item.id,
             produto_id: item.produto_id,
             metragem_corte: parseFloat(item.metragem),
-            sugestao: sugestao
+            origem: origem  // ← MUDADO de "sugestao" para "origem"
         });
     }
     
