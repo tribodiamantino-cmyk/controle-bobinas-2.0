@@ -172,7 +172,7 @@ exports.buscarPlanoPorId = async (req, res) => {
                 ipc.*,
                 p.codigo,
                 p.loja,
-                p.nome as produto_nome,
+                CONCAT(p.codigo, ' - ', c.nome_cor, ' ', g.gramatura, 'g/m²') as produto_nome,
                 c.nome_cor,
                 g.gramatura,
                 p.tipo_tecido
