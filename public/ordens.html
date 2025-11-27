@@ -3,27 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ordens de Corte - Controle de Bobinas</title>
+    <title>Ordens de Corte - Controle de Bobinas 2.0</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <nav>
-        <div class="nav-content">
-            <div class="nav-brand">📦 Controle de Bobinas 2.0</div>
-            <div class="nav-links">
-                <a href="index.html">Home</a>
-                <a href="configuracoes.html">Configurações</a>
-                <a href="produtos.html">Produtos</a>
-                <a href="estoque.html">Estoque</a>
-                <a href="ordens.html" class="active">Ordens de Corte</a>
-            </div>
-        </div>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">🎯 Controle de Bobinas 2.0</a>
+        <ul class="navbar-menu">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/produtos.html">Produtos</a></li>
+            <li><a href="/estoque.html">Estoque</a></li>
+            <li><a href="/ordens.html" class="active">Ordens de Corte</a></li>
+            <li><a href="/configuracoes.html">Configurações</a></li>
+        </ul>
     </nav>
 
     <div class="container">
         <div class="page-header">
             <h1>📋 Ordens de Corte</h1>
-            <button class="btn btn-primary" onclick="abrirModalNovoPlano()">
+            <button class="btn btn-primary btn-lg" onclick="abrirModalNovoPlano()">
                 ➕ Novo Plano de Corte
             </button>
         </div>
