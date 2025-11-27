@@ -126,6 +126,10 @@ function abrirOrdem(ordemId) {
 function renderizarDetalhesOrdem() {
     const container = document.getElementById('ordem-detalhes-container');
     
+    // Filtrar itens que têm bobina alocada
+    const itensComBobina = ordemAtual.itens.filter(item => item.bobina_id !== null);
+    const itensSemBobina = ordemAtual.itens.filter(item => item.bobina_id === null);
+    
     container.innerHTML = `
         <div class="ordem-detalhes-header">
             <h3>${ordemAtual.numero_ordem}</h3>
@@ -135,10 +139,10 @@ function renderizarDetalhesOrdem() {
         ${ordemAtual.observacoes ? `<div class="ordem-cliente">${ordemAtual.observacoes}</div>` : ''}
         
         <div class="itens-lista">
-            <h4>📦 Itens com Alocação Pendente</h4>
-            ${ordemAtual.itens.length === 0 ? 
-                '<p style="color: var(--text-light);">Nenhum item pendente nesta ordem</p>' :
-                ordemAtual.itens.map(item => `
+            <h4>📦 Itens Prontos para Corte</h4>
+            ${itensComBobina.length === 0 ? 
+                '<p style="color: var(--text-light);">Nenhum item com bobina alocada</p>' :
+                itensComBobina.map(item => `
                     <div class="item-card" onclick="iniciarValidacaoItem(${item.alocacao_id || item.item_id})">
                         <div class="item-header">
                             <span class="item-bobina">${item.bobina_codigo || 'Bobina #' + item.bobina_id}</span>
@@ -157,6 +161,24 @@ function renderizarDetalhesOrdem() {
                     </div>
                 `).join('')
             }
+            
+            ${itensSemBobina.length > 0 ? `
+                <h4 style="margin-top: 1.5rem;">⏳ Aguardando Alocação de Bobina</h4>
+                ${itensSemBobina.map(item => `
+                    <div class="item-card item-pendente" style="opacity: 0.7; background: #f3f4f6;">
+                        <div class="item-header">
+                            <span class="item-bobina" style="color: #6b7280;">Sem bobina</span>
+                            <span class="item-metragem">${item.metragem_alocada || item.metragem_solicitada}m</span>
+                        </div>
+                        <div class="item-info">
+                            <span>${item.produto_codigo || ''} ${item.nome_cor ? '- ' + item.nome_cor : ''}</span>
+                        </div>
+                        <div style="color: #9ca3af; font-size: 0.875rem;">
+                            ⚠️ Aguardando alocação no desktop
+                        </div>
+                    </div>
+                `).join('')}
+            ` : ''}
         </div>
         
         <button class="btn btn-secondary" onclick="voltarListaOrdens()" style="margin-top: 1rem;">
