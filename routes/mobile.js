@@ -30,6 +30,16 @@ router.get('/bobina/:id', async (req, res) => {
     }
 });
 
+// Debug: ver todas as ordens no banco
+router.get('/debug-ordens', async (req, res) => {
+    try {
+        const [ordens] = await db.query('SELECT id, numero_ordem, status, data_criacao FROM ordens_corte ORDER BY id DESC LIMIT 10');
+        return res.json({ success: true, ordens });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 router.get('/ordens-producao', async (req, res) => {
     try {
         let ordens = [];
@@ -47,7 +57,8 @@ router.get('/ordens-producao', async (req, res) => {
         } catch (err) { console.log('planos_corte nao disponivel:', err.message); }
         if (ordens.length === 0) {
             try {
-                const [ordensCorte] = await db.query('SELECT oc.id, oc.numero_ordem, oc.status, oc.criado_por, oc.data_criacao, oc.observacoes FROM ordens_corte oc WHERE oc.status IN (\'Em Andamento\', \'Pendente\') ORDER BY oc.data_criacao DESC LIMIT 20');
+                // Buscar ordens que NAO estao Concluidas ou Canceladas
+                const [ordensCorte] = await db.query('SELECT oc.id, oc.numero_ordem, oc.status, oc.criado_por, oc.data_criacao, oc.observacoes FROM ordens_corte oc WHERE oc.status NOT IN (\'Concluída\', \'Cancelada\') ORDER BY oc.data_criacao DESC LIMIT 20');
                 for (let ordem of ordensCorte) {
                     const [itens] = await db.query('SELECT i.id AS item_id, i.id AS alocacao_id, i.bobina_id, i.metragem_cortada AS metragem_alocada, b.codigo_interno AS bobina_codigo, b.metragem_atual, b.localizacao_atual, p.codigo AS produto_codigo, c.nome_cor FROM itens_ordem_corte i LEFT JOIN bobinas b ON i.bobina_id = b.id LEFT JOIN produtos p ON i.produto_id = p.id LEFT JOIN configuracoes_cores c ON p.cor_id = c.id WHERE i.ordem_corte_id = ? ORDER BY i.id', [ordem.id]);
                     ordem.itens = itens;
