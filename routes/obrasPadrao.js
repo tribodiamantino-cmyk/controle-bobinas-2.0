@@ -9,7 +9,10 @@ router.get('/', obrasPadraoController.listarObrasPadrao);
 router.get('/:id', obrasPadraoController.buscarObraPadrao);
 
 // Criar obra padrão a partir de um plano existente
-router.post('/criar-de-plano', obrasPadraoController.criarObraPadraoDeплano);
+router.post('/criar-de-plano', obrasPadraoController.criarObraPadraoDeплано);
+
+// Criar obra padrão manualmente (sem plano existente)
+router.post('/criar-manual', obrasPadraoController.criarObraPadraoManual);
 
 // Criar novo plano a partir de uma obra padrão
 router.post('/criar-plano', obrasPadraoController.criarPlanoDeObraPadrao);

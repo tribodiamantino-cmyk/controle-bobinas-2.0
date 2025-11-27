@@ -1,10 +1,14 @@
 // Estado global
 let templates = [];
 let templateSelecionado = null;
+let produtos = [];
+let cortesAgrupadosTemplate = {}; // { produto_id: [{ metragem, observacoes }, ...] }
+let produtoAtualSelecionadoTemplate = null;
 
 // Carregar templates ao iniciar
 document.addEventListener('DOMContentLoaded', () => {
     carregarTemplates();
+    carregarProdutosParaTemplate();
 });
 
 // Carregar todos os templates
@@ -352,3 +356,227 @@ function mostrarNotificacao(message, type = 'info') {
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
+
+// ========== CRIAR TEMPLATE MANUAL ==========
+
+async function carregarProdutosParaTemplate() {
+    try {
+        const response = await fetch('/api/produtos');
+        const data = await response.json();
+        produtos = data;
+    } catch (error) {
+        console.error('Erro ao carregar produtos:', error);
+    }
+}
+
+function abrirModalNovoTemplate() {
+    cortesAgrupadosTemplate = {};
+    produtoAtualSelecionadoTemplate = null;
+    
+    document.getElementById('modalNovoTemplate').style.display = 'flex';
+    document.getElementById('formNovoTemplate').reset();
+    document.getElementById('areaInputCortesTemplate').style.display = 'none';
+    
+    // Popular select de produtos
+    popularSelectProdutosTemplate();
+    renderizarListaCortesTemplate();
+}
+
+function fecharModalNovoTemplate() {
+    document.getElementById('modalNovoTemplate').style.display = 'none';
+    cortesAgrupadosTemplate = {};
+    produtoAtualSelecionadoTemplate = null;
+}
+
+function popularSelectProdutosTemplate() {
+    const select = document.getElementById('produtoSelecionadoTemplate');
+    select.innerHTML = '<option value="">Selecione um produto...</option>';
+    
+    produtos.forEach(produto => {
+        const option = document.createElement('option');
+        option.value = produto.id;
+        option.textContent = `${produto.nome} (${produto.codigo})`;
+        select.appendChild(option);
+    });
+}
+
+function selecionarProdutoTemplate() {
+    const select = document.getElementById('produtoSelecionadoTemplate');
+    const produtoId = select.value;
+    
+    if (produtoId) {
+        produtoAtualSelecionadoTemplate = parseInt(produtoId);
+        document.getElementById('areaInputCortesTemplate').style.display = 'block';
+        document.getElementById('inputMetragemTemplate').focus();
+    } else {
+        produtoAtualSelecionadoTemplate = null;
+        document.getElementById('areaInputCortesTemplate').style.display = 'none';
+    }
+}
+
+function adicionarCorteTemplate() {
+    const metragem = parseFloat(document.getElementById('inputMetragemTemplate').value);
+    const observacoes = document.getElementById('inputObservacoesTemplate').value.trim();
+    
+    if (!produtoAtualSelecionadoTemplate) {
+        mostrarNotificacao('Selecione um produto primeiro', 'warning');
+        return;
+    }
+    
+    if (!metragem || metragem <= 0) {
+        mostrarNotificacao('Informe uma metragem válida', 'warning');
+        document.getElementById('inputMetragemTemplate').focus();
+        return;
+    }
+    
+    // Adicionar ao agrupamento
+    if (!cortesAgrupadosTemplate[produtoAtualSelecionadoTemplate]) {
+        cortesAgrupadosTemplate[produtoAtualSelecionadoTemplate] = [];
+    }
+    
+    cortesAgrupadosTemplate[produtoAtualSelecionadoTemplate].push({
+        metragem: metragem,
+        observacoes: observacoes
+    });
+    
+    // Limpar inputs
+    document.getElementById('inputMetragemTemplate').value = '';
+    document.getElementById('inputObservacoesTemplate').value = '';
+    document.getElementById('inputMetragemTemplate').focus();
+    
+    // Atualizar visualização
+    renderizarListaCortesTemplate();
+}
+
+function renderizarListaCortesTemplate() {
+    const container = document.getElementById('listaCortesTemplate');
+    
+    if (Object.keys(cortesAgrupadosTemplate).length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhum corte adicionado ainda</p>';
+        return;
+    }
+    
+    let html = '';
+    let ordemGlobal = 1;
+    
+    for (const produtoId in cortesAgrupadosTemplate) {
+        const produto = produtos.find(p => p.id === parseInt(produtoId));
+        const cortes = cortesAgrupadosTemplate[produtoId];
+        
+        if (!produto || cortes.length === 0) continue;
+        
+        const metragemTotal = cortes.reduce((sum, c) => sum + c.metragem, 0);
+        
+        html += `
+            <div class="produto-grupo-card">
+                <div class="produto-grupo-header">
+                    <div>
+                        <strong>${produto.nome}</strong>
+                        <small style="color: #666; margin-left: 8px;">${produto.codigo}</small>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span class="badge badge-info">${cortes.length} cortes • ${metragemTotal.toFixed(2)}m total</span>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removerProdutoTemplate(${produtoId})">🗑️</button>
+                    </div>
+                </div>
+                <div class="cortes-lista-grupo">
+                    ${cortes.map((corte, index) => `
+                        <div class="corte-item">
+                            <span class="corte-numero">#${ordemGlobal++}</span>
+                            <div class="corte-detalhes">
+                                <strong>${corte.metragem.toFixed(2)}m</strong>
+                                ${corte.observacoes ? `<small>${corte.observacoes}</small>` : ''}
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerCorteTemplate(${produtoId}, ${index})">✕</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function removerProdutoTemplate(produtoId) {
+    delete cortesAgrupadosTemplate[produtoId];
+    renderizarListaCortesTemplate();
+}
+
+function removerCorteTemplate(produtoId, index) {
+    cortesAgrupadosTemplate[produtoId].splice(index, 1);
+    if (cortesAgrupadosTemplate[produtoId].length === 0) {
+        delete cortesAgrupadosTemplate[produtoId];
+    }
+    renderizarListaCortesTemplate();
+}
+
+function handleEnterMetragemTemplate(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        document.getElementById('inputObservacoesTemplate').focus();
+    }
+}
+
+function handleEnterObservacoesTemplate(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        adicionarCorteTemplate();
+    }
+}
+
+// Submit do formulário de novo template
+document.getElementById('formNovoTemplate')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const nome = document.getElementById('nome-novo-template').value;
+    const descricao = document.getElementById('descricao-novo-template').value;
+    
+    // Validar se há cortes
+    const totalCortes = Object.values(cortesAgrupadosTemplate).reduce((sum, arr) => sum + arr.length, 0);
+    if (totalCortes === 0) {
+        mostrarNotificacao('Adicione pelo menos um corte ao template', 'warning');
+        return;
+    }
+    
+    // Preparar itens
+    const itens = [];
+    let ordem = 0;
+    for (const produtoId in cortesAgrupadosTemplate) {
+        const cortes = cortesAgrupadosTemplate[produtoId];
+        cortes.forEach(corte => {
+            itens.push({
+                produto_id: parseInt(produtoId),
+                metragem: corte.metragem,
+                observacoes: corte.observacoes || null,
+                ordem: ordem++
+            });
+        });
+    }
+    
+    try {
+        const response = await fetch('/api/obras-padrao/criar-manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: nome,
+                descricao: descricao,
+                itens: itens
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao criar template');
+        }
+        
+        mostrarNotificacao('✨ Template criado com sucesso!', 'success');
+        fecharModalNovoTemplate();
+        await carregarTemplates();
+        
+    } catch (error) {
+        mostrarNotificacao('Erro ao criar template: ' + error.message, 'error');
+        console.error(error);
+    }
+});

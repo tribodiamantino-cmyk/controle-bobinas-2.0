@@ -1420,43 +1420,63 @@ let planoParaSalvarComoTemplate = null;
 
 function abrirModalSalvarTemplate(planoId) {
     planoParaSalvarComoTemplate = planoId;
-    document.getElementById('modalSalvarTemplate').style.display = 'flex';
-    document.getElementById('formSalvarTemplate').reset();
+    const modal = document.getElementById('modalSalvarTemplate');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('formSalvarTemplate').reset();
+    } else {
+        console.error('Modal modalSalvarTemplate não encontrado');
+        mostrarNotificacao('Erro ao abrir modal de template', 'error');
+    }
 }
 
 function fecharModalSalvarTemplate() {
-    document.getElementById('modalSalvarTemplate').style.display = 'none';
+    const modal = document.getElementById('modalSalvarTemplate');
+    if (modal) {
+        modal.style.display = 'none';
+    }
     planoParaSalvarComoTemplate = null;
 }
 
-document.getElementById('formSalvarTemplate')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const nome = document.getElementById('nomeTemplate').value;
-    const descricao = document.getElementById('descricaoTemplate').value;
-    
-    try {
-        const response = await fetch('/api/obras-padrao/criar-de-plano', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                plano_id: planoParaSalvarComoTemplate,
-                nome: nome,
-                descricao: descricao
-            })
+// Listener para formulário de salvar template
+window.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('formSalvarTemplate');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nome = document.getElementById('nomeTemplate').value;
+            const descricao = document.getElementById('descricaoTemplate').value;
+            
+            if (!planoParaSalvarComoTemplate) {
+                mostrarNotificacao('Nenhum plano selecionado', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/obras-padrao/criar-de-plano', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plano_id: planoParaSalvarComoTemplate,
+                        nome: nome,
+                        descricao: descricao
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erro ao salvar template');
+                }
+                
+                mostrarNotificacao('💾 Obra padrão salva com sucesso!', 'success');
+                fecharModalSalvarTemplate();
+                
+            } catch (error) {
+                mostrarNotificacao('Erro ao salvar template: ' + error.message, 'error');
+                console.error(error);
+            }
         });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao salvar template');
-        }
-        
-        mostrarNotificacao('💾 Obra padrão salva com sucesso!', 'success');
-        fecharModalSalvarTemplate();
-        
-    } catch (error) {
-        mostrarNotificacao('Erro ao salvar template: ' + error.message, 'error');
-        console.error(error);
     }
 });

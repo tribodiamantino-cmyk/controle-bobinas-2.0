@@ -126,6 +126,63 @@ exports.criarObraPadraoDeплano = async (req, res) => {
     }
 };
 
+// Criar obra padrão manualmente (sem plano existente)
+exports.criarObraPadraoManual = async (req, res) => {
+    const connection = await db.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+
+        const { nome, descricao, itens } = req.body;
+
+        if (!nome || !itens || itens.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Nome e pelo menos um item são obrigatórios' 
+            });
+        }
+
+        // Criar obra padrão
+        const [result] = await connection.query(`
+            INSERT INTO obras_padrao (nome, descricao, criado_de_plano_id)
+            VALUES (?, ?, NULL)
+        `, [nome, descricao || null]);
+
+        const obraPadraoId = result.insertId;
+
+        // Inserir itens
+        for (const item of itens) {
+            if (!item.produto_id || !item.metragem) {
+                await connection.rollback();
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Cada item deve ter produto_id e metragem' 
+                });
+            }
+
+            await connection.query(`
+                INSERT INTO obra_padrao_itens (obra_padrao_id, produto_id, metragem, observacoes, ordem)
+                VALUES (?, ?, ?, ?, ?)
+            `, [obraPadraoId, item.produto_id, item.metragem, item.observacoes || null, item.ordem || 0]);
+        }
+
+        await connection.commit();
+
+        res.json({ 
+            success: true, 
+            message: 'Obra padrão criada com sucesso',
+            data: { id: obraPadraoId }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Erro ao criar obra padrão manual:', error);
+        res.status(500).json({ success: false, error: error.message });
+    } finally {
+        connection.release();
+    }
+};
+
 // Criar novo plano a partir de uma obra padrão
 exports.criarPlanoDeObraPadrao = async (req, res) => {
     const connection = await db.getConnection();
