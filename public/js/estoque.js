@@ -6,6 +6,11 @@ let cores = [];
 let gramaturas = [];
 let filtrosVisiveis = false;
 
+// Seleção múltipla para impressão
+let modoSelecaoAtivo = false;
+let bobinaSelecionadas = [];
+let retalhosSelecionados = [];
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     carregarEstoque();
@@ -870,8 +875,15 @@ function renderizarItemBobina(bobina) {
         ? `📏 <strong>${metragemAtual.toFixed(2)}m</strong> (${metragemDisponivel.toFixed(2)}m disponível, ${metragemReservada.toFixed(2)}m reservada) de ${metragemInicial.toFixed(2)}m`
         : `📏 ${metragemAtual.toFixed(2)}m de ${metragemInicial.toFixed(2)}m`;
     
+    const checkboxHTML = modoSelecaoAtivo 
+        ? `<input type="checkbox" class="checkbox-selecao-bobina" data-bobina-id="${bobina.id}" 
+                  onchange="toggleSelecaoBobina(${bobina.id}, this.checked)" 
+                  ${bobinaSelecionadas.includes(bobina.id) ? 'checked' : ''}>` 
+        : '';
+    
     return `
-        <div class="bobina-item" id="bobina-item-${bobina.id}">
+        <div class="bobina-item ${modoSelecaoAtivo ? 'modo-selecao' : ''}" id="bobina-item-${bobina.id}">
+            ${checkboxHTML}
             <div class="bobina-info">
                 <div class="bobina-codigo">
                     <strong>🏷️ ${bobina.codigo_interno}</strong> | 📄 NF: ${bobina.nota_fiscal}
@@ -903,7 +915,7 @@ function renderizarItemBobina(bobina) {
             </div>
             <div class="bobina-actions">
                 <button class="btn btn-sm btn-warning" onclick="converterEmRetalho(${bobina.id}, '${bobina.codigo_interno}')" title="Converter em retalho">📐</button>
-                <button class="btn btn-sm btn-secondary" onclick="imprimirEtiquetaBobina('${bobina.codigo_interno}')" title="Imprimir etiqueta">🖨️</button>
+                <button class="btn btn-sm btn-secondary" onclick="imprimirEtiquetaBobinaUnica('${bobina.codigo_interno}')" title="Imprimir etiqueta">🖨️</button>
                 <button class="btn btn-sm btn-danger" onclick="excluirBobina(${bobina.id})" title="Excluir bobina">🗑️</button>
             </div>
         </div>
@@ -939,8 +951,15 @@ function renderizarItemRetalho(retalho) {
         ? `<strong>${metragem.toFixed(2)}m</strong> (${metragemDisponivel.toFixed(2)}m disponível, ${metragemReservada.toFixed(2)}m reservada)`
         : `${metragem.toFixed(2)}m`;
     
+    const checkboxHTML = modoSelecaoAtivo 
+        ? `<input type="checkbox" class="checkbox-selecao-retalho" data-retalho-id="${retalho.id}" 
+                  onchange="toggleSelecaoRetalho(${retalho.id}, this.checked)" 
+                  ${retalhosSelecionados.includes(retalho.id) ? 'checked' : ''}>` 
+        : '';
+    
     return `
-        <div class="bobina-item retalho-item" id="retalho-item-${retalho.id}">
+        <div class="bobina-item retalho-item ${modoSelecaoAtivo ? 'modo-selecao' : ''}" id="retalho-item-${retalho.id}">
+            ${checkboxHTML}
             <div class="bobina-info">
                 <div class="bobina-codigo">
                     <strong>🏷️ ${retalho.codigo_retalho}</strong>
@@ -979,7 +998,7 @@ function renderizarItemRetalho(retalho) {
                 </div>
             </div>
             <div class="bobina-actions">
-                <button class="btn btn-sm btn-secondary" onclick="imprimirEtiquetaRetalho('${retalho.codigo_retalho}')" title="Imprimir etiqueta">🖨️</button>
+                <button class="btn btn-sm btn-secondary" onclick="imprimirEtiquetaRetalhoUnica('${retalho.codigo_retalho}')" title="Imprimir etiqueta">🖨️</button>
                 <button class="btn btn-sm btn-danger" onclick="excluirRetalho(${retalho.id})" title="Excluir retalho">🗑️</button>
             </div>
         </div>
@@ -987,64 +1006,164 @@ function renderizarItemRetalho(retalho) {
 }
 
 // Imprimir etiqueta de uma bobina específica
-async function imprimirEtiquetaBobina(codigoInterno) {
+async function imprimirEtiquetaBobinaUnica(codigoInterno) {
     try {
         const response = await fetch(`/api/bobinas/codigo/${codigoInterno}`);
         const data = await response.json();
         
         if (data.success) {
             const bobina = data.data;
-            
-            // Mostrar preview da etiqueta
-            const confirmar = confirm(
-                `🖨️ Imprimir etiqueta da bobina?\n\n` +
-                `Código: ${bobina.codigo_interno}\n` +
-                `Produto: ${bobina.produto_codigo}\n` +
-                `Metragem: ${bobina.metragem_inicial}m\n\n` +
-                `Certifique-se de que a impressora está ligada e com papel.`
-            );
-            
-            if (confirmar) {
-                await imprimirEtiquetaBobina(bobina);
-            }
+            await imprimirEtiquetaBobina(bobina);
+            mostrarNotificacao('✅ Página de impressão aberta!', 'success');
         } else {
-            mostrarAlerta('Bobina não encontrada', 'danger');
+            mostrarNotificacao('❌ Erro ao buscar dados da bobina', 'error');
         }
-        
     } catch (error) {
-        console.error('Erro ao buscar bobina:', error);
-        mostrarAlerta('Erro ao buscar bobina', 'danger');
+        console.error('Erro:', error);
+        mostrarNotificacao('❌ Erro ao preparar impressão', 'error');
     }
 }
 
 // Imprimir etiqueta de um retalho específico
-async function imprimirEtiquetaRetalho(codigoRetalho) {
+async function imprimirEtiquetaRetalhoUnica(codigoRetalho) {
     try {
         const response = await fetch(`/api/retalhos/codigo/${codigoRetalho}`);
         const data = await response.json();
         
         if (data.success) {
             const retalho = data.data;
-            
-            // Mostrar preview da etiqueta
-            const confirmar = confirm(
-                `🖨️ Imprimir etiqueta do retalho?\n\n` +
-                `Código: ${retalho.codigo_retalho}\n` +
-                `Produto: ${retalho.produto_codigo}\n` +
-                `Metragem: ${retalho.metragem}m\n\n` +
-                `Certifique-se de que a impressora está ligada e com papel.`
-            );
-            
-            if (confirmar) {
-                await imprimirEtiquetaRetalho(retalho);
-            }
+            await imprimirEtiquetaRetalho(retalho);
+            mostrarNotificacao('✅ Página de impressão aberta!', 'success');
         } else {
-            mostrarAlerta('Retalho não encontrado', 'danger');
+            mostrarNotificacao('❌ Erro ao buscar dados do retalho', 'error');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarNotificacao('❌ Erro ao preparar impressão', 'error');
+    }
+}
+
+// ===============================================
+// FUNÇÕES DE SELEÇÃO MÚLTIPLA
+// ===============================================
+
+// Ativar/desativar modo de seleção
+function toggleModoSelecao() {
+    modoSelecaoAtivo = !modoSelecaoAtivo;
+    
+    if (!modoSelecaoAtivo) {
+        bobinaSelecionadas = [];
+        retalhosSelecionados = [];
+    }
+    
+    // Recarregar estoque para mostrar/ocultar checkboxes
+    const produtoAtual = produtosEstoque.find(p => p.expanded);
+    if (produtoAtual) {
+        produtoAtual.expanded = false;
+        toggleProduto(produtoAtual.id);
+    }
+    
+    atualizarBotaoSelecao();
+}
+
+// Atualizar visual do botão de seleção
+function atualizarBotaoSelecao() {
+    const btnSelecao = document.getElementById('btn-modo-selecao');
+    const btnImprimirSelecionados = document.getElementById('btn-imprimir-selecionados');
+    
+    if (btnSelecao) {
+        if (modoSelecaoAtivo) {
+            btnSelecao.textContent = '✅ Concluir Seleção';
+            btnSelecao.classList.add('active');
+        } else {
+            btnSelecao.textContent = '☑️ Selecionar Múltiplos';
+            btnSelecao.classList.remove('active');
+        }
+    }
+    
+    if (btnImprimirSelecionados) {
+        const totalSelecionados = bobinaSelecionadas.length + retalhosSelecionados.length;
+        btnImprimirSelecionados.style.display = totalSelecionados > 0 ? 'inline-block' : 'none';
+        btnImprimirSelecionados.textContent = `🖨️ Imprimir ${totalSelecionados} Etiqueta${totalSelecionados > 1 ? 's' : ''}`;
+    }
+}
+
+// Toggle seleção de bobina
+function toggleSelecaoBobina(bobinaId, selecionada) {
+    if (selecionada) {
+        if (!bobinaSelecionadas.includes(bobinaId)) {
+            bobinaSelecionadas.push(bobinaId);
+        }
+    } else {
+        bobinaSelecionadas = bobinaSelecionadas.filter(id => id !== bobinaId);
+    }
+    atualizarBotaoSelecao();
+}
+
+// Toggle seleção de retalho
+function toggleSelecaoRetalho(retalhoId, selecionada) {
+    if (selecionada) {
+        if (!retalhosSelecionados.includes(retalhoId)) {
+            retalhosSelecionados.push(retalhoId);
+        }
+    } else {
+        retalhosSelecionados = retalhosSelecionados.filter(id => id !== retalhoId);
+    }
+    atualizarBotaoSelecao();
+}
+
+// Imprimir etiquetas dos itens selecionados
+async function imprimirEtiquetasSelecionadas() {
+    try {
+        const totalSelecionados = bobinaSelecionadas.length + retalhosSelecionados.length;
+        
+        if (totalSelecionados === 0) {
+            mostrarNotificacao('⚠️ Nenhum item selecionado', 'warning');
+            return;
+        }
+        
+        const etiquetas = [];
+        
+        // Buscar dados das bobinas selecionadas
+        for (const bobinaId of bobinaSelecionadas) {
+            const response = await fetch(`/api/bobinas/${bobinaId}`);
+            const data = await response.json();
+            if (data.success) {
+                etiquetas.push(gerarConteudoEtiquetaBobina(data.data));
+            }
+        }
+        
+        // Buscar dados dos retalhos selecionados
+        for (const retalhoId of retalhosSelecionados) {
+            const response = await fetch(`/api/retalhos/${retalhoId}`);
+            const data = await response.json();
+            if (data.success) {
+                etiquetas.push(gerarConteudoEtiquetaRetalho(data.data));
+            }
+        }
+        
+        if (etiquetas.length > 0) {
+            abrirPaginaEtiquetas(etiquetas);
+            mostrarNotificacao(`✅ ${etiquetas.length} etiqueta${etiquetas.length > 1 ? 's' : ''} pronta${etiquetas.length > 1 ? 's' : ''} para impressão!`, 'success');
+            
+            // Desativar modo seleção e limpar
+            modoSelecaoAtivo = false;
+            bobinaSelecionadas = [];
+            retalhosSelecionados = [];
+            
+            // Recarregar visualização
+            const produtoAtual = produtosEstoque.find(p => p.expanded);
+            if (produtoAtual) {
+                produtoAtual.expanded = false;
+                toggleProduto(produtoAtual.id);
+            }
+            
+            atualizarBotaoSelecao();
         }
         
     } catch (error) {
-        console.error('Erro ao buscar retalho:', error);
-        mostrarAlerta('Erro ao buscar retalho', 'danger');
+        console.error('Erro:', error);
+        mostrarNotificacao('❌ Erro ao preparar impressão', 'error');
     }
 }
 
@@ -1220,24 +1339,6 @@ async function salvarNovoRetalho() {
 }
 
 // Imprimir etiqueta de retalho
-async function imprimirEtiquetaRetalho(codigoRetalho) {
-    try {
-        const response = await fetch(`/api/retalhos/codigo/${codigoRetalho}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            // TODO: Implementar geração de etiqueta ZPL para retalhos
-            mostrarAlerta('Funcionalidade de impressão de etiquetas será implementada em breve', 'info');
-        } else {
-            mostrarAlerta('Retalho não encontrado', 'danger');
-        }
-        
-    } catch (error) {
-        console.error('Erro ao buscar retalho:', error);
-        mostrarAlerta('Erro ao buscar retalho', 'danger');
-    }
-}
-
 // Excluir retalho
 async function excluirRetalho(id) {
     if (!confirm('Tem certeza que deseja excluir este retalho?')) return;

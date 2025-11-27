@@ -3,219 +3,12 @@
 // Elgin L42 PRO Full - 60mm x 30mm
 // ===============================================
 
-class ImpressoraEtiquetas {
-    constructor() {
-        this.impressora = null;
-        this.larguraEtiqueta = 60; // mm
-        this.alturaEtiqueta = 30; // mm
-    }
-
-    // Conectar com a impressora via USB/Bluetooth
-    async conectar() {
-        if (!navigator.usb) {
-            throw new Error('Web USB não suportado neste navegador. Use Chrome/Edge.');
-        }
-
-        try {
-            // Solicitar acesso à impressora USB
-            const device = await navigator.usb.requestDevice({
-                filters: [
-                    { vendorId: 0x0483 } // Elgin vendor ID
-                ]
-            });
-
-            await device.open();
-            await device.selectConfiguration(1);
-            await device.claimInterface(0);
-
-            this.impressora = device;
-            console.log('Impressora conectada com sucesso!');
-            return true;
-
-        } catch (error) {
-            console.error('Erro ao conectar impressora:', error);
-            throw new Error('Não foi possível conectar à impressora. Verifique se está ligada e conectada via USB.');
-        }
-    }
-
-    // Gerar comandos ESC/POS para etiqueta de BOBINA
-    gerarEtiquetaBobina(bobina) {
-        const comandos = [];
-
-        // Inicializar impressora
-        comandos.push(0x1B, 0x40); // ESC @ - Inicializar
-
-        // Configurar tamanho da etiqueta (60mm x 30mm)
-        comandos.push(0x1B, 0x57, 0x3C, 0x00); // Largura 60mm
-
-        // LINHA 1: ID da Bobina (GRANDE E NEGRITO)
-        comandos.push(0x1B, 0x21, 0x30); // Fonte dupla altura e largura
-        comandos.push(0x1B, 0x45, 0x01); // Negrito ON
-        const idBobina = bobina.codigo || `BOB-${bobina.id}`;
-        comandos.push(...this.stringParaBytes(idBobina));
-        comandos.push(0x0A); // Line feed
-        comandos.push(0x1B, 0x45, 0x00); // Negrito OFF
-        comandos.push(0x1B, 0x21, 0x00); // Fonte normal
-
-        // LINHA 2: Código do Produto • Cor
-        comandos.push(0x1B, 0x21, 0x10); // Fonte média
-        const linhaProduto = `${bobina.produto_codigo} • ${bobina.nome_cor || ''}`;
-        comandos.push(...this.stringParaBytes(linhaProduto));
-        comandos.push(0x0A);
-        comandos.push(0x1B, 0x21, 0x00);
-
-        // LINHA 3: Gramatura • Largura
-        comandos.push(0x1B, 0x21, 0x10); // Fonte média
-        const gramatura = bobina.gramatura || '';
-        let largura = '';
-        
-        if (bobina.tipo_tecido === 'Bando Y' && bobina.largura_maior && bobina.largura_y) {
-            // Formato: XX+YY+YY
-            largura = `${bobina.largura_maior}+${bobina.largura_y}+${bobina.largura_y}cm`;
-        } else if (bobina.largura_final) {
-            largura = `L: ${bobina.largura_final}cm`;
-        }
-        
-        const linhaGramatura = `${gramatura} • ${largura}`;
-        comandos.push(...this.stringParaBytes(linhaGramatura));
-        comandos.push(0x0A);
-        comandos.push(0x1B, 0x21, 0x00);
-
-        // LINHA 4: METRAGEM (GRANDE E NEGRITO)
-        comandos.push(0x1B, 0x21, 0x20); // Fonte grande
-        comandos.push(0x1B, 0x45, 0x01); // Negrito ON
-        const metragem = parseFloat(bobina.metragem || 0).toFixed(2);
-        const linhaMetragem = `METRAGEM: ${this.formatarNumero(metragem)}m`;
-        comandos.push(...this.stringParaBytes(linhaMetragem));
-        comandos.push(0x0A);
-        comandos.push(0x1B, 0x45, 0x00); // Negrito OFF
-        comandos.push(0x1B, 0x21, 0x00);
-
-        // Espaço para QR Code futuro
-        comandos.push(0x0A);
-
-        // Cortar papel
-        comandos.push(0x1D, 0x56, 0x42, 0x00); // Corte total
-
-        return new Uint8Array(comandos);
-    }
-
-    // Gerar comandos ESC/POS para etiqueta de RETALHO
-    gerarEtiquetaRetalho(retalho) {
-        const comandos = [];
-
-        // Inicializar impressora
-        comandos.push(0x1B, 0x40); // ESC @ - Inicializar
-
-        // LINHA 1: ID do Retalho (GRANDE E NEGRITO)
-        comandos.push(0x1B, 0x21, 0x30); // Fonte dupla
-        comandos.push(0x1B, 0x45, 0x01); // Negrito ON
-        const idRetalho = retalho.codigo || `RET-${retalho.id}`;
-        comandos.push(...this.stringParaBytes(idRetalho));
-        comandos.push(0x0A);
-        comandos.push(0x1B, 0x45, 0x00);
-        comandos.push(0x1B, 0x21, 0x00);
-
-        // LINHA 2: Código do Produto • Cor
-        comandos.push(0x1B, 0x21, 0x10);
-        const linhaProduto = `${retalho.produto_codigo} • ${retalho.nome_cor || ''}`;
-        comandos.push(...this.stringParaBytes(linhaProduto));
-        comandos.push(0x0A);
-        comandos.push(0x1B, 0x21, 0x00);
-
-        // LINHA 3: Gramatura • Largura
-        comandos.push(0x1B, 0x21, 0x10);
-        const gramatura = retalho.gramatura || '';
-        let largura = '';
-        
-        if (retalho.tipo_tecido === 'Bando Y' && retalho.largura_maior && retalho.largura_y) {
-            largura = `${retalho.largura_maior}+${retalho.largura_y}+${retalho.largura_y}cm`;
-        } else if (retalho.largura_final) {
-            largura = `L: ${retalho.largura_final}cm`;
-        }
-        
-        const linhaGramatura = `${gramatura} • ${largura}`;
-        comandos.push(...this.stringParaBytes(linhaGramatura));
-        comandos.push(0x0A);
-        comandos.push(0x1B, 0x21, 0x00);
-
-        // LINHA 4: METRAGEM (GRANDE E NEGRITO)
-        comandos.push(0x1B, 0x21, 0x20);
-        comandos.push(0x1B, 0x45, 0x01);
-        const metragem = parseFloat(retalho.metragem || 0).toFixed(2);
-        const linhaMetragem = `METRAGEM: ${this.formatarNumero(metragem)}m`;
-        comandos.push(...this.stringParaBytes(linhaMetragem));
-        comandos.push(0x0A);
-        comandos.push(0x1B, 0x45, 0x00);
-        comandos.push(0x1B, 0x21, 0x00);
-
-        // Espaço para QR Code futuro
-        comandos.push(0x0A);
-
-        // Cortar papel
-        comandos.push(0x1D, 0x56, 0x42, 0x00);
-
-        return new Uint8Array(comandos);
-    }
-
-    // Enviar dados para a impressora
-    async imprimir(dados) {
-        if (!this.impressora) {
-            throw new Error('Impressora não conectada. Conecte primeiro.');
-        }
-
-        try {
-            // Endpoint para transferência de dados (normalmente endpoint 1)
-            await this.impressora.transferOut(1, dados);
-            console.log('Etiqueta enviada para impressão!');
-            return true;
-
-        } catch (error) {
-            console.error('Erro ao imprimir:', error);
-            throw new Error('Erro ao enviar dados para a impressora.');
-        }
-    }
-
-    // Utilitários
-    stringParaBytes(str) {
-        const encoder = new TextEncoder();
-        return Array.from(encoder.encode(str));
-    }
-
-    formatarNumero(numero) {
-        return parseFloat(numero).toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    }
-
-    // Desconectar impressora
-    async desconectar() {
-        if (this.impressora) {
-            await this.impressora.close();
-            this.impressora = null;
-            console.log('Impressora desconectada');
-        }
-    }
-}
-
-// Instância global
-const impressora = new ImpressoraEtiquetas();
-
 // Funções auxiliares para uso no sistema
 async function imprimirEtiquetaBobina(bobina) {
     try {
-        // Verificar se já está conectado
-        if (!impressora.impressora) {
-            await impressora.conectar();
-        }
-
-        const dados = impressora.gerarEtiquetaBobina(bobina);
-        await impressora.imprimir(dados);
-        
-        mostrarNotificacao('🖨️ Etiqueta impressa com sucesso!', 'success');
+        const conteudo = gerarConteudoEtiquetaBobina(bobina);
+        abrirPaginaEtiquetas(conteudo);
         return true;
-
     } catch (error) {
         console.error('Erro ao imprimir etiqueta:', error);
         mostrarNotificacao('Erro ao imprimir: ' + error.message, 'error');
@@ -225,22 +18,292 @@ async function imprimirEtiquetaBobina(bobina) {
 
 async function imprimirEtiquetaRetalho(retalho) {
     try {
-        // Verificar se já está conectado
-        if (!impressora.impressora) {
-            await impressora.conectar();
-        }
-
-        const dados = impressora.gerarEtiquetaRetalho(retalho);
-        await impressora.imprimir(dados);
-        
-        mostrarNotificacao('🖨️ Etiqueta impressa com sucesso!', 'success');
+        const conteudo = gerarConteudoEtiquetaRetalho(retalho);
+        abrirPaginaEtiquetas(conteudo);
         return true;
-
     } catch (error) {
         console.error('Erro ao imprimir etiqueta:', error);
         mostrarNotificacao('Erro ao imprimir: ' + error.message, 'error');
         return false;
     }
+}
+
+// Imprimir múltiplas etiquetas de bobinas
+async function imprimirEtiquetasBobinas(bobinas) {
+    try {
+        const etiquetas = bobinas.map(b => gerarConteudoEtiquetaBobina(b));
+        abrirPaginaEtiquetas(etiquetas);
+        return true;
+    } catch (error) {
+        console.error('Erro ao imprimir etiquetas:', error);
+        mostrarNotificacao('Erro ao imprimir: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// Imprimir múltiplas etiquetas de retalhos
+async function imprimirEtiquetasRetalhos(retalhos) {
+    try {
+        const etiquetas = retalhos.map(r => gerarConteudoEtiquetaRetalho(r));
+        abrirPaginaEtiquetas(etiquetas);
+        return true;
+    } catch (error) {
+        console.error('Erro ao imprimir etiquetas:', error);
+        mostrarNotificacao('Erro ao imprimir: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// Gerar HTML para conteúdo da etiqueta de bobina (só o conteúdo, sem página completa)
+function gerarConteudoEtiquetaBobina(bobina) {
+    const idBobina = bobina.codigo_interno || `BOB-${bobina.id}`;
+    const linhaProduto = `${bobina.produto_codigo} • ${bobina.nome_cor || ''}`;
+    const gramatura = bobina.gramatura || '';
+    
+    let largura = '';
+    if (bobina.tipo_tecido === 'Bando Y' && bobina.largura_maior && bobina.largura_y) {
+        largura = `${bobina.largura_maior}+${bobina.largura_y}+${bobina.largura_y}cm`;
+    } else if (bobina.largura_final) {
+        largura = `L: ${bobina.largura_final}cm`;
+    }
+    
+    const metragem = parseFloat(bobina.metragem_inicial || bobina.metragem_atual || 0).toFixed(2);
+    
+    return `
+        <div class="linha-1">${idBobina}</div>
+        <div class="linha-2">${linhaProduto}</div>
+        <div class="linha-3">${gramatura} • ${largura}</div>
+        <div class="linha-4">METRAGEM: ${metragem}m</div>
+    `;
+}
+
+// Gerar HTML para conteúdo da etiqueta de retalho (só o conteúdo, sem página completa)
+function gerarConteudoEtiquetaRetalho(retalho) {
+    const idRetalho = retalho.codigo_retalho || `RET-${retalho.id}`;
+    const linhaProduto = `${retalho.produto_codigo} • ${retalho.nome_cor || ''}`;
+    const gramatura = retalho.gramatura || '';
+    
+    let largura = '';
+    if (retalho.tipo_tecido === 'Bando Y' && retalho.largura_maior && retalho.largura_y) {
+        largura = `${retalho.largura_maior}+${retalho.largura_y}+${retalho.largura_y}cm`;
+    } else if (retalho.largura_final) {
+        largura = `L: ${retalho.largura_final}cm`;
+    }
+    
+    const metragem = parseFloat(retalho.metragem || 0).toFixed(2);
+    
+    return `
+        <div class="linha-1">${idRetalho}</div>
+        <div class="linha-2">${linhaProduto}</div>
+        <div class="linha-3">${gramatura} • ${largura}</div>
+        <div class="linha-4">METRAGEM: ${metragem}m</div>
+    `;
+}
+
+// Abrir página de visualização de etiquetas
+function abrirPaginaEtiquetas(etiquetas) {
+    // etiquetas pode ser um array ou objeto único
+    const listaEtiquetas = Array.isArray(etiquetas) ? etiquetas : [etiquetas];
+    
+    const htmlCompleto = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Impressão de Etiquetas</title>
+            <style>
+                /* Estilos para visualização na tela */
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: Arial, sans-serif;
+                    background: #f5f5f5;
+                    padding: 20px;
+                }
+                
+                .controles {
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    margin-bottom: 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .controles h2 {
+                    color: #333;
+                    font-size: 20px;
+                }
+                
+                .controles .info {
+                    color: #666;
+                    font-size: 14px;
+                }
+                
+                .btn-container {
+                    display: flex;
+                    gap: 10px;
+                }
+                
+                button {
+                    padding: 12px 24px;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                }
+                
+                .btn-imprimir {
+                    background: #4CAF50;
+                    color: white;
+                }
+                
+                .btn-imprimir:hover {
+                    background: #45a049;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+                }
+                
+                .btn-cancelar {
+                    background: #f44336;
+                    color: white;
+                }
+                
+                .btn-cancelar:hover {
+                    background: #da190b;
+                }
+                
+                .preview-container {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                    gap: 20px;
+                }
+                
+                .etiqueta-preview {
+                    background: white;
+                    border: 2px dashed #ccc;
+                    border-radius: 8px;
+                    padding: 15px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                
+                .etiqueta-preview h3 {
+                    color: #666;
+                    font-size: 12px;
+                    margin-bottom: 10px;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }
+                
+                .etiqueta-conteudo {
+                    background: #fafafa;
+                    padding: 10px;
+                    border-radius: 4px;
+                    font-family: 'Courier New', monospace;
+                }
+                
+                .etiqueta-conteudo .linha-1 {
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin-bottom: 8px;
+                    color: #000;
+                }
+                
+                .etiqueta-conteudo .linha-2,
+                .etiqueta-conteudo .linha-3 {
+                    font-size: 12px;
+                    margin-bottom: 6px;
+                    color: #333;
+                }
+                
+                .etiqueta-conteudo .linha-4 {
+                    font-size: 14px;
+                    font-weight: bold;
+                    margin-top: 8px;
+                    color: #000;
+                }
+                
+                /* Estilos para impressão */
+                @media print {
+                    body {
+                        background: white;
+                        padding: 0;
+                    }
+                    
+                    .controles {
+                        display: none !important;
+                    }
+                    
+                    .preview-container {
+                        display: block;
+                    }
+                    
+                    .etiqueta-preview {
+                        page-break-inside: avoid;
+                        page-break-after: always;
+                        border: none;
+                        box-shadow: none;
+                        padding: 0;
+                        margin: 0;
+                    }
+                    
+                    .etiqueta-preview h3 {
+                        display: none;
+                    }
+                    
+                    .etiqueta-conteudo {
+                        background: white;
+                        padding: 2mm;
+                        width: 60mm;
+                        height: 30mm;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                    }
+                    
+                    @page {
+                        size: 60mm 30mm;
+                        margin: 0;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="controles">
+                <div>
+                    <h2>📄 Visualização de Etiquetas</h2>
+                    <p class="info">${listaEtiquetas.length} etiqueta(s) pronta(s) para impressão</p>
+                </div>
+                <div class="btn-container">
+                    <button class="btn-cancelar" onclick="window.close()">✕ Cancelar</button>
+                    <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir Etiquetas</button>
+                </div>
+            </div>
+            
+            <div class="preview-container">
+                ${listaEtiquetas.map((etiqueta, index) => `
+                    <div class="etiqueta-preview">
+                        <h3>Etiqueta ${index + 1} de ${listaEtiquetas.length}</h3>
+                        <div class="etiqueta-conteudo">
+                            ${etiqueta}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </body>
+        </html>
+    `;
+    
+    const janela = window.open('', '_blank', 'width=1000,height=700');
+    janela.document.write(htmlCompleto);
+    janela.document.close();
 }
 
 // Preview da etiqueta (mostra como vai ficar)
