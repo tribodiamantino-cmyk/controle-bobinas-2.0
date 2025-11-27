@@ -257,6 +257,78 @@ exports.criarPlanoDeObraPadrao = async (req, res) => {
     }
 };
 
+// Atualizar obra padrão
+exports.atualizarObraPadrao = async (req, res) => {
+    const connection = await db.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+
+        const { id } = req.params;
+        const { nome, descricao, itens } = req.body;
+
+        if (!nome || !itens || itens.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Nome e pelo menos um item são obrigatórios' 
+            });
+        }
+
+        // Verificar se obra padrão existe
+        const [obras] = await connection.query(`
+            SELECT * FROM obras_padrao WHERE id = ?
+        `, [id]);
+
+        if (obras.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: 'Obra padrão não encontrada' });
+        }
+
+        // Atualizar dados da obra padrão
+        await connection.query(`
+            UPDATE obras_padrao 
+            SET nome = ?, descricao = ?
+            WHERE id = ?
+        `, [nome, descricao || null, id]);
+
+        // Excluir itens antigos
+        await connection.query(`
+            DELETE FROM obra_padrao_itens WHERE obra_padrao_id = ?
+        `, [id]);
+
+        // Inserir novos itens
+        for (const item of itens) {
+            if (!item.produto_id || !item.metragem) {
+                await connection.rollback();
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Cada item deve ter produto_id e metragem' 
+                });
+            }
+
+            await connection.query(`
+                INSERT INTO obra_padrao_itens (obra_padrao_id, produto_id, metragem, observacoes, ordem)
+                VALUES (?, ?, ?, ?, ?)
+            `, [id, item.produto_id, item.metragem, item.observacoes || null, item.ordem || 0]);
+        }
+
+        await connection.commit();
+
+        res.json({ 
+            success: true, 
+            message: 'Obra padrão atualizada com sucesso',
+            data: { id: id }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Erro ao atualizar obra padrão:', error);
+        res.status(500).json({ success: false, error: error.message });
+    } finally {
+        connection.release();
+    }
+};
+
 // Excluir obra padrão
 exports.excluirObraPadrao = async (req, res) => {
     try {

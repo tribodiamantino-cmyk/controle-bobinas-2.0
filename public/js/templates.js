@@ -128,6 +128,9 @@ function renderizarTemplates() {
                         <button class="btn btn-sm btn-primary" onclick="abrirModalCriarPlano(${template.id})" title="Criar plano com este template">
                             ✨ Usar Template
                         </button>
+                        <button class="btn btn-sm btn-warning" onclick="abrirModalEditarTemplate(${template.id})" title="Editar template">
+                            ✏️ Editar
+                        </button>
                         <button class="btn btn-sm btn-outline-secondary" onclick="abrirDetalhesTemplate(${template.id})" title="Ver detalhes">
                             👁️ Detalhes
                         </button>
@@ -583,6 +586,259 @@ document.getElementById('formNovoTemplate')?.addEventListener('submit', async (e
         
     } catch (error) {
         mostrarNotificacao('Erro ao criar template: ' + error.message, 'error');
+        console.error(error);
+    }
+});
+
+// ==============================
+// EDIÇÃO DE TEMPLATE
+// ==============================
+
+let cortesAgrupadosEditar = {};
+let produtoAtualSelecionadoEditar = null;
+let templateEmEdicao = null;
+
+async function abrirModalEditarTemplate(templateId) {
+    try {
+        // Buscar detalhes do template
+        const response = await fetch(`/api/obras-padrao/${templateId}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao carregar template');
+        }
+        
+        const template = data.data;
+        templateEmEdicao = template;
+        
+        // Preencher formulário
+        document.getElementById('editar-template-id').value = template.id;
+        document.getElementById('editar-nome-template').value = template.nome;
+        document.getElementById('editar-descricao-template').value = template.descricao || '';
+        
+        // Carregar cortes agrupados por produto
+        cortesAgrupadosEditar = {};
+        template.itens.forEach(item => {
+            if (!cortesAgrupadosEditar[item.produto_id]) {
+                cortesAgrupadosEditar[item.produto_id] = [];
+            }
+            cortesAgrupadosEditar[item.produto_id].push({
+                metragem: parseFloat(item.metragem),
+                observacoes: item.observacoes || ''
+            });
+        });
+        
+        // Popular select de produtos
+        popularSelectProdutosEditar();
+        renderizarListaCortesEditar();
+        
+        // Mostrar modal
+        document.getElementById('modalEditarTemplate').style.display = 'flex';
+        document.getElementById('areaInputCortesEditar').style.display = 'none';
+        
+    } catch (error) {
+        mostrarNotificacao('Erro ao abrir edição: ' + error.message, 'error');
+        console.error(error);
+    }
+}
+
+function fecharModalEditarTemplate() {
+    document.getElementById('modalEditarTemplate').style.display = 'none';
+    cortesAgrupadosEditar = {};
+    produtoAtualSelecionadoEditar = null;
+    templateEmEdicao = null;
+}
+
+function popularSelectProdutosEditar() {
+    const select = document.getElementById('editarProdutoSelecionado');
+    select.innerHTML = '<option value="">Selecione um produto...</option>';
+    
+    produtos.forEach(produto => {
+        const option = document.createElement('option');
+        option.value = produto.id;
+        option.textContent = getNomeProduto(produto);
+        select.appendChild(option);
+    });
+}
+
+function selecionarProdutoEditar() {
+    const select = document.getElementById('editarProdutoSelecionado');
+    const produtoId = select.value;
+    
+    if (produtoId) {
+        produtoAtualSelecionadoEditar = parseInt(produtoId);
+        document.getElementById('areaInputCortesEditar').style.display = 'block';
+        document.getElementById('inputMetragemEditar').focus();
+    } else {
+        produtoAtualSelecionadoEditar = null;
+        document.getElementById('areaInputCortesEditar').style.display = 'none';
+    }
+}
+
+function adicionarCorteEditar() {
+    const metragem = parseFloat(document.getElementById('inputMetragemEditar').value);
+    const observacoes = document.getElementById('inputObservacoesEditar').value.trim();
+    
+    if (!produtoAtualSelecionadoEditar) {
+        mostrarNotificacao('Selecione um produto primeiro', 'warning');
+        return;
+    }
+    
+    if (!metragem || metragem <= 0) {
+        mostrarNotificacao('Informe uma metragem válida', 'warning');
+        document.getElementById('inputMetragemEditar').focus();
+        return;
+    }
+    
+    // Adicionar ao array do produto
+    if (!cortesAgrupadosEditar[produtoAtualSelecionadoEditar]) {
+        cortesAgrupadosEditar[produtoAtualSelecionadoEditar] = [];
+    }
+    
+    cortesAgrupadosEditar[produtoAtualSelecionadoEditar].push({
+        metragem: metragem,
+        observacoes: observacoes
+    });
+    
+    // Limpar inputs
+    document.getElementById('inputMetragemEditar').value = '';
+    document.getElementById('inputObservacoesEditar').value = '';
+    document.getElementById('inputMetragemEditar').focus();
+    
+    // Atualizar lista visual
+    renderizarListaCortesEditar();
+}
+
+function renderizarListaCortesEditar() {
+    const container = document.getElementById('listaCortesEditar');
+    
+    if (Object.keys(cortesAgrupadosEditar).length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Nenhum corte adicionado ainda</p>';
+        return;
+    }
+    
+    let html = '';
+    let ordemGlobal = 1;
+    
+    for (const produtoId in cortesAgrupadosEditar) {
+        const produto = produtos.find(p => p.id === parseInt(produtoId));
+        const cortes = cortesAgrupadosEditar[produtoId];
+        
+        if (!produto || cortes.length === 0) continue;
+        
+        const metragemTotal = cortes.reduce((sum, c) => sum + c.metragem, 0);
+        
+        html += `
+            <div class="produto-grupo-card">
+                <div class="produto-grupo-header">
+                    <div>
+                        <strong>${getNomeProduto(produto)}</strong>
+                        <small style="color: #666; margin-left: 8px;">${produto.loja || ''}</small>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span class="badge badge-info">${cortes.length} cortes • ${metragemTotal.toFixed(2)}m total</span>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removerProdutoEditar(${produtoId})">🗑️</button>
+                    </div>
+                </div>
+                <div class="cortes-lista-grupo">
+                    ${cortes.map((corte, index) => `
+                        <div class="corte-item">
+                            <span class="corte-numero">#${ordemGlobal++}</span>
+                            <div class="corte-detalhes">
+                                <strong>${corte.metragem.toFixed(2)}m</strong>
+                                ${corte.observacoes ? `<small>${corte.observacoes}</small>` : ''}
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerCorteEditar(${produtoId}, ${index})">✕</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function removerProdutoEditar(produtoId) {
+    delete cortesAgrupadosEditar[produtoId];
+    renderizarListaCortesEditar();
+}
+
+function removerCorteEditar(produtoId, index) {
+    cortesAgrupadosEditar[produtoId].splice(index, 1);
+    if (cortesAgrupadosEditar[produtoId].length === 0) {
+        delete cortesAgrupadosEditar[produtoId];
+    }
+    renderizarListaCortesEditar();
+}
+
+function handleEnterMetragemEditar(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        document.getElementById('inputObservacoesEditar').focus();
+    }
+}
+
+function handleEnterObservacoesEditar(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        adicionarCorteEditar();
+    }
+}
+
+// Form submit de edição
+document.getElementById('formEditarTemplate')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const templateId = document.getElementById('editar-template-id').value;
+    const nome = document.getElementById('editar-nome-template').value;
+    const descricao = document.getElementById('editar-descricao-template').value;
+    
+    // Validar se há cortes
+    const totalCortes = Object.values(cortesAgrupadosEditar).reduce((sum, arr) => sum + arr.length, 0);
+    if (totalCortes === 0) {
+        mostrarNotificacao('Adicione pelo menos um corte ao template', 'warning');
+        return;
+    }
+    
+    // Preparar itens
+    const itens = [];
+    let ordem = 0;
+    for (const produtoId in cortesAgrupadosEditar) {
+        const cortes = cortesAgrupadosEditar[produtoId];
+        cortes.forEach(corte => {
+            itens.push({
+                produto_id: parseInt(produtoId),
+                metragem: corte.metragem,
+                observacoes: corte.observacoes || null,
+                ordem: ordem++
+            });
+        });
+    }
+    
+    try {
+        const response = await fetch(`/api/obras-padrao/${templateId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: nome,
+                descricao: descricao,
+                itens: itens
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao atualizar template');
+        }
+        
+        mostrarNotificacao('✏️ Template atualizado com sucesso!', 'success');
+        fecharModalEditarTemplate();
+        await carregarTemplates();
+        
+    } catch (error) {
+        mostrarNotificacao('Erro ao atualizar template: ' + error.message, 'error');
         console.error(error);
     }
 });

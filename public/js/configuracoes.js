@@ -116,7 +116,8 @@ async function salvarCampo(tipo, id, campo) {
 async function atualizarCor(id, dados) {
     // Buscar dados atuais para manter o que não foi editado
     const response = await fetch('/api/cores');
-    const cores = await response.json();
+    const result = await response.json();
+    const cores = result.data || result;
     const corAtual = cores.find(c => c.id === id);
     
     const dadosCompletos = {
@@ -147,7 +148,8 @@ async function atualizarCor(id, dados) {
 async function atualizarGramatura(id, dados) {
     // Buscar dados atuais para manter o que não foi editado
     const response = await fetch('/api/gramaturas');
-    const gramaturas = await response.json();
+    const result = await response.json();
+    const gramaturas = result.data || result;
     const gramaturaAtual = gramaturas.find(g => g.id === id);
     
     const dadosCompletos = {
@@ -218,7 +220,8 @@ async function carregarCores() {
     
     try {
         const response = await fetch('/api/cores');
-        const cores = await response.json();
+        const result = await response.json();
+        const cores = result.data || result; // Suportar ambos os formatos
         
         loading.style.display = 'none';
         
@@ -367,7 +370,8 @@ async function carregarGramaturas() {
     
     try {
         const response = await fetch('/api/gramaturas');
-        const gramaturas = await response.json();
+        const result = await response.json();
+        const gramaturas = result.data || result; // Suportar ambos os formatos
         
         loading.style.display = 'none';
         

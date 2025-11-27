@@ -17,6 +17,9 @@ router.post('/criar-manual', obrasPadraoController.criarObraPadraoManual);
 // Criar novo plano a partir de uma obra padrão
 router.post('/criar-plano', obrasPadraoController.criarPlanoDeObraPadrao);
 
+// Atualizar obra padrão
+router.put('/:id', obrasPadraoController.atualizarObraPadrao);
+
 // Excluir obra padrão
 router.delete('/:id', obrasPadraoController.excluirObraPadrao);
 

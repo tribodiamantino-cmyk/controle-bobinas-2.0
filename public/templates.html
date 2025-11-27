@@ -222,6 +222,84 @@
         </div>
     </div>
 
+    <!-- Modal: Editar Template -->
+    <div id="modalEditarTemplate" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>✏️ Editar Template</h2>
+                <button class="btn-close" onclick="fecharModalEditarTemplate()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarTemplate">
+                    <input type="hidden" id="editar-template-id">
+                    <div class="form-group">
+                        <label>Nome do Template *</label>
+                        <input type="text" id="editar-nome-template" class="form-control" required placeholder="Ex: Aviário Padrão 100x12m">
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição (opcional)</label>
+                        <textarea id="editar-descricao-template" class="form-control" rows="2" placeholder="Detalhes sobre este padrão de corte..."></textarea>
+                    </div>
+
+                    <hr>
+
+                    <div class="section-header">
+                        <h3>Cortes</h3>
+                    </div>
+
+                    <!-- Seletor de Produto -->
+                    <div class="produto-selector-container">
+                        <div class="form-group">
+                            <label>Adicionar Produto *</label>
+                            <select id="editarProdutoSelecionado" class="form-control" onchange="selecionarProdutoEditar()">
+                                <option value="">Selecione um produto...</option>
+                            </select>
+                        </div>
+
+                        <!-- Área de input de cortes -->
+                        <div id="areaInputCortesEditar" style="display: none; margin-top: 15px;">
+                            <div style="background: #f0f8ff; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                                <div class="corte-input-linha">
+                                    <div style="display: grid; grid-template-columns: 150px 1fr 100px; gap: 12px; align-items: center;">
+                                        <div>
+                                            <input type="number" 
+                                                   id="inputMetragemEditar" 
+                                                   class="form-control" 
+                                                   step="0.01" 
+                                                   min="0.01" 
+                                                   placeholder="Metragem"
+                                                   onkeypress="handleEnterMetragemEditar(event)">
+                                        </div>
+                                        <div>
+                                            <input type="text" 
+                                                   id="inputObservacoesEditar" 
+                                                   class="form-control" 
+                                                   placeholder="Observações (opcional)"
+                                                   onkeypress="handleEnterObservacoesEditar(event)">
+                                        </div>
+                                        <button type="button" class="btn btn-primary" onclick="adicionarCorteEditar()">
+                                            ➕ Adicionar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de cortes agrupados -->
+                    <div id="listaCortesEditar" style="margin-top: 20px;">
+                        <!-- Preenchido via JavaScript -->
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-top: 30px; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalEditarTemplate()">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">✏️ Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="js/templates.js"></script>
 </body>
 </html>
