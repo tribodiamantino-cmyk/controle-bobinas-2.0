@@ -337,13 +337,17 @@ function renderizarProdutos(listaProdutos) {
         const largMaior = produto.tipo_tecido === 'Bando Y' ? (produto.largura_maior || '-') : '-';
         const largY = produto.tipo_tecido === 'Bando Y' ? (produto.largura_y || '-') : '-';
         
+        // Indicador de metragem confiável
+        const badgeConfiavel = produto.metragem_confiavel ? 
+            '<span class="badge badge-info" title="Metragens precisas do fornecedor">✓ Precisa</span>' : '';
+        
         return `
         <tr>
             <td>${produto.loja}</td>
             <td>${produto.codigo}</td>
             <td>${produto.nome_cor}</td>
             <td>${produto.gramatura}</td>
-            <td>${produto.fabricante}</td>
+            <td>${produto.fabricante} ${badgeConfiavel}</td>
             <td>${produto.tipo_tecido || 'Normal'}</td>
             <td>${largSemCostura}</td>
             <td>${tipoBainha}</td>
@@ -380,7 +384,8 @@ async function cadastrarProduto(e) {
         cor_id: parseInt(document.getElementById('cor_id').value),
         gramatura_id: parseInt(document.getElementById('gramatura_id').value),
         fabricante: document.getElementById('fabricante').value,
-        tipo_tecido: tipoTecido
+        tipo_tecido: tipoTecido,
+        metragem_confiavel: document.getElementById('metragem_confiavel').checked
     };
     
     // Adicionar campos específicos conforme o tipo
@@ -469,6 +474,7 @@ async function salvarCampo(id, campo) {
         largura_sem_costura: produto.largura_sem_costura,
         tipo_bainha: produto.tipo_bainha,
         largura_final: produto.largura_final,
+        metragem_confiavel: produto.metragem_confiavel,
         ativo: produto.ativo
     };
     

@@ -92,12 +92,21 @@ function criarCardPlano(plano) {
     
     let acoes = '';
     
+    // Botão de salvar como template (disponível em todos os status)
+    const btnTemplate = `
+        <button class="btn-kanban btn-kanban-info" onclick="event.stopPropagation(); abrirModalSalvarTemplate(${plano.id})" title="Salvar este plano como obra padrão">
+            <span class="btn-kanban-icon">💾</span>
+            <span class="btn-kanban-text">Salvar Template</span>
+        </button>
+    `;
+    
     if (plano.status === 'planejamento') {
         acoes = `
             <button class="btn-kanban btn-kanban-primary" onclick="event.stopPropagation(); alocarAutomaticamente(${plano.id})" title="Aloca automaticamente todas as origens">
                 <span class="btn-kanban-icon">🤖</span>
                 <span class="btn-kanban-text">Auto-Alocar</span>
             </button>
+            ${btnTemplate}
             <button class="btn-kanban btn-kanban-success" onclick="event.stopPropagation(); enviarParaProducao(${plano.id})">
                 <span class="btn-kanban-icon">▶</span>
                 <span class="btn-kanban-text">Produzir</span>
@@ -113,6 +122,7 @@ function criarCardPlano(plano) {
                 <span class="btn-kanban-icon">◀</span>
                 <span class="btn-kanban-text">Voltar</span>
             </button>
+            ${btnTemplate}
             <button class="btn-kanban btn-kanban-success" onclick="event.stopPropagation(); abrirModalFinalizacao(${plano.id})">
                 <span class="btn-kanban-icon">✓</span>
                 <span class="btn-kanban-text">Finalizar</span>
@@ -120,6 +130,7 @@ function criarCardPlano(plano) {
         `;
     } else if (plano.status === 'finalizado') {
         acoes = `
+            ${btnTemplate}
             <button class="btn-kanban btn-kanban-info" onclick="event.stopPropagation(); arquivarPlano(${plano.id})">
                 <span class="btn-kanban-icon">📦</span>
                 <span class="btn-kanban-text">Arquivar</span>
@@ -1280,3 +1291,172 @@ function showNotification(message, type = 'info') {
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
+
+// ========== OBRAS PADRÃO / TEMPLATES ==========
+
+async function abrirModalTemplates() {
+    document.getElementById('modalTemplates').style.display = 'flex';
+    await carregarTemplates();
+}
+
+function fecharModalTemplates() {
+    document.getElementById('modalTemplates').style.display = 'none';
+}
+
+async function carregarTemplates() {
+    try {
+        const response = await fetch('/api/obras-padrao');
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao carregar templates');
+        }
+        
+        const templates = data.data;
+        const container = document.getElementById('listaTemplates');
+        
+        if (templates.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <p style="font-size: 48px; margin-bottom: 10px;">📋</p>
+                    <p>Nenhuma obra padrão salva ainda.</p>
+                    <p style="font-size: 14px; margin-top: 10px;">Crie um plano e salve como template para reutilizar depois!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = templates.map(template => `
+            <div class="template-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; cursor: pointer; transition: all 0.2s;" 
+                 onclick="usarTemplate(${template.id})"
+                 onmouseenter="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
+                 onmouseleave="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                    <h3 style="margin: 0; color: var(--primary-color);">📋 ${template.nome}</h3>
+                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); excluirTemplate(${template.id})" title="Excluir template">🗑️</button>
+                </div>
+                ${template.descricao ? `<p style="color: #666; margin: 8px 0;">${template.descricao}</p>` : ''}
+                <div style="display: flex; gap: 20px; margin-top: 12px; font-size: 14px; color: #666;">
+                    <span>📦 <strong>${template.total_itens || 0}</strong> cortes</span>
+                    <span>📏 <strong>${parseFloat(template.metragem_total || 0).toFixed(2)}m</strong> total</span>
+                    ${template.vezes_utilizada > 0 ? `<span>🔄 Usado <strong>${template.vezes_utilizada}x</strong></span>` : ''}
+                </div>
+                ${template.produtos ? `<div style="margin-top: 10px; font-size: 13px; color: #888;">Produtos: ${template.produtos}</div>` : ''}
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        mostrarNotificacao('Erro ao carregar templates: ' + error.message, 'error');
+        console.error(error);
+    }
+}
+
+async function usarTemplate(templateId) {
+    try {
+        const cliente = document.getElementById('clientePlano').value;
+        const aviario = document.getElementById('aviarioPlano').value;
+        
+        if (!cliente || !aviario) {
+            mostrarNotificacao('Preencha Cliente e Aviário antes de usar o template', 'warning');
+            return;
+        }
+        
+        const codigoPlano = `${cliente}-${aviario}-${Date.now()}`;
+        
+        const response = await fetch('/api/obras-padrao/criar-plano', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                obra_padrao_id: templateId,
+                codigo_plano: codigoPlano,
+                cliente: cliente,
+                aviario: aviario
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao criar plano do template');
+        }
+        
+        mostrarNotificacao('✨ Plano criado a partir do template!', 'success');
+        fecharModalTemplates();
+        fecharModalNovoPlano();
+        await carregarPlanos();
+        
+    } catch (error) {
+        mostrarNotificacao('Erro ao usar template: ' + error.message, 'error');
+        console.error(error);
+    }
+}
+
+async function excluirTemplate(templateId) {
+    if (!confirm('Tem certeza que deseja excluir esta obra padrão?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/obras-padrao/${templateId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao excluir template');
+        }
+        
+        mostrarNotificacao('Template excluído com sucesso', 'success');
+        await carregarTemplates();
+        
+    } catch (error) {
+        mostrarNotificacao('Erro ao excluir template: ' + error.message, 'error');
+        console.error(error);
+    }
+}
+
+let planoParaSalvarComoTemplate = null;
+
+function abrirModalSalvarTemplate(planoId) {
+    planoParaSalvarComoTemplate = planoId;
+    document.getElementById('modalSalvarTemplate').style.display = 'flex';
+    document.getElementById('formSalvarTemplate').reset();
+}
+
+function fecharModalSalvarTemplate() {
+    document.getElementById('modalSalvarTemplate').style.display = 'none';
+    planoParaSalvarComoTemplate = null;
+}
+
+document.getElementById('formSalvarTemplate')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const nome = document.getElementById('nomeTemplate').value;
+    const descricao = document.getElementById('descricaoTemplate').value;
+    
+    try {
+        const response = await fetch('/api/obras-padrao/criar-de-plano', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plano_id: planoParaSalvarComoTemplate,
+                nome: nome,
+                descricao: descricao
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao salvar template');
+        }
+        
+        mostrarNotificacao('💾 Obra padrão salva com sucesso!', 'success');
+        fecharModalSalvarTemplate();
+        
+    } catch (error) {
+        mostrarNotificacao('Erro ao salvar template: ' + error.message, 'error');
+        console.error(error);
+    }
+});

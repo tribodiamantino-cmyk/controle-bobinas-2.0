@@ -33,7 +33,8 @@ exports.criarProduto = async (req, res) => {
         tipo_bainha, 
         largura_final,
         largura_maior,
-        largura_y
+        largura_y,
+        metragem_confiavel
     } = req.body;
 
     console.log('=== CRIAR PRODUTO ===');
@@ -73,12 +74,12 @@ exports.criarProduto = async (req, res) => {
             `INSERT INTO produtos (
                 loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido,
                 largura_sem_costura, tipo_bainha, largura_final,
-                largura_maior, largura_y
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                largura_maior, largura_y, metragem_confiavel
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido || 'Normal',
                 largura_sem_costura || null, tipo_bainha || null, largura_final || null,
-                largura_maior || null, largura_y || null
+                largura_maior || null, largura_y || null, metragem_confiavel ? 1 : 0
             ]
         );
 
@@ -106,6 +107,7 @@ exports.atualizarProduto = async (req, res) => {
         largura_final,
         largura_maior,
         largura_y,
+        metragem_confiavel,
         ativo 
     } = req.body;
 
@@ -124,12 +126,12 @@ exports.atualizarProduto = async (req, res) => {
             `UPDATE produtos 
              SET loja = ?, codigo = ?, cor_id = ?, gramatura_id = ?, fabricante = ?, tipo_tecido = ?,
                  largura_sem_costura = ?, tipo_bainha = ?, largura_final = ?,
-                 largura_maior = ?, largura_y = ?, ativo = ?
+                 largura_maior = ?, largura_y = ?, metragem_confiavel = ?, ativo = ?
              WHERE id = ?`,
             [
                 loja, codigo, cor_id, gramatura_id, fabricante, tipo_tecido || 'Normal',
                 largura_sem_costura || null, tipo_bainha || null, largura_final || null,
-                largura_maior || null, largura_y || null,
+                largura_maior || null, largura_y || null, metragem_confiavel ? 1 : 0,
                 ativo !== undefined ? ativo : 1, id
             ]
         );

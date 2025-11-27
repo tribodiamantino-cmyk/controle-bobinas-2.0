@@ -96,6 +96,7 @@ const bobinasRoutes = require('./routes/bobinas');
 const retalhosRoutes = require('./routes/retalhos');
 const localizacaoRoutes = require('./routes/localizacao');
 const ordensCorteRoutes = require('./routes/ordensCorte');
+const obrasPadraoRoutes = require('./routes/obrasPadrao');
 const setupRoutes = require('./routes/setup');
 const migrateRoutes = require('./routes/migrate');
 
@@ -107,6 +108,7 @@ app.use('/api/bobinas', bobinasRoutes);
 app.use('/api/retalhos', retalhosRoutes);
 app.use('/api/localizacao', localizacaoRoutes);
 app.use('/api/ordens-corte', ordensCorteRoutes);
+app.use('/api/obras-padrao', obrasPadraoRoutes);
 app.use('/api/database', setupRoutes);
 app.use('/api/database', migrateRoutes);
 

@@ -73,6 +73,13 @@
             </div>
             <div class="modal-body">
                 <form id="formNovoPlano">
+                    <!-- Botão de Template -->
+                    <div style="margin-bottom: 20px; text-align: center;">
+                        <button type="button" class="btn btn-outline-info" onclick="abrirModalTemplates()">
+                            📋 Usar Obra Padrão (Template)
+                        </button>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
                             <label>Cliente *</label>
@@ -249,6 +256,47 @@
                 <div id="conteudoFinalizacao">
                     <!-- Conteúdo será inserido dinamicamente -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Escolher Template -->
+    <div id="modalTemplates" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>📋 Obras Padrão (Templates)</h2>
+                <button class="btn-close" onclick="fecharModalTemplates()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="listaTemplates">
+                    <p style="text-align: center; color: #666;">Carregando templates...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Salvar como Template -->
+    <div id="modalSalvarTemplate" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>💾 Salvar como Obra Padrão</h2>
+                <button class="btn-close" onclick="fecharModalSalvarTemplate()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="formSalvarTemplate">
+                    <div class="form-group">
+                        <label>Nome da Obra Padrão *</label>
+                        <input type="text" id="nomeTemplate" class="form-control" required placeholder="Ex: Aviário Padrão 100x12m">
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição (opcional)</label>
+                        <textarea id="descricaoTemplate" class="form-control" rows="3" placeholder="Detalhes sobre este padrão de corte..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalSalvarTemplate()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">💾 Salvar Template</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
