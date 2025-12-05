@@ -235,9 +235,9 @@ router.post('/criar-cenario-teste', async (req, res) => {
             // Criar item do plano
             const [itemResult] = await connection.query(
                 `INSERT INTO itens_plano_corte 
-                 (plano_id, produto_id, metragem_planejada, status) 
-                 VALUES (?, ?, ?, 'pendente')`,
-                [planoId, bobinaProduto[0].produto_id, item.metragem]
+                 (plano_corte_id, produto_id, metragem, ordem) 
+                 VALUES (?, ?, ?, ?)`,
+                [planoId, bobinaProduto[0].produto_id, item.metragem, i + 1]
             );
             
             const itemId = itemResult.insertId;
@@ -245,8 +245,8 @@ router.post('/criar-cenario-teste', async (req, res) => {
             // Criar alocação
             const [alocResult] = await connection.query(
                 `INSERT INTO alocacoes_corte 
-                 (item_id, origem_tipo, origem_id, metragem_alocada, status) 
-                 VALUES (?, 'bobina', ?, ?, 'pendente')`,
+                 (item_plano_corte_id, tipo_origem, bobina_id, metragem_alocada) 
+                 VALUES (?, 'bobina', ?, ?)`,
                 [itemId, bobina.id, item.metragem]
             );
             
