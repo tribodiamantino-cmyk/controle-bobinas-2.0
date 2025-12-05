@@ -407,6 +407,19 @@
         </div>
     </div>
     
+    <hr class="separador">
+    
+    <!-- Etiquetas das Locações -->
+    <div class="secao-etiquetas" style="border-color: #43a047;">
+        <h2 style="color: #43a047;">📍 Etiquetas de Locações (para Finalização)</h2>
+        <p style="text-align: center; color: #888; margin-bottom: 20px;">
+            Após todos os cortes, escaneie estas locações para indicar onde os cortes serão armazenados
+        </p>
+        <div class="etiquetas-grid" id="locacoes-container">
+            <!-- Preenchido via JS -->
+        </div>
+    </div>
+    
     <script>
         // Dados de teste - 3 produtos diferentes, 10 cortes
         const produtos = [
@@ -420,6 +433,13 @@
             { id: 101, codigo: 'BOB-TEST-001', produto: produtos[0], metragem: 250, localizacao: '1-A-1' },
             { id: 102, codigo: 'BOB-TEST-002', produto: produtos[1], metragem: 300, localizacao: '2-B-2' },
             { id: 103, codigo: 'BOB-TEST-003', produto: produtos[2], metragem: 200, localizacao: '3-C-3' }
+        ];
+        
+        // Locações de teste para armazenar os cortes finalizados
+        const locacoes = [
+            { id: 201, codigo: '1-A-1', descricao: 'Corredor A - Prateleira 1' },
+            { id: 202, codigo: '2-B-2', descricao: 'Corredor B - Prateleira 2' },
+            { id: 203, codigo: '3-C-3', descricao: 'Corredor C - Prateleira 3' }
         ];
         
         // 10 itens de corte distribuídos entre as 3 bobinas
@@ -515,11 +535,51 @@
             }, 100);
         }
         
+        // Renderizar etiquetas de locações
+        function renderizarLocacoes() {
+            const container = document.getElementById('locacoes-container');
+            
+            container.innerHTML = locacoes.map(loc => `
+                <div class="etiqueta" id="etiqueta-loc-${loc.id}" style="border: 3px solid #43a047;">
+                    <div class="etiqueta-titulo" style="color: #43a047;">📍 LOCAÇÃO</div>
+                    <div class="etiqueta-codigo" style="color: #43a047;">${loc.codigo}</div>
+                    <div class="etiqueta-qr" id="qr-loc-${loc.id}"></div>
+                    <div class="etiqueta-info">
+                        <div><strong>ID:</strong> ${loc.id}</div>
+                        <div><strong>Descrição:</strong> ${loc.descricao}</div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: #e8f5e9; border-radius: 5px; color: #2e7d32;">
+                        <strong>Use para:</strong><br>
+                        Indicar onde os cortes finalizados serão armazenados
+                    </div>
+                </div>
+            `).join('');
+            
+            // Gerar QR codes das locações
+            setTimeout(() => {
+                locacoes.forEach(loc => {
+                    const qrContainer = document.getElementById(`qr-loc-${loc.id}`);
+                    if (qrContainer) {
+                        // O QR code contém o padrão LOC-{id} que o mobile espera
+                        new QRCode(qrContainer, {
+                            text: `LOC-${loc.id}`,
+                            width: 150,
+                            height: 150,
+                            colorDark: "#2e7d32",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    }
+                });
+            }, 200);
+        }
+        
         // Inicializar
         document.addEventListener('DOMContentLoaded', () => {
             renderizarTabela();
             renderizarChecklist();
             renderizarEtiquetas();
+            renderizarLocacoes();
         });
     </script>
 </body>
