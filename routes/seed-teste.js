@@ -78,14 +78,14 @@ router.post('/criar-cenario-teste', async (req, res) => {
         const produtosIds = {};
         for (const prod of produtos) {
             const [existing] = await connection.query(
-                'SELECT id FROM produtos WHERE codigo_produto = ? AND loja = ?',
+                'SELECT id FROM produtos WHERE codigo = ? AND loja = ?',
                 [prod.codigo, prod.loja]
             );
             if (existing.length > 0) {
                 produtosIds[prod.codigo] = existing[0].id;
             } else {
                 const [result] = await connection.query(
-                    `INSERT INTO produtos (loja, codigo_produto, cor_id, gramatura_id, largura_final, largura_sem_costura, fabricante, tipo_bainha, tipo_tecido) 
+                    `INSERT INTO produtos (loja, codigo, cor_id, gramatura_id, largura_final, largura_sem_costura, fabricante, tipo_bainha, tipo_tecido) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Normal')`,
                     [prod.loja, prod.codigo, coresIds[prod.cor], gramaturasIds[prod.gramatura], prod.largura, prod.largura_sem_costura, prod.fabricante, prod.tipo_bainha]
                 );
