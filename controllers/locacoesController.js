@@ -68,12 +68,12 @@ exports.criarLocacao = async (req, res) => {
             });
         }
         
-        // Validação: formato da máscara 0000-X-0000
-        const mascaraRegex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+        // Validação: formato flexível N-X-N (1-4 dígitos em cada parte)
+        const mascaraRegex = /^[0-9]{1,4}-[A-Z]-[0-9]{1,4}$/;
         if (!mascaraRegex.test(codigo)) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Código deve seguir o formato 0000-X-0000 (ex: 0001-A-0001)' 
+                error: 'Código deve seguir o formato N-X-N (ex: 1-A-1, 12-B-34, 0001-A-0001)' 
             });
         }
         
@@ -114,13 +114,13 @@ exports.atualizarLocacao = async (req, res) => {
         const { id } = req.params;
         const { codigo, descricao, capacidade, ativa } = req.body;
         
-        // Se forneceu código, validar formato
+        // Se forneceu código, validar formato flexível N-X-N (1-4 dígitos)
         if (codigo) {
-            const mascaraRegex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+            const mascaraRegex = /^[0-9]{1,4}-[A-Z]-[0-9]{1,4}$/;
             if (!mascaraRegex.test(codigo)) {
                 return res.status(400).json({ 
                     success: false, 
-                    error: 'Código deve seguir o formato 0000-X-0000 (ex: 0001-A-0001)' 
+                    error: 'Código deve seguir o formato N-X-N (ex: 1-A-1, 12-B-34, 0001-A-0001)' 
                 });
             }
         }
