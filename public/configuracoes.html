@@ -163,45 +163,6 @@
                 <h2>🔧 Ferramentas de Manutenção do Sistema</h2>
                 <p style="color: #666; margin-bottom: 30px;">Use estas ferramentas para corrigir problemas de inconsistência de dados.</p>
 
-                <!-- Card: Gerenciar Locações -->
-                <div class="card" style="margin-bottom: 20px;">
-                    <div class="card-header">
-                        <h3>📍 Gerenciar Locações do Armazém</h3>
-                    </div>
-                    <div class="card-body">
-                        <p style="margin-bottom: 15px;">Edite as locações diretamente na tabela. Formato: <strong>0000-X-0000</strong></p>
-                        
-                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                            <button class="btn btn-success" onclick="adicionarLinhaLocacao()">
-                                ➕ Nova Locação
-                            </button>
-                            <button class="btn btn-secondary" onclick="carregarLocacoesInline()">
-                                🔄 Atualizar
-                            </button>
-                        </div>
-                        
-                        <div id="alert-locacoes-inline"></div>
-                        
-                        <table class="table" id="table-locacoes-inline">
-                            <thead>
-                                <tr>
-                                    <th style="width: 25%;">Código</th>
-                                    <th style="width: 45%;">Descrição</th>
-                                    <th style="width: 12%;">Status</th>
-                                    <th style="width: 18%;">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-locacoes-inline">
-                                <tr>
-                                    <td colspan="4" style="text-align: center; padding: 20px; color: #666;">
-                                        Carregando locações...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
                 <!-- Card: Impressão de Etiquetas -->
                 <div class="card" style="margin-bottom: 20px;">
                     <div class="card-header">
