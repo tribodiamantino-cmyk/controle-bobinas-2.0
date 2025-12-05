@@ -13,6 +13,7 @@ router.post('/criar-cenario-teste', async (req, res) => {
         await connection.beginTransaction();
         
         console.log('🌱 Iniciando seed de teste...');
+        const errors = [];
         
         // =====================================================
         // 1. CRIAR CORES (se não existirem)
@@ -77,19 +78,29 @@ router.post('/criar-cenario-teste', async (req, res) => {
         
         const produtosIds = {};
         for (const prod of produtos) {
-            const [existing] = await connection.query(
-                'SELECT id FROM produtos WHERE codigo = ? AND loja = ?',
-                [prod.codigo, prod.loja]
-            );
-            if (existing.length > 0) {
-                produtosIds[prod.codigo] = existing[0].id;
-            } else {
-                const [result] = await connection.query(
-                    `INSERT INTO produtos (loja, codigo, cor_id, gramatura_id, largura_final, largura_sem_costura, fabricante, tipo_bainha, tipo_tecido) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Normal')`,
-                    [prod.loja, prod.codigo, coresIds[prod.cor], gramaturasIds[prod.gramatura], prod.largura, prod.largura_sem_costura, prod.fabricante, prod.tipo_bainha]
+            try {
+                const [existing] = await connection.query(
+                    'SELECT id FROM produtos WHERE codigo = ? AND loja = ?',
+                    [prod.codigo, prod.loja]
                 );
-                produtosIds[prod.codigo] = result.insertId;
+                if (existing.length > 0) {
+                    produtosIds[prod.codigo] = existing[0].id;
+                    console.log(`  → Produto ${prod.codigo} já existe (ID ${existing[0].id})`);
+                } else {
+                    console.log(`  → Criando produto ${prod.codigo}...`);
+                    const [result] = await connection.query(
+                        `INSERT INTO produtos (loja, codigo, cor_id, gramatura_id, largura_final, largura_sem_costura, fabricante, tipo_bainha, tipo_tecido) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Normal')`,
+                        [prod.loja, prod.codigo, coresIds[prod.cor], gramaturasIds[prod.gramatura], prod.largura, prod.largura_sem_costura, prod.fabricante, prod.tipo_bainha]
+                    );
+                    produtosIds[prod.codigo] = result.insertId;
+                    console.log(`  ✓ Produto criado com ID ${result.insertId}`);
+                }
+            } catch (err) {
+                console.error(`  ❌ Erro ao criar produto ${prod.codigo}:`, err.message);
+                console.error(`  SQL State: ${err.sqlState}, Errno: ${err.errno}`);
+                console.error(`  Valores:`, [prod.loja, prod.codigo, coresIds[prod.cor], gramaturasIds[prod.gramatura], prod.largura, prod.largura_sem_costura, prod.fabricante, prod.tipo_bainha]);
+                throw err;
             }
         }
         console.log('✅ Produtos criados/verificados');
@@ -305,10 +316,16 @@ router.post('/criar-cenario-teste', async (req, res) => {
     } catch (error) {
         await connection.rollback();
         console.error('❌ Erro ao criar cenário de teste:', error);
+        console.error('❌ SQL Message:', error.sqlMessage);
+        console.error('❌ SQL State:', error.sqlState);
+        console.error('❌ Errno:', error.errno);
+        console.error('❌ Stack:', error.stack);
         return res.status(500).json({ 
             success: false, 
             error: error.message,
-            stack: error.stack
+            sqlMessage: error.sqlMessage,
+            sqlState: error.sqlState,
+            errno: error.errno
         });
     } finally {
         connection.release();
