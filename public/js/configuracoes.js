@@ -648,7 +648,6 @@ function renderizarLocacoes() {
         <tr>
             <td><strong>${loc.codigo}</strong></td>
             <td>${loc.descricao || '-'}</td>
-            <td>${loc.capacidade || 'Ilimitada'}</td>
             <td>
                 <span class="badge ${loc.ativa ? 'badge-success' : 'badge-danger'}">
                     ${loc.ativa ? 'Ativa' : 'Inativa'}
@@ -687,14 +686,16 @@ function fecharModalLocacao() {
 
 function editarLocacao(id) {
     const locacao = locacoes.find(l => l.id === id);
-    if (!locacao) return;
+    if (!locacao) {
+        alert('Locação não encontrada');
+        return;
+    }
 
     locacaoEditando = locacao;
     document.getElementById('modal-locacao-title').textContent = 'Editar Locação';
     document.getElementById('locacao-id').value = locacao.id;
     document.getElementById('locacao-codigo').value = locacao.codigo;
     document.getElementById('locacao-descricao').value = locacao.descricao || '';
-    document.getElementById('locacao-capacidade').value = locacao.capacidade || '';
     document.getElementById('modal-locacao').classList.add('show');
 }
 
@@ -704,7 +705,6 @@ async function salvarLocacao(event) {
     const id = document.getElementById('locacao-id').value;
     const codigo = document.getElementById('locacao-codigo').value.trim().toUpperCase();
     const descricao = document.getElementById('locacao-descricao').value.trim();
-    const capacidade = document.getElementById('locacao-capacidade').value.trim();
 
     // Validar formato da máscara
     const regex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
@@ -725,7 +725,6 @@ async function salvarLocacao(event) {
             body: JSON.stringify({
                 codigo: codigo,
                 descricao: descricao || null,
-                capacidade: capacidade || null,
                 ativa: true
             })
         });
