@@ -557,6 +557,19 @@ async function confirmarValidacao(event) {
             
             if (data.data.ordem_concluida || (MODO_TESTE && ordemAtual.itens.length <= 1)) {
                 mostrarToast('✅ Item validado! Ordem concluída!', 'success');
+                
+                // Verificar se TODOS os itens do plano foram cortados
+                if (data.data.plano_completo) {
+                    console.log('🎯 Plano completo! Iniciando finalização com locações...');
+                    // Limpar estado
+                    bobinaAtual = null;
+                    itemValidando = null;
+                    removerFotoValidacao();
+                    
+                    // Ir para finalização com scanner de locações
+                    await iniciarFinalizacaoPlano(ordemAtual.id);
+                    return; // Não continua o fluxo normal
+                }
             } else {
                 mostrarToast('✅ Item validado com sucesso!', 'success');
             }

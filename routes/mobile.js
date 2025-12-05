@@ -313,7 +313,48 @@ router.post('/validar-item', async (req, res) => {
             await db.query('UPDATE alocacoes_corte SET confirmado = TRUE WHERE id = ?', [item_id]);
         } catch (e) { /* pode nao existir */ }
         
-        return res.json({ success: true, message: 'Corte validado!', data: { metragem_cortada, metragem_restante: nova_metragem.toFixed(2) } });
+        // Verificar se TODOS os itens do plano foram cortados
+        let planoCompleto = false;
+        try {
+            // Buscar o plano_corte_id a partir do item
+            const [itemPlano] = await db.query(`
+                SELECT ipc.plano_corte_id 
+                FROM alocacoes_corte ac
+                JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+                WHERE ac.id = ?
+            `, [item_id]);
+            
+            if (itemPlano && itemPlano.length > 0) {
+                const planoId = itemPlano[0].plano_corte_id;
+                
+                // Contar total de alocações e quantas estão confirmadas
+                const [stats] = await db.query(`
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN confirmado = TRUE THEN 1 ELSE 0 END) as confirmadas
+                    FROM alocacoes_corte ac
+                    JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+                    WHERE ipc.plano_corte_id = ?
+                `, [planoId]);
+                
+                if (stats && stats.length > 0) {
+                    planoCompleto = stats[0].total === stats[0].confirmadas;
+                    console.log(`📊 Plano ${planoId}: ${stats[0].confirmadas}/${stats[0].total} itens confirmados. Completo: ${planoCompleto}`);
+                }
+            }
+        } catch (e) {
+            console.error('Erro ao verificar se plano está completo:', e);
+        }
+        
+        return res.json({ 
+            success: true, 
+            message: 'Corte validado!', 
+            data: { 
+                metragem_cortada, 
+                metragem_restante: nova_metragem.toFixed(2),
+                plano_completo: planoCompleto
+            } 
+        });
     } catch (error) {
         console.error('Erro validar:', error);
         return res.status(500).json({ success: false, message: 'Erro ao validar item', error: error.message });
