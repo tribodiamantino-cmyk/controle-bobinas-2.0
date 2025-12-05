@@ -341,11 +341,14 @@ function mostrarConfirmacaoCorte() {
             </div>
 
             <div class="form-group">
-                <label for="foto-medidor-validacao">📸 Foto do Medidor (contraprova) *</label>
-                <input type="file" id="foto-medidor-validacao" accept="image/*" capture="environment" required>
+                <label>📸 Foto do Medidor (contraprova) *</label>
+                <input type="file" id="foto-medidor-validacao" accept="image/*" capture="environment" style="display: none;">
+                <button type="button" id="btn-tirar-foto" class="btn btn-secondary" onclick="document.getElementById('foto-medidor-validacao').click()" style="width: 100%; padding: 15px; font-size: 16px;">
+                    📷 Tirar Foto do Medidor
+                </button>
                 <div id="preview-foto-validacao" class="hidden" style="margin-top: 10px;">
                     <img id="preview-img-validacao" style="max-width: 100%; border-radius: 8px; border: 2px solid var(--primary);">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="removerFotoValidacao()" style="margin-top: 5px;">🗑️ Remover</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="removerFotoValidacao()" style="margin-top: 5px;">🗑️ Tirar Outra Foto</button>
                 </div>
             </div>
 
@@ -371,6 +374,7 @@ function mostrarConfirmacaoCorte() {
                 reader.onload = (event) => {
                     document.getElementById('preview-img-validacao').src = event.target.result;
                     document.getElementById('preview-foto-validacao').classList.remove('hidden');
+                    document.getElementById('btn-tirar-foto').style.display = 'none';
                 };
                 reader.readAsDataURL(file);
             }
@@ -388,6 +392,8 @@ function removerFotoValidacao() {
     if (preview) preview.classList.add('hidden');
     const img = document.getElementById('preview-img-validacao');
     if (img) img.src = '';
+    const btn = document.getElementById('btn-tirar-foto');
+    if (btn) btn.style.display = 'block';
 }
 
 async function confirmarValidacao(event) {
