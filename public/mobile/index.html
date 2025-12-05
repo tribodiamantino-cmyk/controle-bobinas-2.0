@@ -43,10 +43,16 @@
                     <div class="card-desc">Validar cortes de ordens em andamento</div>
                 </button>
 
-                <button class="menu-card" onclick="abrirTelaConsulta()">
+                <button class="menu-card" onclick="abrirTelaConsultas()">
                     <div class="card-icon">🔍</div>
-                    <div class="card-title">Consultar Bobina</div>
-                    <div class="card-desc">Visualizar detalhes e histórico completo</div>
+                    <div class="card-title">Consultas</div>
+                    <div class="card-desc">Consultar bobinas, retalhos ou cortes</div>
+                </button>
+
+                <button class="menu-card" onclick="abrirTelaCarregamento()">
+                    <div class="card-icon">🚚</div>
+                    <div class="card-title">Carregamento</div>
+                    <div class="card-desc">Validar planos finalizados para envio</div>
                 </button>
             </div>
         </div>
@@ -161,6 +167,251 @@
                 <div id="confirma-corte-container">
                     <!-- Formulário de confirmação via JS -->
                 </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- NOVAS TELAS: SISTEMA DE CORTES COM QR -->
+        <!-- ============================================ -->
+
+        <!-- TELA: Submenu Consultas -->
+        <div id="tela-consultas" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="voltarMenu()">← Voltar</button>
+                <h2>🔍 Consultas</h2>
+            </div>
+            <div class="menu-grid">
+                <button class="menu-card" onclick="abrirConsultaBobina()">
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">Consultar Bobina</div>
+                    <div class="card-desc">Escanear QR e ver detalhes da bobina</div>
+                </button>
+                <button class="menu-card" onclick="abrirConsultaCorte()">
+                    <div class="card-icon">✂️</div>
+                    <div class="card-title">Consultar Corte</div>
+                    <div class="card-desc">Escanear QR e ver detalhes do corte</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- TELA: Validar Bobina (antes de cortar) -->
+        <div id="tela-validar-bobina" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="voltarProducao()">← Voltar</button>
+                <h2>📱 Validar Bobina Origem</h2>
+            </div>
+
+            <div class="info-box info-warning">
+                <strong>Item selecionado:</strong>
+                <div id="item-validacao-info">Carregando...</div>
+            </div>
+
+            <div class="scanner-container">
+                <div id="reader-validar-bobina" class="qr-reader"></div>
+                <div class="scanner-instrucao">
+                    📱 Escaneie o QR Code da bobina/retalho que será cortada
+                </div>
+            </div>
+
+            <div id="validacao-resultado" class="hidden">
+                <!-- Preenchido via JS após scan -->
+            </div>
+        </div>
+
+        <!-- TELA: Registrar Corte (com foto do medidor) -->
+        <div id="tela-registrar-corte" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="cancelarRegistroCorte()">← Cancelar</button>
+                <h2>✂️ Registrar Corte</h2>
+            </div>
+
+            <div class="bobina-info" id="bobina-info-registro">
+                <!-- Preenchido via JS -->
+            </div>
+
+            <form id="form-registrar-corte" onsubmit="salvarNovoCorte(event)">
+                <div class="form-group">
+                    <label for="metragem-corte">Metragem Cortada (metros) *</label>
+                    <input type="number" id="metragem-corte" step="0.01" min="0.01" required>
+                    <small class="form-hint">Metragem restante a cortar: <span id="metragem-restante-display">-</span>m</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Foto do Medidor (Contraprova) *</label>
+                    <input type="file" id="foto-medidor" accept="image/*" capture="environment" required>
+                    <div id="preview-foto" class="foto-preview hidden">
+                        <img id="preview-img" src="" alt="Preview">
+                        <button type="button" class="btn-remove-foto" onclick="removerFoto()">✖ Remover</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="observacoes-registro">Observações (opcional)</label>
+                    <textarea id="observacoes-registro" rows="3" placeholder="Ex: corte com defeito, ajuste de metragem..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="cancelarRegistroCorte()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">💾 Registrar Corte</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- TELA: QR Corte Gerado (após registrar corte) -->
+        <div id="tela-qr-corte-gerado" class="tela">
+            <div class="tela-header">
+                <h2>✅ Corte Registrado!</h2>
+            </div>
+
+            <div class="success-box">
+                <div class="success-icon">✂️</div>
+                <div class="success-title">Corte cadastrado com sucesso</div>
+                <div id="codigo-corte-display" class="codigo-display">COR-2025-00001</div>
+            </div>
+
+            <div class="qr-display-container">
+                <img id="qr-corte-img" src="" alt="QR Code do Corte">
+                <p class="qr-instrucao">Imprima ou escaneie este QR Code para consultar o corte</p>
+            </div>
+
+            <div id="info-progresso-item" class="info-box">
+                <!-- Preenchido via JS com progresso do item -->
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="registrarOutroCorte()">✂️ Cortar Mais</button>
+                <button class="btn btn-primary" onclick="finalizarItemCorte()">✅ Finalizar Item</button>
+            </div>
+        </div>
+
+        <!-- TELA: Finalizar Plano (escanear locações) -->
+        <div id="tela-finalizar-plano" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="voltarProducao()">← Voltar</button>
+                <h2>📍 Armazenar Plano</h2>
+            </div>
+
+            <div class="info-box info-success">
+                <strong>🎉 Todos os itens foram cortados!</strong>
+                <p>Agora escaneie as locações onde o plano será armazenado.</p>
+            </div>
+
+            <div id="plano-info-finalizar">
+                <!-- Info do plano via JS -->
+            </div>
+
+            <div class="scanner-container">
+                <div id="reader-locacao" class="qr-reader"></div>
+                <div class="scanner-instrucao">
+                    📱 Escaneie o QR Code da locação de armazenamento
+                </div>
+            </div>
+
+            <div id="locacoes-escaneadas" class="locacoes-list">
+                <h3>Locações Escaneadas:</h3>
+                <div id="lista-locacoes">
+                    <!-- Lista preenchida via JS -->
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="cancelarFinalizacao()">Cancelar</button>
+                <button id="btn-confirmar-finalizacao" class="btn btn-primary" disabled onclick="confirmarFinalizacao()">
+                    ✅ Confirmar Armazenamento
+                </button>
+            </div>
+        </div>
+
+        <!-- TELA: Consultar Corte (via QR) -->
+        <div id="tela-consultar-corte-qr" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="voltarConsultas()">← Voltar</button>
+                <h2>🔍 Consultar Corte</h2>
+            </div>
+
+            <!-- Scanner -->
+            <div id="passo-scanner-corte-consulta" class="passo active">
+                <div class="scanner-container">
+                    <div id="reader-consulta-corte" class="qr-reader"></div>
+                    <div class="scanner-instrucao">
+                        📱 Escaneie o QR Code do corte
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="voltarConsultas()">Cancelar</button>
+            </div>
+
+            <!-- Detalhes do Corte -->
+            <div id="passo-detalhes-corte" class="passo">
+                <div id="corte-detalhes-container">
+                    <!-- Preenchido via JS -->
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-secondary" onclick="escanearOutroCorte()">🔍 Escanear Outro</button>
+                    <button class="btn btn-primary" onclick="imprimirEtiquetaCorte()">🖨️ Imprimir Etiqueta</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA: Carregamento - Lista Planos -->
+        <div id="tela-carregamento" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="voltarMenu()">← Voltar</button>
+                <h2>🚚 Carregamento</h2>
+            </div>
+
+            <div id="lista-planos-finalizados">
+                <!-- Cards de planos preenchidos via JS -->
+            </div>
+
+            <button class="btn btn-secondary" onclick="carregarPlanosFinalizados()" style="margin-top: 1rem;">
+                🔄 Atualizar Lista
+            </button>
+        </div>
+
+        <!-- TELA: Validação Carregamento -->
+        <div id="tela-validacao-carregamento" class="tela">
+            <div class="tela-header">
+                <button class="btn-back" onclick="cancelarCarregamento()">← Cancelar</button>
+                <h2>📦 Validar Carregamento</h2>
+            </div>
+
+            <div id="carregamento-info">
+                <!-- Info do carregamento via JS -->
+            </div>
+
+            <div class="progresso-carregamento">
+                <div class="progresso-header">
+                    <span>Progresso:</span>
+                    <span id="progresso-texto">0 / 0</span>
+                </div>
+                <div class="progresso-bar">
+                    <div id="progresso-fill" class="progresso-fill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="scanner-container">
+                <div id="reader-carregamento" class="qr-reader"></div>
+                <div class="scanner-instrucao">
+                    📱 Escaneie os QR Codes dos cortes para validar
+                </div>
+            </div>
+
+            <div id="feedback-scan" class="scan-feedback hidden">
+                <!-- Feedback visual verde/vermelho após scan -->
+            </div>
+
+            <div id="lista-cortes-validados" class="cortes-validados-list">
+                <h3>Cortes Validados:</h3>
+                <div id="lista-validados">
+                    <!-- Lista preenchida via JS com ícones ✅ -->
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="cancelarCarregamento()">Cancelar</button>
+                <button id="btn-finalizar-carregamento" class="btn btn-primary" disabled onclick="finalizarCarregamento()">
+                    ✅ Finalizar Carregamento
+                </button>
             </div>
         </div>
     </div>
