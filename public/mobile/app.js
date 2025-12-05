@@ -256,10 +256,13 @@ async function processarValidacao(origemId) {
     mostrarLoading(true);
     
     try {
-        // Determinar endpoint baseado no tipo
-        const endpoint = itemValidando.tipo === 'retalho' 
-            ? `/api/mobile/retalho/${origemId}`
-            : `/api/mobile/bobina/${origemId}`;
+        // Determinar endpoint baseado no tipo E no modo teste
+        let endpoint;
+        if (itemValidando.tipo === 'retalho') {
+            endpoint = MODO_TESTE ? `/api/mobile/teste/retalho/${origemId}` : `/api/mobile/retalho/${origemId}`;
+        } else {
+            endpoint = MODO_TESTE ? `/api/mobile/teste/bobina/${origemId}` : `/api/mobile/bobina/${origemId}`;
+        }
             
         const response = await fetch(endpoint);
         const data = await response.json();
