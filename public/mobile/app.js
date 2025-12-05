@@ -555,23 +555,27 @@ async function confirmarValidacao(event) {
                 console.log('🧪 [TESTE] Total validados:', itensValidadosTeste.length);
             }
             
-            if (data.data.ordem_concluida || (MODO_TESTE && ordemAtual.itens.length <= 1)) {
-                mostrarToast('✅ Item validado! Ordem concluída!', 'success');
+            mostrarToast('✅ Item validado com sucesso!', 'success');
+            
+            // Verificar se acabaram os cortes DESTA BOBINA (não do plano todo)
+            if (data.data.bobina_concluida) {
+                console.log('📦 Todos os cortes desta bobina foram concluídos!');
+                console.log('📍 Bobina ID:', bobinaAtual.id);
                 
-                // Verificar se TODOS os itens do plano foram cortados
-                if (data.data.plano_completo) {
-                    console.log('🎯 Plano completo! Iniciando finalização com locações...');
-                    // Limpar estado
-                    bobinaAtual = null;
-                    itemValidando = null;
-                    removerFotoValidacao();
-                    
-                    // Ir para finalização com scanner de locações
-                    await iniciarFinalizacaoPlano(ordemAtual.id);
-                    return; // Não continua o fluxo normal
-                }
-            } else {
-                mostrarToast('✅ Item validado com sucesso!', 'success');
+                // Guardar ID da bobina que precisa ser guardada
+                const bobinaParaGuardar = {
+                    id: bobinaAtual.id,
+                    codigo: bobinaAtual.codigo_interno,
+                    tipo: bobinaAtual.tipo_origem || 'bobina'
+                };
+                
+                // Limpar estado do corte
+                itemValidando = null;
+                removerFotoValidacao();
+                
+                // Pedir para guardar bobina e escanear locação
+                await solicitarLocalizacaoBobina(bobinaParaGuardar);
+                return; // Não continua o fluxo normal até guardar
             }
             
             // Limpar estado e foto
@@ -609,6 +613,113 @@ async function confirmarValidacao(event) {
     }
 }
 
+// ========== SOLICITAR LOCALIZAÇÃO APÓS CORTAR BOBINA ==========
+let bobinaAguardandoLocalizacao = null;
+
+async function solicitarLocalizacaoBobina(bobina) {
+    bobinaAguardandoLocalizacao = bobina;
+    
+    // Mostrar instrução
+    const container = document.getElementById('container-guardar-bobina');
+    container.innerHTML = `
+        <div class="card" style="text-align: center; padding: 30px;">
+            <h2 style="margin: 0 0 20px 0;">📦 Guardar Bobina</h2>
+            <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="font-size: 18px; margin: 0 0 10px 0;">
+                    <strong>${bobina.codigo}</strong>
+                </p>
+                <p style="margin: 0; color: #666;">
+                    Todos os cortes desta bobina foram concluídos
+                </p>
+            </div>
+            
+            <div class="alert alert-info" style="margin-bottom: 20px;">
+                <strong>📍 Próximo passo:</strong><br>
+                Guarde a bobina em uma localização e escaneie o QR code da locação
+            </div>
+            
+            <button class="btn btn-primary" onclick="iniciarScannerLocalizacao()">
+                📱 Escanear Localização
+            </button>
+        </div>
+    `;
+    
+    mostrarPasso('passo-guardar-bobina');
+}
+
+async function iniciarScannerLocalizacao() {
+    document.getElementById('instrucao-scanner-localizacao').innerHTML = `
+        📱 Escaneie o QR code da <strong>localização</strong> onde guardou a bobina
+    `;
+    
+    mostrarPasso('passo-scanner-localizacao');
+    await pararScanner();
+    iniciarScanner('localizacao');
+}
+
+async function processarLocalizacao(codigoLocalizacao) {
+    if (!bobinaAguardandoLocalizacao) {
+        mostrarToast('❌ Erro: bobina não identificada', 'error');
+        voltarParaItens();
+        return;
+    }
+    
+    mostrarLoading(true);
+    
+    try {
+        // Validar formato da localização (N-X-N)
+        if (!/^\d+-[A-Z]-\d+$/.test(codigoLocalizacao)) {
+            mostrarToast('❌ Código de localização inválido. Use formato: 1-A-1', 'error');
+            setTimeout(() => iniciarScanner('localizacao'), 1500);
+            return;
+        }
+        
+        // Atualizar localização da bobina no banco
+        const endpoint = bobinaAguardandoLocalizacao.tipo === 'retalho' 
+            ? '/api/mobile/atualizar-localizacao-retalho'
+            : '/api/mobile/atualizar-localizacao-bobina';
+            
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: bobinaAguardandoLocalizacao.id,
+                localizacao: codigoLocalizacao
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarToast(`✅ Bobina guardada em ${codigoLocalizacao}`, 'success');
+            
+            // Limpar estado
+            bobinaAtual = null;
+            bobinaAguardandoLocalizacao = null;
+            
+            // Recarregar ordens
+            await carregarOrdensProducao();
+            
+            // Verificar se ainda tem itens pendentes
+            ordemAtual = ordensProducao.find(o => o.id === ordemAtual.id);
+            if (ordemAtual && ordemAtual.itens.length > 0) {
+                renderizarDetalhesOrdem();
+                mostrarPasso('passo-ordem-detalhes');
+            } else {
+                // Plano concluído
+                mostrarPasso('passo-lista-ordens');
+            }
+        } else {
+            throw new Error(data.message || 'Erro ao atualizar localização');
+        }
+    } catch (error) {
+        console.error('Erro ao processar localização:', error);
+        mostrarToast(error.message || 'Erro ao guardar bobina', 'error');
+    } finally {
+        mostrarLoading(false);
+    }
+}
+
 // ========== CONTROLE DE PASSOS ==========
 function mostrarPasso(passoId) {
     // Encontrar container pai
@@ -632,6 +743,8 @@ function iniciarScanner(tipo) {
         readerId = 'reader-consulta';
     } else if (tipo === 'validacao') {
         readerId = 'reader-validacao';
+    } else if (tipo === 'localizacao') {
+        readerId = 'reader-localizacao';
     }
     
     if (scannerTransicao || scannerAtivo) {
@@ -710,6 +823,13 @@ async function onScanSucesso(qrData, tipo) {
     try {
         // Limpar espaços em branco
         qrData = qrData.trim();
+        
+        // Se está escaneando localização (formato N-X-N como 1-A-1)
+        if (tipo === 'localizacao') {
+            console.log('📍 Processando localização:', qrData);
+            await processarLocalizacao(qrData);
+            return;
+        }
         
         // Novo formato simplificado: B-123 ou R-456
         let bobinaId = null;

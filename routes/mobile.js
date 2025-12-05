@@ -313,6 +313,27 @@ router.post('/validar-item', async (req, res) => {
             await db.query('UPDATE alocacoes_corte SET confirmado = TRUE WHERE id = ?', [item_id]);
         } catch (e) { /* pode nao existir */ }
         
+        // Verificar se TODOS os cortes desta BOBINA foram concluídos
+        let bobinaConcluida = false;
+        try {
+            // Contar total de alocações desta bobina/retalho e quantas estão confirmadas
+            const campo = tipoOrigem === 'retalho' ? 'retalho_id' : 'bobina_id';
+            const [statsOrigem] = await db.query(`
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN confirmado = TRUE THEN 1 ELSE 0 END) as confirmadas
+                FROM alocacoes_corte
+                WHERE ${campo} = ?
+            `, [origemId]);
+            
+            if (statsOrigem && statsOrigem.length > 0) {
+                bobinaConcluida = statsOrigem[0].total === statsOrigem[0].confirmadas;
+                console.log(`📦 ${tipoOrigem} ${origemId}: ${statsOrigem[0].confirmadas}/${statsOrigem[0].total} cortes confirmados. Concluída: ${bobinaConcluida}`);
+            }
+        } catch (e) {
+            console.error('Erro ao verificar se bobina está concluída:', e);
+        }
+        
         // Verificar se TODOS os itens do plano foram cortados
         let planoCompleto = false;
         try {
@@ -352,6 +373,7 @@ router.post('/validar-item', async (req, res) => {
             data: { 
                 metragem_cortada, 
                 metragem_restante: nova_metragem.toFixed(2),
+                bobina_concluida: bobinaConcluida,
                 plano_completo: planoCompleto
             } 
         });
@@ -698,6 +720,58 @@ router.post('/carregamento/finalizar', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Atualizar localização de bobina após corte
+router.post('/atualizar-localizacao-bobina', async (req, res) => {
+    try {
+        const { id, localizacao } = req.body;
+        
+        if (!id || !localizacao) {
+            return res.status(400).json({ success: false, message: 'ID e localização são obrigatórios' });
+        }
+        
+        // Validar formato da localização (N-X-N)
+        if (!/^\d+-[A-Z]-\d+$/.test(localizacao)) {
+            return res.status(400).json({ success: false, message: 'Formato de localização inválido. Use: 1-A-1' });
+        }
+        
+        await db.query(
+            'UPDATE bobinas SET localizacao_atual = ? WHERE id = ?',
+            [localizacao, id]
+        );
+        
+        res.json({ success: true, message: 'Localização atualizada com sucesso' });
+    } catch (error) {
+        console.error('Erro ao atualizar localização:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Atualizar localização de retalho após corte
+router.post('/atualizar-localizacao-retalho', async (req, res) => {
+    try {
+        const { id, localizacao } = req.body;
+        
+        if (!id || !localizacao) {
+            return res.status(400).json({ success: false, message: 'ID e localização são obrigatórios' });
+        }
+        
+        // Validar formato da localização (N-X-N)
+        if (!/^\d+-[A-Z]-\d+$/.test(localizacao)) {
+            return res.status(400).json({ success: false, message: 'Formato de localização inválido. Use: 1-A-1' });
+        }
+        
+        await db.query(
+            'UPDATE retalhos SET localizacao_atual = ? WHERE id = ?',
+            [localizacao, id]
+        );
+        
+        res.json({ success: true, message: 'Localização atualizada com sucesso' });
+    } catch (error) {
+        console.error('Erro ao atualizar localização:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 

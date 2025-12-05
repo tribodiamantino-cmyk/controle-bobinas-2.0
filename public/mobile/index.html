@@ -168,6 +168,24 @@
                     <!-- Formulário de confirmação via JS -->
                 </div>
             </div>
+
+            <!-- Passo: Guardar Bobina -->
+            <div id="passo-guardar-bobina" class="passo">
+                <div id="container-guardar-bobina">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+
+            <!-- Passo: Scanner de Localização -->
+            <div id="passo-scanner-localizacao" class="passo">
+                <div class="scanner-container">
+                    <div id="reader-localizacao" class="qr-reader"></div>
+                    <div class="scanner-instrucao" id="instrucao-scanner-localizacao">
+                        📱 Escaneie o QR code da localização
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="cancelarValidacao()">Cancelar</button>
+            </div>
         </div>
 
         <!-- ============================================ -->
