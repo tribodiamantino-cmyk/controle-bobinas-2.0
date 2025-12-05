@@ -502,11 +502,25 @@ async function confirmarValidacao(event) {
                 body: formData
             });
             
+            if (!uploadResponse.ok) {
+                throw new Error(`Erro HTTP: ${uploadResponse.status}`);
+            }
+            
             const uploadData = await uploadResponse.json();
+            console.log('📤 Upload response:', uploadData);
+            
             if (!uploadData.success) {
                 throw new Error(uploadData.error || 'Erro ao fazer upload da foto');
             }
+            
+            // Verificar se data existe e tem filePath
+            if (!uploadData.data || !uploadData.data.filePath) {
+                console.error('❌ Upload data inválido:', uploadData);
+                throw new Error('Resposta de upload inválida');
+            }
+            
             fotoPath = uploadData.data.filePath;
+            console.log('✅ Foto enviada:', fotoPath);
         } else {
             // No modo teste, simular path da foto
             fotoPath = '/uploads/teste/foto-simulada.jpg';

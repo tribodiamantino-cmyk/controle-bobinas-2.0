@@ -383,8 +383,11 @@ router.post('/upload-foto-medidor', upload.single('foto'), async (req, res) => {
         const foto_url = `/uploads/fotos-medidor/${req.file.filename}`;
         
         res.json({ 
-            success: true, 
-            foto_url,
+            success: true,
+            data: {
+                filePath: foto_url,
+                filename: req.file.filename
+            },
             timestamp: new Date().toISOString()
         });
     } catch (error) {
