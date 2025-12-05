@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Criar Cenário de Teste Real</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        
+        /* Botão principal */
+        .action-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-criar {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #000;
+        }
+        
+        .btn-criar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        
+        .btn-criar:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-mobile {
+            background: linear-gradient(135deg, #e94560, #ff6b8a);
+            color: #fff;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-mobile:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Status */
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 16px;
+        }
+        
+        .status.loading {
+            background: #2a2a4a;
+            color: #00d4ff;
+        }
+        
+        .status.success {
+            background: #1a4a2a;
+            color: #4ade80;
+        }
+        
+        .status.error {
+            background: #4a1a1a;
+            color: #f87171;
+        }
+        
+        /* Cards */
+        .section {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .section h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Plano info */
+        .plano-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .plano-item {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .plano-item label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        
+        .plano-item value {
+            display: block;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        /* Grid de etiquetas */
+        .etiquetas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .etiqueta {
+            background: #fff;
+            color: #000;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .etiqueta-header {
+            background: #000;
+            color: #fff;
+            padding: 8px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .etiqueta-codigo {
+            font-size: 16px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 10px;
+            color: #e94560;
+        }
+        
+        .etiqueta-qr {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        .etiqueta-info {
+            font-size: 13px;
+            color: #555;
+            text-align: left;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .etiqueta-info div {
+            margin: 3px 0;
+        }
+        
+        /* Tabela de itens */
+        .itens-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .itens-table th {
+            background: #0f3460;
+            color: #00d4ff;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .itens-table td {
+            padding: 12px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        
+        .itens-table tr:hover {
+            background: #0f3460;
+        }
+        
+        .qr-code-small {
+            font-family: 'Courier New', monospace;
+            background: #e94560;
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        /* Instruções */
+        .instrucoes {
+            background: #0f3460;
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .instrucoes ol {
+            margin-left: 20px;
+        }
+        
+        .instrucoes li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        
+        .instrucoes code {
+            background: #16213e;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #e94560;
+        }
+        
+        /* Hidden */
+        .hidden {
+            display: none;
+        }
+        
+        /* Print */
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            .action-section, .instrucoes, .btn, h1, .subtitle {
+                display: none;
+            }
+            .section {
+                background: white;
+                border: 1px solid #ccc;
+            }
+            .etiqueta {
+                border: 2px solid #000;
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Criar Cenário de Teste Real</h1>
+        <p class="subtitle">Gera dados reais no banco para testar o fluxo completo de corte</p>
+        
+        <!-- Ação principal -->
+        <div class="action-section">
+            <button id="btn-criar" class="btn btn-criar" onclick="criarCenario()">
+                🚀 Criar Cenário de Teste
+            </button>
+        </div>
+        
+        <!-- Status -->
+        <div id="status" class="status hidden"></div>
+        
+        <!-- Resultado (inicialmente oculto) -->
+        <div id="resultado" class="hidden">
+            
+            <!-- Plano criado -->
+            <div class="section">
+                <h2>📋 Plano de Corte Criado</h2>
+                <div class="plano-info" id="plano-info"></div>
+            </div>
+            
+            <!-- Link para mobile -->
+            <div class="action-section">
+                <a id="link-mobile" href="/mobile/" target="_blank" class="btn btn-mobile">
+                    📱 Abrir App Mobile para Operar
+                </a>
+            </div>
+            
+            <!-- Instruções -->
+            <div class="section instrucoes">
+                <h2>📝 Como Testar</h2>
+                <ol id="instrucoes-lista"></ol>
+            </div>
+            
+            <!-- Itens do plano -->
+            <div class="section">
+                <h2>✂️ Itens para Cortar</h2>
+                <table class="itens-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Bobina</th>
+                            <th>QR Code</th>
+                            <th>Metragem</th>
+                            <th>Localização</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itens-lista"></tbody>
+                </table>
+            </div>
+            
+            <!-- QR Codes das Bobinas -->
+            <div class="section">
+                <h2>📦 QR Codes das Bobinas (para escanear)</h2>
+                <p style="color: #888; margin-bottom: 15px;">Imprima ou exiba na tela para escanear com o celular</p>
+                <div class="etiquetas-grid" id="bobinas-qr"></div>
+            </div>
+            
+            <!-- QR Codes das Locações -->
+            <div class="section">
+                <h2>📍 QR Codes das Locações (para finalização)</h2>
+                <p style="color: #888; margin-bottom: 15px;">Use após todos os cortes para indicar onde armazenar</p>
+                <div class="etiquetas-grid" id="locacoes-qr"></div>
+            </div>
+            
+            <!-- Botão imprimir -->
+            <div class="action-section">
+                <button class="btn btn-criar" onclick="window.print()">🖨️ Imprimir QR Codes</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let dadosCenario = null;
+        
+        async function criarCenario() {
+            const btn = document.getElementById('btn-criar');
+            const status = document.getElementById('status');
+            const resultado = document.getElementById('resultado');
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Criando...';
+            
+            status.className = 'status loading';
+            status.textContent = '🔄 Criando cenário de teste no banco de dados...';
+            status.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/api/seed/criar-cenario-teste', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Erro desconhecido');
+                }
+                
+                dadosCenario = data;
+                
+                status.className = 'status success';
+                status.textContent = '✅ ' + data.message;
+                
+                renderizarResultado(data);
+                resultado.classList.remove('hidden');
+                
+                btn.textContent = '✅ Cenário Criado!';
+                
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = '❌ Erro: ' + error.message;
+                btn.disabled = false;
+                btn.textContent = '🚀 Tentar Novamente';
+            }
+        }
+        
+        function renderizarResultado(data) {
+            // Plano info
+            const planoHtml = `
+                <div class="plano-item">
+                    <label>Código</label>
+                    <value>${data.plano.codigo}</value>
+                </div>
+                <div class="plano-item">
+                    <label>Cliente</label>
+                    <value>${data.plano.cliente}</value>
+                </div>
+                <div class="plano-item">
+                    <label>Aviário</label>
+                    <value>${data.plano.aviario}</value>
+                </div>
+                <div class="plano-item">
+                    <label>Status</label>
+                    <value style="color: #ffc107;">EM PRODUÇÃO</value>
+                </div>
+                <div class="plano-item">
+                    <label>Total de Cortes</label>
+                    <value>${data.itens.length}</value>
+                </div>
+            `;
+            document.getElementById('plano-info').innerHTML = planoHtml;
+            
+            // Instruções
+            const instrHtml = Object.entries(data.instrucoes).map(([key, value]) => 
+                `<li>${value}</li>`
+            ).join('');
+            document.getElementById('instrucoes-lista').innerHTML = instrHtml;
+            
+            // Itens do plano
+            const itensHtml = data.itens.map(item => `
+                <tr>
+                    <td><strong>${item.numero}</strong></td>
+                    <td>${item.bobina_codigo}</td>
+                    <td><span class="qr-code-small">${item.bobina_qr}</span></td>
+                    <td><strong>${item.metragem_cortar}m</strong></td>
+                    <td>${item.localizacao}</td>
+                </tr>
+            `).join('');
+            document.getElementById('itens-lista').innerHTML = itensHtml;
+            
+            // QR codes das bobinas
+            const bobinasContainer = document.getElementById('bobinas-qr');
+            bobinasContainer.innerHTML = data.bobinas.map(bob => `
+                <div class="etiqueta">
+                    <div class="etiqueta-header">📦 BOBINA</div>
+                    <div class="etiqueta-codigo">${bob.codigo}</div>
+                    <div class="etiqueta-qr" id="qr-bob-${bob.id}"></div>
+                    <div class="etiqueta-info">
+                        <div><strong>QR:</strong> ${bob.qr_code}</div>
+                        <div><strong>Produto:</strong> ${bob.produto}</div>
+                        <div><strong>Metragem:</strong> ${bob.metragem}m</div>
+                        <div><strong>Localização:</strong> ${bob.localizacao}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Gerar QR codes das bobinas
+            setTimeout(() => {
+                data.bobinas.forEach(bob => {
+                    const container = document.getElementById(`qr-bob-${bob.id}`);
+                    if (container) {
+                        new QRCode(container, {
+                            text: bob.qr_code,
+                            width: 150,
+                            height: 150,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    }
+                });
+            }, 100);
+            
+            // QR codes das locações
+            const locacoesContainer = document.getElementById('locacoes-qr');
+            locacoesContainer.innerHTML = data.locacoes_destino.map(loc => `
+                <div class="etiqueta" style="border: 3px solid #10b981;">
+                    <div class="etiqueta-header" style="background: #10b981;">📍 LOCAÇÃO</div>
+                    <div class="etiqueta-codigo" style="color: #10b981; font-size: 24px;">${loc.codigo}</div>
+                    <div class="etiqueta-qr" id="qr-loc-${loc.id}"></div>
+                    <div class="etiqueta-info">
+                        <div><strong>QR:</strong> ${loc.qr_code}</div>
+                        <div><strong>ID:</strong> ${loc.id}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Gerar QR codes das locações
+            setTimeout(() => {
+                data.locacoes_destino.forEach(loc => {
+                    const container = document.getElementById(`qr-loc-${loc.id}`);
+                    if (container) {
+                        new QRCode(container, {
+                            text: loc.qr_code,
+                            width: 150,
+                            height: 150,
+                            colorDark: "#10b981",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    }
+                });
+            }, 200);
+        }
+    </script>
+</body>
+</html>

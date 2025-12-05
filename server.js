@@ -126,6 +126,7 @@ const migrateRoutes = require('./routes/migrate');
 const mobileRoutes = require('./routes/mobile');
 const qrcodesRoutes = require('./routes/qrcodes');
 const locacoesRoutes = require('./routes/locacoes');
+const seedTesteRoutes = require('./routes/seed-teste');
 
 // Usar rotas
 app.use('/api/cores', coresRoutes);
@@ -141,6 +142,7 @@ app.use('/api/database', migrateRoutes);
 app.use('/api/mobile', mobileRoutes);
 app.use('/api/qrcodes', qrcodesRoutes);
 app.use('/api/locacoes', locacoesRoutes);
+app.use('/api/seed', seedTesteRoutes);
 
 // Servir arquivos de upload
 app.use('/uploads', express.static('uploads'));
