@@ -70,24 +70,24 @@ router.post('/criar-cenario-teste', async (req, res) => {
         // 3. CRIAR PRODUTOS
         // =====================================================
         const produtos = [
-            { codigo: 'LONA-AZ-180-500', cor: 'Azul Royal', gramatura: 180, largura: 500, fabricante: 'Propex' },
-            { codigo: 'LONA-VD-200-600', cor: 'Verde Escuro', gramatura: 200, largura: 600, fabricante: 'Textiloeste' },
-            { codigo: 'LONA-PT-150-500', cor: 'Preto', gramatura: 150, largura: 500, fabricante: 'Propex' }
+            { codigo: 'LONA-AZ-180-500', cor: 'Azul Royal', gramatura: 180, largura: 500, fabricante: 'Propex', loja: 'Cortinave', largura_sem_costura: 510, tipo_bainha: 'Cano/Cano' },
+            { codigo: 'LONA-VD-200-600', cor: 'Verde Escuro', gramatura: 200, largura: 600, fabricante: 'Textiloeste', loja: 'Cortinave', largura_sem_costura: 615, tipo_bainha: 'Cano/Arame' },
+            { codigo: 'LONA-PT-150-500', cor: 'Preto', gramatura: 150, largura: 500, fabricante: 'Propex', loja: 'BN', largura_sem_costura: 510, tipo_bainha: 'Arame/Arame' }
         ];
         
         const produtosIds = {};
         for (const prod of produtos) {
             const [existing] = await connection.query(
-                'SELECT id FROM produtos WHERE codigo = ?',
-                [prod.codigo]
+                'SELECT id FROM produtos WHERE codigo_produto = ? AND loja = ?',
+                [prod.codigo, prod.loja]
             );
             if (existing.length > 0) {
                 produtosIds[prod.codigo] = existing[0].id;
             } else {
                 const [result] = await connection.query(
-                    `INSERT INTO produtos (codigo, cor_id, gramatura_id, largura_final, fabricante, tipo_tecido) 
-                     VALUES (?, ?, ?, ?, ?, 'Normal')`,
-                    [prod.codigo, coresIds[prod.cor], gramaturasIds[prod.gramatura], prod.largura, prod.fabricante]
+                    `INSERT INTO produtos (loja, codigo_produto, cor_id, gramatura_id, largura_final, largura_sem_costura, fabricante, tipo_bainha, tipo_tecido) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Normal')`,
+                    [prod.loja, prod.codigo, coresIds[prod.cor], gramaturasIds[prod.gramatura], prod.largura, prod.largura_sem_costura, prod.fabricante, prod.tipo_bainha]
                 );
                 produtosIds[prod.codigo] = result.insertId;
             }
@@ -143,9 +143,9 @@ router.post('/criar-cenario-teste', async (req, res) => {
         }
         
         const bobinas = [
-            { produto: 'LONA-AZ-180-500', metragem: 250, localizacao: '1-A-1', loja: 'CTV' },
-            { produto: 'LONA-AZ-180-500', metragem: 180, localizacao: '1-A-2', loja: 'CTV' },
-            { produto: 'LONA-VD-200-600', metragem: 300, localizacao: '1-B-1', loja: 'CTV' },
+            { produto: 'LONA-AZ-180-500', metragem: 250, localizacao: '1-A-1', loja: 'Cortinave' },
+            { produto: 'LONA-AZ-180-500', metragem: 180, localizacao: '1-A-2', loja: 'Cortinave' },
+            { produto: 'LONA-VD-200-600', metragem: 300, localizacao: '1-B-1', loja: 'Cortinave' },
             { produto: 'LONA-PT-150-500', metragem: 200, localizacao: '2-A-1', loja: 'BN' }
         ];
         
@@ -153,14 +153,16 @@ router.post('/criar-cenario-teste', async (req, res) => {
         const bobinasInfo = [];
         
         for (const bob of bobinas) {
-            const codigoInterno = `${bob.loja}-${ano}-${String(sequencial).padStart(5, '0')}`;
+            // Código interno usa CTV/BN como prefixo
+            const prefixoCodigo = bob.loja === 'Cortinave' ? 'CTV' : 'BN';
+            const codigoInterno = `${prefixoCodigo}-${ano}-${String(sequencial).padStart(5, '0')}`;
             sequencial++;
             
             const [result] = await connection.query(
                 `INSERT INTO bobinas 
                  (produto_id, codigo_interno, metragem_inicial, metragem_atual, metragem_reservada, 
                   localizacao_atual, status, loja, data_entrada, nota_fiscal) 
-                 VALUES (?, ?, ?, ?, 0, ?, 'disponivel', ?, NOW(), 'NF-TESTE-001')`,
+                 VALUES (?, ?, ?, ?, 0, ?, 'Disponível', ?, NOW(), 'NF-TESTE-001')`,
                 [produtosIds[bob.produto], codigoInterno, bob.metragem, bob.metragem, bob.localizacao, bob.loja]
             );
             
