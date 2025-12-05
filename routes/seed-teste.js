@@ -135,58 +135,44 @@ router.post('/criar-cenario-teste', async (req, res) => {
         console.log('✅ Locações criadas/verificadas');
         
         // =====================================================
-        // 5. CRIAR BOBINAS COM METRAGEM
+        // 5. BUSCAR BOBINAS DISPONÍVEIS NO ESTOQUE
         // =====================================================
-        const agora = new Date();
-        const ano = agora.getFullYear();
+        console.log('🔍 Buscando bobinas disponíveis no estoque...');
         
-        // Buscar último código interno do ano
-        const [ultimoCodigo] = await connection.query(
-            `SELECT codigo_interno FROM bobinas 
-             WHERE codigo_interno LIKE 'CTV-${ano}-%' 
-             ORDER BY id DESC LIMIT 1`
+        // Buscar bobinas disponíveis com metragem suficiente
+        const [bobinasDisponiveis] = await connection.query(
+            `SELECT b.id, b.codigo_interno, b.metragem_atual, b.metragem_reservada, 
+                    b.localizacao_atual, p.codigo as produto_codigo,
+                    c.nome_cor, g.gramatura
+             FROM bobinas b
+             JOIN produtos p ON b.produto_id = p.id
+             JOIN configuracoes_cores c ON p.cor_id = c.id
+             JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+             WHERE b.status = 'Disponível' 
+             AND (b.metragem_atual - b.metragem_reservada) >= 30
+             ORDER BY b.metragem_atual DESC
+             LIMIT 10`
         );
         
-        let sequencial = 1;
-        if (ultimoCodigo.length > 0) {
-            const partes = ultimoCodigo[0].codigo_interno.split('-');
-            sequencial = parseInt(partes[2]) + 1;
+        if (bobinasDisponiveis.length < 3) {
+            throw new Error('Não há bobinas suficientes disponíveis no estoque. Cadastre pelo menos 3 bobinas com 30m+ disponíveis.');
         }
         
-        const bobinas = [
-            { produto: 'LONA-AZ-180-500', metragem: 250, localizacao: '1-A-1', loja: 'Cortinave' },
-            { produto: 'LONA-AZ-180-500', metragem: 180, localizacao: '1-A-2', loja: 'Cortinave' },
-            { produto: 'LONA-VD-200-600', metragem: 300, localizacao: '1-B-1', loja: 'Cortinave' },
-            { produto: 'LONA-PT-150-500', metragem: 200, localizacao: '2-A-1', loja: 'BN' }
-        ];
+        // Selecionar as primeiras 4 bobinas (ou menos se não tiver)
+        const bobinasInfo = bobinasDisponiveis.slice(0, Math.min(4, bobinasDisponiveis.length)).map(b => ({
+            id: b.id,
+            codigo: b.codigo_interno,
+            produto: b.produto_codigo,
+            metragem: parseFloat(b.metragem_atual) - parseFloat(b.metragem_reservada),
+            localizacao: b.localizacao_atual,
+            cor: b.nome_cor,
+            gramatura: b.gramatura
+        }));
         
-        const bobinasIds = [];
-        const bobinasInfo = [];
-        
-        for (const bob of bobinas) {
-            // Código interno usa CTV/BN como prefixo
-            const prefixoCodigo = bob.loja === 'Cortinave' ? 'CTV' : 'BN';
-            const codigoInterno = `${prefixoCodigo}-${ano}-${String(sequencial).padStart(5, '0')}`;
-            sequencial++;
-            
-            const [result] = await connection.query(
-                `INSERT INTO bobinas 
-                 (produto_id, codigo_interno, metragem_inicial, metragem_atual, metragem_reservada, 
-                  localizacao_atual, status, loja, data_entrada, nota_fiscal) 
-                 VALUES (?, ?, ?, ?, 0, ?, 'Disponível', ?, NOW(), 'NF-TESTE-001')`,
-                [produtosIds[bob.produto], codigoInterno, bob.metragem, bob.metragem, bob.localizacao, bob.loja]
-            );
-            
-            bobinasIds.push(result.insertId);
-            bobinasInfo.push({
-                id: result.insertId,
-                codigo: codigoInterno,
-                produto: bob.produto,
-                metragem: bob.metragem,
-                localizacao: bob.localizacao
-            });
-        }
-        console.log('✅ Bobinas criadas:', bobinasInfo.map(b => b.codigo).join(', '));
+        console.log('✅ Bobinas selecionadas para teste:');
+        bobinasInfo.forEach(b => {
+            console.log(`  → ${b.codigo}: ${b.cor} ${b.gramatura}g - ${b.metragem.toFixed(1)}m disponíveis`);
+        });
         
         // =====================================================
         // 6. CRIAR PLANO DE CORTE
@@ -204,16 +190,33 @@ router.post('/criar-cenario-teste', async (req, res) => {
         console.log('✅ Plano de corte criado:', codigoPlano);
         
         // =====================================================
-        // 7. CRIAR ITENS DO PLANO
+        // 7. CRIAR ITENS DO PLANO BASEADO NAS BOBINAS REAIS
         // =====================================================
-        const itensPlano = [
-            { bobina_idx: 0, metragem: 45 },  // Azul Royal - 45m
-            { bobina_idx: 0, metragem: 38 },  // Azul Royal - 38m
-            { bobina_idx: 1, metragem: 52 },  // Azul Royal (2ª bobina) - 52m
-            { bobina_idx: 2, metragem: 65 },  // Verde Escuro - 65m
-            { bobina_idx: 2, metragem: 48 },  // Verde Escuro - 48m
-            { bobina_idx: 3, metragem: 35 },  // Preto - 35m
-        ];
+        console.log('📋 Criando itens do plano...');
+        
+        // Criar itens baseados nas bobinas disponíveis
+        const itensPlano = [];
+        bobinasInfo.forEach((bobina, idx) => {
+            // Cada bobina terá 1-2 cortes
+            const cortesNaBobina = idx === 0 ? 2 : 1;
+            const metragemDisponivel = bobina.metragem;
+            
+            for (let i = 0; i < cortesNaBobina; i++) {
+                const metragem = Math.min(
+                    30 + Math.floor(Math.random() * 30), // Entre 30 e 60 metros
+                    metragemDisponivel - (i * 40) // Garantir que tem metragem
+                );
+                
+                if (metragem >= 30) {
+                    itensPlano.push({
+                        bobina_idx: idx,
+                        metragem: metragem
+                    });
+                }
+            }
+        });
+        
+        console.log(`  → ${itensPlano.length} itens serão criados`);
         
         const itensInfo = [];
         
@@ -221,12 +224,18 @@ router.post('/criar-cenario-teste', async (req, res) => {
             const item = itensPlano[i];
             const bobina = bobinasInfo[item.bobina_idx];
             
+            // Buscar produto_id da bobina
+            const [bobinaProduto] = await connection.query(
+                'SELECT produto_id FROM bobinas WHERE id = ?',
+                [bobina.id]
+            );
+            
             // Criar item do plano
             const [itemResult] = await connection.query(
                 `INSERT INTO itens_plano_corte 
                  (plano_id, produto_id, metragem_planejada, status) 
                  VALUES (?, ?, ?, 'pendente')`,
-                [planoId, produtosIds[bobina.produto], item.metragem]
+                [planoId, bobinaProduto[0].produto_id, item.metragem]
             );
             
             const itemId = itemResult.insertId;
