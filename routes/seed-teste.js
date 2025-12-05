@@ -70,9 +70,9 @@ router.post('/criar-cenario-teste', async (req, res) => {
         // 3. CRIAR PRODUTOS
         // =====================================================
         const produtos = [
-            { codigo: 'LONA-AZ-180-500', cor: 'Azul Royal', gramatura: 180, largura: 500, fabricante: 'Sansuy' },
-            { codigo: 'LONA-VD-200-600', cor: 'Verde Escuro', gramatura: 200, largura: 600, fabricante: 'Vinilona' },
-            { codigo: 'LONA-PT-150-500', cor: 'Preto', gramatura: 150, largura: 500, fabricante: 'Sansuy' }
+            { codigo: 'LONA-AZ-180-500', cor: 'Azul Royal', gramatura: 180, largura: 500, fabricante: 'Propex' },
+            { codigo: 'LONA-VD-200-600', cor: 'Verde Escuro', gramatura: 200, largura: 600, fabricante: 'Textiloeste' },
+            { codigo: 'LONA-PT-150-500', cor: 'Preto', gramatura: 150, largura: 500, fabricante: 'Propex' }
         ];
         
         const produtosIds = {};
