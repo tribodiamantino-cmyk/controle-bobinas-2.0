@@ -338,6 +338,9 @@
                     // Buscar QR Code
                     const qrResponse = await fetch(`/api/qrcodes/locacao/${locacao.id}`);
                     const qrData = await qrResponse.json();
+                    
+                    // API retorna qrCodeDataURL, não data.qr
+                    const qrImage = qrData.qrCodeDataURL || (qrData.data && qrData.data.qr);
 
                     const etiquetaHtml = `
                         <div class="etiqueta-wrapper">
@@ -347,7 +350,7 @@
                                 </div>
 
                                 <div class="qr-section">
-                                    <img src="${qrData.data.qr}" alt="QR ${locacao.codigo}">
+                                    <img src="${qrImage}" alt="QR ${locacao.codigo}">
                                 </div>
 
                                 <div class="codigo-section">
