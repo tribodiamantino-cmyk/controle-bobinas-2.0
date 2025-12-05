@@ -501,9 +501,9 @@
                 bobinasUnicas.forEach(bobina => {
                     const qrContainer = document.getElementById(`qr-${bobina.id}`);
                     if (qrContainer) {
-                        // O QR code contém o padrão BOB-{id} que o mobile espera
+                        // O QR code contém o padrão B-{id} que o mobile espera
                         new QRCode(qrContainer, {
-                            text: `BOB-${bobina.id}`,
+                            text: `B-${bobina.id}`,
                             width: 150,
                             height: 150,
                             colorDark: "#000000",
