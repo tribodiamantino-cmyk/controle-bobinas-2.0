@@ -79,7 +79,7 @@ function gerarHTMLEtiquetaBobina(bobina) {
                 }
                 .tipo {
                     font-size: 10pt;
-                    color: #333;
+                    color: #000;
                 }
                 .codigo {
                     font-size: 14pt;
@@ -88,14 +88,14 @@ function gerarHTMLEtiquetaBobina(bobina) {
                 }
                 .metragem-box {
                     text-align: center;
-                    background: #f0f0f0;
-                    border: 1px solid #000;
+                    background: white;
+                    border: 2px solid #000;
                     padding: 2mm;
                     margin: 2mm 0;
                 }
                 .metragem-label {
                     font-size: 8pt;
-                    color: #666;
+                    color: #000;
                 }
                 .metragem-value {
                     font-size: 18pt;
@@ -106,13 +106,13 @@ function gerarHTMLEtiquetaBobina(bobina) {
                     justify-content: space-between;
                     font-size: 9pt;
                     padding: 1mm 0;
-                    border-bottom: 1px dotted #ccc;
+                    border-bottom: 1px dotted #000;
                 }
                 .info-row:last-child {
                     border-bottom: none;
                 }
                 .info-label {
-                    color: #666;
+                    color: #000;
                 }
                 .info-value {
                     font-weight: bold;
@@ -125,11 +125,11 @@ function gerarHTMLEtiquetaBobina(bobina) {
                     margin-top: 2mm;
                     padding-top: 1mm;
                     font-size: 7pt;
-                    color: #666;
+                    color: #000;
                 }
                 .cut-line {
                     border: none;
-                    border-top: 1px dashed #999;
+                    border-top: 1px dashed #000;
                     margin-top: 2mm;
                 }
                 @media print {
@@ -228,7 +228,7 @@ function gerarHTMLEtiquetaRetalho(retalho) {
                 }
                 .tipo {
                     font-size: 10pt;
-                    color: #333;
+                    color: #000;
                 }
                 .codigo {
                     font-size: 14pt;
@@ -237,14 +237,14 @@ function gerarHTMLEtiquetaRetalho(retalho) {
                 }
                 .metragem-box {
                     text-align: center;
-                    background: #fff3cd;
-                    border: 1px solid #000;
+                    background: white;
+                    border: 2px solid #000;
                     padding: 2mm;
                     margin: 2mm 0;
                 }
                 .metragem-label {
                     font-size: 8pt;
-                    color: #666;
+                    color: #000;
                 }
                 .metragem-value {
                     font-size: 18pt;
@@ -255,13 +255,13 @@ function gerarHTMLEtiquetaRetalho(retalho) {
                     justify-content: space-between;
                     font-size: 9pt;
                     padding: 1mm 0;
-                    border-bottom: 1px dotted #ccc;
+                    border-bottom: 1px dotted #000;
                 }
                 .info-row:last-child {
                     border-bottom: none;
                 }
                 .info-label {
-                    color: #666;
+                    color: #000;
                 }
                 .info-value {
                     font-weight: bold;
@@ -274,11 +274,11 @@ function gerarHTMLEtiquetaRetalho(retalho) {
                     margin-top: 2mm;
                     padding-top: 1mm;
                     font-size: 7pt;
-                    color: #666;
+                    color: #000;
                 }
                 .cut-line {
                     border: none;
-                    border-top: 1px dashed #999;
+                    border-top: 1px dashed #000;
                     margin-top: 2mm;
                 }
                 @media print {
