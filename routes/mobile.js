@@ -110,6 +110,59 @@ router.get('/teste/bobina/:id', (req, res) => {
     return res.status(404).json({ success: false, message: 'Bobina de teste não encontrada' });
 });
 
+// Plano de TESTE individual (para finalização)
+router.get('/teste/plano/:id', (req, res) => {
+    const planoTeste = {
+        id: 9999,
+        codigo_plano: 'TESTE-2025-001',
+        cliente: 'TESTE MOBILE',
+        aviario: 'Galpão de Testes',
+        status: 'em_producao',
+        itens: [
+            { id: 1, produto_codigo: 'AZUL-150-500', metragem: 25 },
+            { id: 2, produto_codigo: 'VERDE-180-600', metragem: 30 },
+            { id: 3, produto_codigo: 'AMAR-200-500', metragem: 20 }
+        ]
+    };
+    
+    return res.json({ success: true, data: planoTeste });
+});
+
+// Locação de TESTE
+router.get('/teste/locacao/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    
+    const locacoes = {
+        201: { id: 201, codigo: '1-A-1', descricao: 'Corredor A - Prateleira 1', ativa: true },
+        202: { id: 202, codigo: '2-B-2', descricao: 'Corredor B - Prateleira 2', ativa: true },
+        203: { id: 203, codigo: '3-C-3', descricao: 'Corredor C - Prateleira 3', ativa: true }
+    };
+    
+    if (locacoes[id]) {
+        return res.json({ success: true, data: locacoes[id] });
+    }
+    
+    return res.status(404).json({ success: false, message: 'Locação de teste não encontrada' });
+});
+
+// Finalizar plano de TESTE
+router.post('/teste/plano/:id/finalizar', (req, res) => {
+    const { locacoes_ids } = req.body;
+    
+    console.log('🧪 [TESTE] Finalizando plano com locações:', locacoes_ids);
+    
+    return res.json({ 
+        success: true, 
+        message: '✅ [TESTE] Plano finalizado com sucesso!',
+        data: {
+            plano_id: req.params.id,
+            locacoes_ids,
+            status: 'finalizado',
+            modo: 'teste'
+        }
+    });
+});
+
 // Debug: ver todas as ordens no banco
 router.get('/debug-ordens', async (req, res) => {
     try {

@@ -162,8 +162,19 @@ function renderizarDetalhesOrdem() {
     const container = document.getElementById('ordem-detalhes-container');
     
     // Filtrar itens que têm origem alocada (bobina ou retalho)
-    const itensComOrigem = ordemAtual.itens.filter(item => item.origem_id !== null && item.origem_id !== undefined);
+    let itensComOrigem = ordemAtual.itens.filter(item => item.origem_id !== null && item.origem_id !== undefined);
     const itensSemOrigem = ordemAtual.itens.filter(item => item.origem_id === null || item.origem_id === undefined);
+    
+    // No modo teste, filtrar itens já validados
+    if (MODO_TESTE) {
+        itensComOrigem = itensComOrigem.filter(item => {
+            const itemId = item.alocacao_id || item.item_id;
+            return !itensValidadosTeste.includes(itemId);
+        });
+    }
+    
+    // Verificar se todos os itens foram concluídos (modo teste)
+    const todosItensConcluidos = MODO_TESTE && itensComOrigem.length === 0 && itensSemOrigem.length === 0 && itensValidadosTeste.length > 0;
     
     container.innerHTML = `
         <div class="ordem-detalhes-header">
@@ -173,9 +184,26 @@ function renderizarDetalhesOrdem() {
         
         ${ordemAtual.observacoes ? `<div class="ordem-cliente">${ordemAtual.observacoes}</div>` : ''}
         
+        ${todosItensConcluidos ? `
+            <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
+                <h4 style="color: #047857; margin-bottom: 0.5rem;">Todos os ${itensValidadosTeste.length} cortes concluídos!</h4>
+                <p style="color: #065f46; font-size: 0.875rem;">Agora escaneie os QR codes das locações para finalizar o plano.</p>
+                <button class="btn btn-primary" onclick="abrirFinalizarPlano()" style="margin-top: 1rem; width: 100%;">
+                    📍 Finalizar Plano com Locações
+                </button>
+            </div>
+        ` : ''}
+        
+        ${MODO_TESTE && itensValidadosTeste.length > 0 && !todosItensConcluidos ? `
+            <div style="background: #dbeafe; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
+                <span style="color: #1d4ed8;">✅ ${itensValidadosTeste.length} corte(s) validado(s) | ${itensComOrigem.length} restante(s)</span>
+            </div>
+        ` : ''}
+        
         <div class="itens-lista">
-            <h4>📦 Itens Prontos para Corte</h4>
-            ${itensComOrigem.length === 0 ? 
+            ${!todosItensConcluidos ? '<h4>📦 Itens Prontos para Corte</h4>' : ''}
+            ${itensComOrigem.length === 0 && !todosItensConcluidos ? 
                 '<p style="color: var(--text-light);">Nenhum item com origem alocada</p>' :
                 itensComOrigem.map(item => {
                     const tipoIcon = item.tipo === 'retalho' ? '🧵' : '📦';
@@ -1338,7 +1366,8 @@ async function abrirFinalizarPlano(planoId) {
     
     // Buscar info do plano
     try {
-        const response = await fetch(`/api/mobile/plano/${planoId}`);
+        const endpoint = MODO_TESTE ? `/api/mobile/teste/plano/${planoId}` : `/api/mobile/plano/${planoId}`;
+        const response = await fetch(endpoint);
         const data = await response.json();
         
         document.getElementById('plano-info-finalizar').innerHTML = `
@@ -1380,8 +1409,9 @@ async function processarScanLocacao(qrData) {
             return;
         }
         
-        // Buscar info da locação
-        const response = await fetch(`/api/locacoes/${locacaoId}`);
+        // Buscar info da locação (endpoint de teste ou real)
+        const endpoint = MODO_TESTE ? `/api/mobile/teste/locacao/${locacaoId}` : `/api/locacoes/${locacaoId}`;
+        const response = await fetch(endpoint);
         const data = await response.json();
         
         if (data.success) {
@@ -1428,7 +1458,11 @@ async function confirmarFinalizacao() {
         mostrarLoading(true);
         await pararScanner();
         
-        const response = await fetch(`/api/mobile/plano/${planoAtual}/finalizar`, {
+        const endpoint = MODO_TESTE 
+            ? `/api/mobile/teste/plano/${planoAtual}/finalizar` 
+            : `/api/mobile/plano/${planoAtual}/finalizar`;
+            
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
