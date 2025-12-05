@@ -23,8 +23,36 @@ produtos (specifications)
 
 planos_corte (cut plans: planejamento → em_producao → finalizado)
   ├─ itens_plano_corte (items to cut)
-  └─ alocacoes_corte (which bobina/retalho provides material)
+  ├─ alocacoes_corte (which bobina/retalho provides material)
+  └─ cortes_realizados (individual cuts with QR codes and photos)
+
+locacoes (warehouse locations: A1-B1-C1, A2-B2-C2, etc.)
+  └─ plano_locacoes (storage locations for finalized plans)
+
+carregamentos (loading processes for shipping)
+  └─ carregamentos_itens (audit trail of validated cuts)
 ```
+
+### QR Code System (NEW in v2.2.0)
+**Critical Features**: Individual cut tracking with photo contraprova, origin validation, and loading verification.
+
+- **Codes Generated**:
+  - `BOB-{id}` for bobinas (legacy)
+  - `RET-{id}` for retalhos (legacy)
+  - `COR-{YEAR}-{SEQ}` for cortes (e.g., COR-2025-00001) - NEW
+  - `LOC-{id}` for locacoes - NEW
+  - `CAR-{YEAR}-{SEQ}` for carregamentos - NEW
+
+- **Controllers**: `qrcodesController.js`, `cortesController.js`, `locacoesController.js`
+- **Routes**: `/api/qrcodes`, `/api/mobile/corte`, `/api/locacoes`, `/api/mobile/carregamento`
+- **Photo Upload**: `middleware/uploadFotos.js` with multer + sharp compression (5MB limit, JPEG 80%, 1200px max)
+- **See**: `SISTEMA_CORTES_QR.md` for complete documentation
+
+**Key Flows**:
+1. **Validation**: Mobile scans bobina QR → validates against expected origin → proceeds to cut
+2. **Cut Registration**: Operator inputs metragem + uploads medidor photo → system generates unique COR code
+3. **Finalization**: When all items cut → scan warehouse location QRs → mark plan as finalizado
+4. **Loading**: Scan cut QRs to validate → green/red feedback → finalizes when 100% validated
 
 ### Reserved Metragem System
 **Critical**: `metragem_reservada` in bobinas/retalhos MUST match active allocations in `alocacoes_corte` for plans with `status='em_producao'`. 
@@ -91,6 +119,8 @@ Located in `public/mobile/` with:
 
 - `ROADMAP.md`: Full system requirements and phased development plan
 - `SISTEMA_VALIDACAO_RESERVAS.md`: Critical reserved metragem architecture
+- `SISTEMA_CORTES_QR.md`: Complete QR code system documentation (NEW v2.2.0)
+- `ROADMAP_SISTEMA_CORTES_QR.md`: QR system implementation roadmap (NEW v2.2.0)
 - `database/schema.sql`: Complete table definitions (for reference, migrations are source of truth)
 - `server.js`: Entry point with middleware setup, migration runner, and route registration
 
