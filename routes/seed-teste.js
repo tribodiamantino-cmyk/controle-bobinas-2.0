@@ -86,7 +86,7 @@ router.post('/criar-cenario-teste', async (req, res) => {
             } else {
                 const [result] = await connection.query(
                     `INSERT INTO produtos (codigo, cor_id, gramatura_id, largura_final, fabricante, tipo_tecido) 
-                     VALUES (?, ?, ?, ?, ?, 'Lona')`,
+                     VALUES (?, ?, ?, ?, ?, 'Normal')`,
                     [prod.codigo, coresIds[prod.cor], gramaturasIds[prod.gramatura], prod.largura, prod.fabricante]
                 );
                 produtosIds[prod.codigo] = result.insertId;
