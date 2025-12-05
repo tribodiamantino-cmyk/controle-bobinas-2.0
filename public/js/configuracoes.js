@@ -202,6 +202,8 @@ function showTab(tabName) {
         carregarGramaturas();
     } else if (tabName === 'locacoes') {
         carregarLocacoes();
+    } else if (tabName === 'manutencao') {
+        carregarLocacoesInline();
     }
 }
 
@@ -849,6 +851,266 @@ function formatarCodigoLocacao(input) {
     }
 
     input.value = formatado;
+}
+
+// ======================
+// LOCAÇÕES INLINE (MANUTENÇÃO)
+// ======================
+let locacoesInline = [];
+
+async function carregarLocacoesInline() {
+    try {
+        const tbody = document.getElementById('tbody-locacoes-inline');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #666;">Carregando...</td></tr>';
+        
+        const response = await fetch('/api/locacoes');
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        
+        locacoesInline = data.data;
+        renderizarLocacoesInline();
+        
+    } catch (error) {
+        console.error('Erro ao carregar locações inline:', error);
+        document.getElementById('tbody-locacoes-inline').innerHTML = `
+            <tr><td colspan="4" style="text-align: center; padding: 20px; color: red;">
+                Erro: ${error.message}
+            </td></tr>
+        `;
+    }
+}
+
+function renderizarLocacoesInline() {
+    const tbody = document.getElementById('tbody-locacoes-inline');
+    
+    if (locacoesInline.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #666;">Nenhuma locação cadastrada</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = locacoesInline.map(loc => `
+        <tr id="loc-row-${loc.id}">
+            <td>
+                <input type="text" 
+                    id="loc-codigo-${loc.id}" 
+                    value="${loc.codigo}" 
+                    maxlength="11"
+                    style="width: 100%; padding: 5px; font-family: monospace; font-weight: bold;"
+                    oninput="formatarCodigoLocacao(this)"
+                    onchange="marcarLocacaoModificada(${loc.id})"
+                >
+            </td>
+            <td>
+                <input type="text" 
+                    id="loc-descricao-${loc.id}" 
+                    value="${loc.descricao || ''}" 
+                    style="width: 100%; padding: 5px;"
+                    placeholder="Descrição (opcional)"
+                    onchange="marcarLocacaoModificada(${loc.id})"
+                >
+            </td>
+            <td>
+                <span class="badge ${loc.ativa ? 'badge-success' : 'badge-danger'}" style="cursor: pointer;" onclick="toggleStatusLocacao(${loc.id})">
+                    ${loc.ativa ? 'Ativa' : 'Inativa'}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="salvarLocacaoInline(${loc.id})" title="Salvar" id="btn-salvar-${loc.id}" style="display: none;">
+                    💾
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="excluirLocacaoInline(${loc.id})" title="Excluir">
+                    🗑️
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function marcarLocacaoModificada(id) {
+    const btnSalvar = document.getElementById(`btn-salvar-${id}`);
+    if (btnSalvar) {
+        btnSalvar.style.display = 'inline-block';
+    }
+    const row = document.getElementById(`loc-row-${id}`);
+    if (row) {
+        row.style.backgroundColor = '#fff3cd';
+    }
+}
+
+async function salvarLocacaoInline(id) {
+    const codigo = document.getElementById(`loc-codigo-${id}`).value.trim().toUpperCase();
+    const descricao = document.getElementById(`loc-descricao-${id}`).value.trim();
+    
+    // Validar máscara
+    const regex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+    if (!regex.test(codigo)) {
+        alert('Código inválido! Use o formato 0000-X-0000 (ex: 0001-A-0001)');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/locacoes/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo, descricao: descricao || null })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        
+        // Remover destaque e botão salvar
+        const row = document.getElementById(`loc-row-${id}`);
+        if (row) row.style.backgroundColor = '';
+        
+        const btnSalvar = document.getElementById(`btn-salvar-${id}`);
+        if (btnSalvar) btnSalvar.style.display = 'none';
+        
+        mostrarAlertaInline('Locação atualizada!', 'success');
+        
+    } catch (error) {
+        alert('Erro ao salvar: ' + error.message);
+    }
+}
+
+async function toggleStatusLocacao(id) {
+    const loc = locacoesInline.find(l => l.id === id);
+    if (!loc) return;
+    
+    const novoStatus = !loc.ativa;
+    const acao = novoStatus ? 'reativar' : 'desativar';
+    
+    if (!confirm(`Deseja ${acao} esta locação?`)) return;
+    
+    try {
+        const url = novoStatus 
+            ? `/api/locacoes/${id}/reativar`
+            : `/api/locacoes/${id}`;
+        const method = novoStatus ? 'PATCH' : 'DELETE';
+        
+        const response = await fetch(url, { method });
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        
+        loc.ativa = novoStatus;
+        renderizarLocacoesInline();
+        mostrarAlertaInline(`Locação ${novoStatus ? 'reativada' : 'desativada'}!`, 'success');
+        
+    } catch (error) {
+        alert('Erro: ' + error.message);
+    }
+}
+
+async function excluirLocacaoInline(id) {
+    if (!confirm('Deseja desativar esta locação?')) return;
+    
+    try {
+        const response = await fetch(`/api/locacoes/${id}`, { method: 'DELETE' });
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        
+        await carregarLocacoesInline();
+        mostrarAlertaInline('Locação desativada!', 'success');
+        
+    } catch (error) {
+        alert('Erro: ' + error.message);
+    }
+}
+
+function adicionarLinhaLocacao() {
+    const tbody = document.getElementById('tbody-locacoes-inline');
+    const tempId = 'new-' + Date.now();
+    
+    const novaLinha = document.createElement('tr');
+    novaLinha.id = `loc-row-${tempId}`;
+    novaLinha.style.backgroundColor = '#d4edda';
+    novaLinha.innerHTML = `
+        <td>
+            <input type="text" 
+                id="loc-codigo-${tempId}" 
+                maxlength="11"
+                style="width: 100%; padding: 5px; font-family: monospace; font-weight: bold;"
+                placeholder="0000-A-0000"
+                oninput="formatarCodigoLocacao(this)"
+            >
+        </td>
+        <td>
+            <input type="text" 
+                id="loc-descricao-${tempId}" 
+                style="width: 100%; padding: 5px;"
+                placeholder="Descrição (opcional)"
+            >
+        </td>
+        <td>
+            <span class="badge badge-success">Nova</span>
+        </td>
+        <td>
+            <button class="btn btn-sm btn-success" onclick="salvarNovaLocacao('${tempId}')" title="Criar">
+                ✅
+            </button>
+            <button class="btn btn-sm btn-secondary" onclick="cancelarNovaLocacao('${tempId}')" title="Cancelar">
+                ❌
+            </button>
+        </td>
+    `;
+    
+    tbody.insertBefore(novaLinha, tbody.firstChild);
+    document.getElementById(`loc-codigo-${tempId}`).focus();
+}
+
+async function salvarNovaLocacao(tempId) {
+    const codigo = document.getElementById(`loc-codigo-${tempId}`).value.trim().toUpperCase();
+    const descricao = document.getElementById(`loc-descricao-${tempId}`).value.trim();
+    
+    // Validar máscara
+    const regex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+    if (!regex.test(codigo)) {
+        alert('Código inválido! Use o formato 0000-X-0000 (ex: 0001-A-0001)');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/locacoes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo, descricao: descricao || null })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        
+        await carregarLocacoesInline();
+        await carregarLocacoes(); // Atualiza a aba Locações também
+        mostrarAlertaInline('Locação criada com sucesso!', 'success');
+        
+    } catch (error) {
+        alert('Erro ao criar: ' + error.message);
+    }
+}
+
+function cancelarNovaLocacao(tempId) {
+    const row = document.getElementById(`loc-row-${tempId}`);
+    if (row) row.remove();
+}
+
+function mostrarAlertaInline(mensagem, tipo) {
+    const alertDiv = document.getElementById('alert-locacoes-inline');
+    alertDiv.innerHTML = `<div class="alert alert-${tipo}" style="margin-bottom: 10px;">${mensagem}</div>`;
+    setTimeout(() => { alertDiv.innerHTML = ''; }, 3000);
 }
 
 // ======================
