@@ -869,52 +869,74 @@ async function salvarLocacao(event) {
 }
 
 // Formatar código da locação enquanto digita (máscara 0000-X-0000)
+// Formato: [1-4 números]-[1 letra]-[1-4 números]
 function formatarCodigoLocacao(input) {
-    // Pega posição do cursor
     const cursorPos = input.selectionStart;
-    const valorOriginal = input.value;
+    let valor = input.value.toUpperCase();
     
-    // Remove tudo que não for número ou letra
-    let valor = input.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    // Estado: onde estamos na máscara
+    // Parte 1: números (1-4 dígitos)
+    // Parte 2: letra (1 caractere)
+    // Parte 3: números (1-4 dígitos)
     
-    // Limitar comprimento (9 caracteres sem hífen = 4 + 1 + 4)
-    if (valor.length > 9) {
-        valor = valor.substring(0, 9);
+    let parte1 = '';
+    let letra = '';
+    let parte2 = '';
+    let fase = 1; // 1 = números iniciais, 2 = letra, 3 = números finais
+    
+    for (let i = 0; i < valor.length; i++) {
+        const char = valor[i];
+        
+        if (char === '-') {
+            // Hífen avança para próxima fase
+            if (fase === 1 && parte1.length > 0) {
+                fase = 2;
+            } else if (fase === 2 && letra.length > 0) {
+                fase = 3;
+            }
+            continue;
+        }
+        
+        if (fase === 1) {
+            // Fase 1: aceita apenas números (máx 4)
+            if (/[0-9]/.test(char) && parte1.length < 4) {
+                parte1 += char;
+            } else if (/[A-Z]/.test(char) && parte1.length > 0) {
+                // Se digitou letra e já tem números, avança para fase 2
+                fase = 2;
+                letra = char;
+                fase = 3; // Já pegou a letra, vai para fase 3
+            }
+        } else if (fase === 2) {
+            // Fase 2: aceita apenas 1 letra
+            if (/[A-Z]/.test(char) && letra.length === 0) {
+                letra = char;
+                fase = 3;
+            }
+        } else if (fase === 3) {
+            // Fase 3: aceita apenas números (máx 4)
+            if (/[0-9]/.test(char) && parte2.length < 4) {
+                parte2 += char;
+            }
+        }
     }
     
-    // Garantir que posição 5 (index 4) seja letra
-    if (valor.length > 4) {
-        const parte1 = valor.substring(0, 4).replace(/[^0-9]/g, ''); // só números
-        const letra = valor.substring(4, 5).replace(/[^A-Z]/g, '');  // só letra
-        const parte2 = valor.substring(5, 9).replace(/[^0-9]/g, ''); // só números
-        valor = parte1 + letra + parte2;
-    }
-
-    // Aplicar máscara 0000-X-0000
-    let formatado = '';
-    
-    // Primeiros 4 dígitos (números)
-    if (valor.length > 0) {
-        formatado = valor.substring(0, Math.min(4, valor.length));
+    // Montar resultado
+    let resultado = parte1;
+    if (letra) {
+        resultado += '-' + letra;
+        if (parte2) {
+            resultado += '-' + parte2;
+        }
     }
     
-    // Hífen + letra
-    if (valor.length > 4) {
-        formatado += '-' + valor.substring(4, 5);
-    }
+    input.value = resultado;
     
-    // Hífen + últimos 4 dígitos
-    if (valor.length > 5) {
-        formatado += '-' + valor.substring(5, 9);
-    }
-
-    input.value = formatado;
-    
-    // Ajustar posição do cursor
-    if (cursorPos < valorOriginal.length) {
-        const novoPos = Math.min(cursorPos + (formatado.length - valorOriginal.length), formatado.length);
-        input.setSelectionRange(novoPos, novoPos);
-    }
+    // Manter cursor no final ou na posição apropriada
+    const novoPos = Math.min(cursorPos, resultado.length);
+    setTimeout(() => {
+        input.setSelectionRange(resultado.length, resultado.length);
+    }, 0);
 }
 
 // ======================
