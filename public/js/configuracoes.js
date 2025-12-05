@@ -1,4 +1,75 @@
 // ======================
+// SISTEMA DE TOAST/NOTIFICAÇÕES
+// ======================
+
+function mostrarToast(mensagem, tipo = 'info', duracao = 3000) {
+    // Remover toast existente
+    const existente = document.getElementById('toast-notificacao');
+    if (existente) existente.remove();
+    
+    // Criar toast
+    const toast = document.createElement('div');
+    toast.id = 'toast-notificacao';
+    toast.innerHTML = `
+        <span>${mensagem}</span>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;font-size:18px;cursor:pointer;margin-left:10px;">&times;</button>
+    `;
+    
+    // Estilos base
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideIn 0.3s ease;
+        max-width: 400px;
+    `;
+    
+    // Cores por tipo
+    const cores = {
+        success: '#28a745',
+        error: '#dc3545',
+        warning: '#ffc107',
+        info: '#17a2b8'
+    };
+    toast.style.backgroundColor = cores[tipo] || cores.info;
+    if (tipo === 'warning') toast.style.color = '#333';
+    
+    // Adicionar animação CSS se não existir
+    if (!document.getElementById('toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'toast-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(toast);
+    
+    // Auto-remover após duração
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, duracao);
+}
+
+// ======================
 // EDIÇÃO INLINE GENÉRICA
 // ======================
 
@@ -38,7 +109,7 @@ async function salvarCampo(tipo, id, campo) {
             const valor = inputElement.value;
             
             if (!valor.trim()) {
-                alert('Nome da cor não pode estar vazio');
+                mostrarToast('Nome da cor não pode estar vazio', 'error');
                 carregarCores();
                 return;
             }
@@ -77,7 +148,7 @@ async function salvarCampo(tipo, id, campo) {
             const valor = inputElement.value;
             
             if (!valor.trim()) {
-                alert('Gramatura não pode estar vazia');
+                mostrarToast('Gramatura não pode estar vazia', 'error');
                 carregarGramaturas();
                 return;
             }
@@ -719,7 +790,7 @@ async function salvarCampoLocacao(id, campo) {
         valor = valor.trim().toUpperCase();
         const regex = /^[0-9]{1,4}-[A-Z]-[0-9]{1,4}$/;
         if (!regex.test(valor)) {
-            alert('Código inválido! Use o formato N-X-N (ex: 1-A-1, 12-B-34, 0001-A-0001)');
+            mostrarToast('Código inválido! Use o formato N-X-N (ex: 1-A-1)', 'error');
             input.focus();
             return;
         }
@@ -767,8 +838,10 @@ async function salvarCampoLocacao(id, campo) {
         input.style.display = 'none';
         display.style.display = 'inline';
         
+        mostrarToast('Salvo com sucesso!', 'success', 2000);
+        
     } catch (error) {
-        alert('Erro ao salvar: ' + error.message);
+        mostrarToast('Erro ao salvar: ' + error.message, 'error');
         input.focus();
     }
 }
@@ -786,10 +859,10 @@ async function excluirLocacao(id) {
         }
         
         await carregarLocacoes();
-        mostrarAlerta('locacoes', 'Locação desativada com sucesso!', 'success');
+        mostrarToast('Locação desativada com sucesso!', 'success');
         
     } catch (error) {
-        alert('Erro: ' + error.message);
+        mostrarToast('Erro: ' + error.message, 'error');
     }
 }
 
@@ -824,7 +897,7 @@ async function salvarLocacao(event) {
     // Validar formato da máscara flexível (1-4 dígitos cada parte)
     const regex = /^[0-9]{1,4}-[A-Z]-[0-9]{1,4}$/;
     if (!regex.test(codigo)) {
-        alert('Código inválido! Use o formato N-X-N (ex: 1-A-1, 12-B-34, 0001-A-0001)');
+        mostrarToast('Código inválido! Use o formato N-X-N (ex: 1-A-1)', 'error');
         return;
     }
 
@@ -850,21 +923,13 @@ async function salvarLocacao(event) {
             throw new Error(data.error);
         }
 
-        document.getElementById('alert-locacoes').innerHTML = `
-            <div class="alert alert-success">
-                Locação ${id ? 'atualizada' : 'criada'} com sucesso!
-            </div>
-        `;
-
-        setTimeout(() => {
-            document.getElementById('alert-locacoes').innerHTML = '';
-        }, 3000);
+        mostrarToast(`Locação ${id ? 'atualizada' : 'criada'} com sucesso!`, 'success');
 
         fecharModalLocacao();
         await carregarLocacoes();
 
     } catch (error) {
-        alert('Erro ao salvar locação: ' + error.message);
+        mostrarToast('Erro ao salvar locação: ' + error.message, 'error');
     }
 }
 
