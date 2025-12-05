@@ -443,10 +443,32 @@ function removerFotoValidacao() {
 async function confirmarValidacao(event) {
     event.preventDefault();
     
-    const metragemCortada = parseFloat(document.getElementById('metragem-validacao').value);
-    const observacoes = document.getElementById('observacoes-validacao').value;
+    console.log('📋 confirmarValidacao chamado');
+    console.log('📋 bobinaAtual:', bobinaAtual);
+    console.log('📋 itemValidando:', itemValidando);
+    
+    // Validar se temos bobina atual
+    if (!bobinaAtual) {
+        console.error('❌ bobinaAtual é null/undefined');
+        mostrarToast('❌ Erro: Bobina não identificada. Escaneie novamente.', 'error');
+        voltarParaItens();
+        return;
+    }
+    
+    const metragemCortadaInput = document.getElementById('metragem-validacao');
+    if (!metragemCortadaInput) {
+        console.error('❌ Campo metragem-validacao não encontrado');
+        mostrarToast('❌ Erro no formulário. Tente novamente.', 'error');
+        return;
+    }
+    
+    const metragemCortada = parseFloat(metragemCortadaInput.value);
+    const observacoes = document.getElementById('observacoes-validacao')?.value || '';
     const fotoInput = document.getElementById('foto-medidor-validacao');
     const metragemAtual = Number(bobinaAtual.metragem_atual || bobinaAtual.metragem || 0);
+    
+    console.log('📊 Metragem cortada:', metragemCortada);
+    console.log('📊 Metragem atual bobina:', metragemAtual);
     
     // Validar foto obrigatória
     if (!fotoInput || !fotoInput.files[0]) {
