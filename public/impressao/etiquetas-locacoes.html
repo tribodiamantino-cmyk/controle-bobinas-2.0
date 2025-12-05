@@ -12,23 +12,29 @@
             box-sizing: border-box;
         }
 
-        /* Configuração para impressora térmica 30x60mm */
+        /* Configuração para impressora térmica 57mm (rolo contínuo) */
         @page {
-            size: 30mm 60mm;
+            size: 57mm auto;
             margin: 0;
         }
 
         @media print {
-            body {
+            html, body {
+                width: 57mm;
                 background: white;
             }
             .no-print {
                 display: none !important;
             }
-            .etiqueta {
+            .etiqueta-wrapper {
                 page-break-after: always;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                border-radius: 0;
+                background: transparent;
             }
-            .etiqueta:last-child {
+            .etiqueta-wrapper:last-child {
                 page-break-after: auto;
             }
         }
@@ -104,7 +110,7 @@
         }
 
         .info-box {
-            background: #f0f9ff;
+            background: #e0f2fe;
             border: 1px solid #0284c7;
             padding: 10px;
             border-radius: 4px;
@@ -114,31 +120,22 @@
         /* Preview das etiquetas */
         .preview-container {
             padding: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(30mm, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             gap: 20px;
+            justify-content: center;
         }
 
         .etiqueta-wrapper {
             background: white;
-            padding: 5mm;
+            padding: 10px;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        @media print {
-            .etiqueta-wrapper {
-                background: transparent;
-                padding: 0;
-                box-shadow: none;
-                border-radius: 0;
-            }
-        }
-
-        /* Etiqueta em si - 30mm x 60mm */
+        /* Etiqueta em si - 57mm largura */
         .etiqueta {
-            width: 30mm;
-            height: 60mm;
+            width: 57mm;
             border: 2px solid #000;
             display: flex;
             flex-direction: column;
@@ -146,71 +143,78 @@
             overflow: hidden;
         }
 
-        /* Cabeçalho - 8mm */
+        /* Cabeçalho */
         .header {
             text-align: center;
             border-bottom: 2px solid #000;
-            padding: 2mm 0;
-            height: 8mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 2mm;
+            background: #f0f0f0;
         }
 
         .header h2 {
-            font-size: 11pt;
+            font-size: 12pt;
             font-weight: bold;
             margin: 0;
         }
 
-        /* QR Code - 26mm (ocupa maior parte) */
+        /* QR Code centralizado */
         .qr-section {
-            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1mm;
-            border-bottom: 2px solid #000;
+            padding: 3mm;
+            border-bottom: 1px dashed #000;
         }
 
         .qr-section img {
-            width: 25mm;
-            height: 25mm;
+            width: 40mm;
+            height: 40mm;
             display: block;
         }
 
-        /* Código - 10mm */
+        /* Código grande e legível */
         .codigo-section {
             text-align: center;
-            padding: 2mm 1mm;
-            height: 10mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 2px solid #000;
+            padding: 3mm;
+            border-bottom: 1px solid #000;
+            background: #f8f8f8;
         }
 
         .codigo-locacao {
-            font-size: 10pt;
+            font-size: 18pt;
             font-weight: bold;
             font-family: 'Courier New', monospace;
-            letter-spacing: -0.5px;
-            line-height: 1;
+            letter-spacing: 1px;
         }
 
-        /* Rodapé - 6mm */
+        /* Descrição */
+        .descricao-section {
+            text-align: center;
+            padding: 2mm;
+            border-bottom: 1px dotted #ccc;
+        }
+
+        .descricao-text {
+            font-size: 9pt;
+            color: #333;
+        }
+
+        /* Rodapé */
         .footer {
             text-align: center;
-            padding: 1mm 0;
-            height: 6mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 2mm;
         }
 
         .footer-text {
             font-size: 7pt;
-            color: #333;
+            color: #666;
+        }
+
+        /* Linha de corte */
+        .cut-line {
+            border: none;
+            border-top: 1px dashed #999;
+            margin: 0;
         }
 
         .loading {
@@ -218,15 +222,18 @@
             padding: 40px;
             font-size: 18px;
             color: #666;
+            width: 100%;
         }
     </style>
 </head>
 <body>
     <div class="controls no-print">
-        <h1>📍 Etiquetas de Locações - Impressão em Lote</h1>
+        <h1>📍 Etiquetas de Locações - 57mm</h1>
 
         <div class="info-box">
-            <strong>ℹ️ Formato:</strong> 30mm x 60mm | <strong>QR Code:</strong> 25mm x 25mm (otimizado para leitura rápida)
+            <strong>Formato:</strong> 57mm (largura) × altura automática<br>
+            <strong>Impressora:</strong> Térmica de rolo contínuo<br>
+            <strong>QR Code:</strong> 40mm × 40mm (fácil leitura)
         </div>
 
         <div class="form-group">
@@ -243,7 +250,7 @@
         </div>
 
         <div>
-            <button class="btn btn-success" onclick="carregarLocacoes()">🔄 Atualizar Locações</button>
+            <button class="btn btn-success" onclick="carregarLocacoes()">🔄 Atualizar</button>
             <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir Todas</button>
             <button class="btn btn-secondary" onclick="window.close()">✖ Fechar</button>
         </div>
@@ -346,7 +353,7 @@
                         <div class="etiqueta-wrapper">
                             <div class="etiqueta">
                                 <div class="header">
-                                    <h2>LOCAÇÃO</h2>
+                                    <h2>📍 LOCAÇÃO</h2>
                                 </div>
 
                                 <div class="qr-section">
@@ -357,10 +364,17 @@
                                     <div class="codigo-locacao">${locacao.codigo}</div>
                                 </div>
 
+                                ${locacao.descricao ? `
+                                <div class="descricao-section">
+                                    <div class="descricao-text">${locacao.descricao}</div>
+                                </div>
+                                ` : ''}
+
                                 <div class="footer">
-                                    <div class="footer-text">ID: ${locacao.id}</div>
+                                    <div class="footer-text">ID: ${locacao.id} | Cortinave & BN</div>
                                 </div>
                             </div>
+                            <hr class="cut-line">
                         </div>
                     `;
 

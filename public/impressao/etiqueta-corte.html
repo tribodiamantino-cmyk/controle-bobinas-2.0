@@ -12,16 +12,15 @@
             box-sizing: border-box;
         }
 
-        /* Configuração para impressora térmica 100x50mm */
+        /* Configuração para impressora térmica 57mm (rolo contínuo) */
         @page {
-            size: 100mm 50mm;
+            size: 57mm auto;
             margin: 0;
         }
 
         @media print {
-            body {
-                width: 100mm;
-                height: 50mm;
+            html, body {
+                width: 57mm;
             }
             .no-print {
                 display: none !important;
@@ -30,107 +29,150 @@
 
         body {
             font-family: 'Arial', sans-serif;
-            background: white;
-            padding: 5mm;
-            width: 100mm;
-            height: 50mm;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
         }
 
         .etiqueta {
-            width: 100%;
-            height: 100%;
+            width: 57mm;
+            background: white;
             border: 2px solid #000;
             padding: 3mm;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            gap: 2mm;
         }
 
         .header {
             text-align: center;
-            border-bottom: 1px solid #000;
+            border-bottom: 2px solid #000;
             padding-bottom: 2mm;
-            margin-bottom: 2mm;
         }
 
         .header h1 {
-            font-size: 12pt;
+            font-size: 14pt;
             font-weight: bold;
             margin-bottom: 1mm;
         }
 
         .codigo {
-            font-size: 14pt;
+            font-size: 12pt;
             font-weight: bold;
             font-family: 'Courier New', monospace;
-            letter-spacing: 1px;
-        }
-
-        .content {
-            display: flex;
-            gap: 3mm;
+            letter-spacing: 0.5px;
         }
 
         .qr-container {
-            flex-shrink: 0;
+            text-align: center;
+            padding: 2mm 0;
+            border-bottom: 1px dashed #000;
         }
 
         .qr-container img {
-            width: 30mm;
-            height: 30mm;
+            width: 40mm;
+            height: 40mm;
             border: 1px solid #000;
         }
 
-        .info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+        .info-section {
+            padding: 1mm 0;
         }
 
         .info-row {
+            display: flex;
+            justify-content: space-between;
             margin-bottom: 1mm;
+            padding: 1mm 0;
+            border-bottom: 1px dotted #ccc;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
         }
 
         .info-label {
-            font-size: 7pt;
-            color: #666;
+            font-size: 8pt;
+            color: #333;
             font-weight: bold;
-            display: block;
         }
 
         .info-value {
             font-size: 10pt;
             font-weight: bold;
+            text-align: right;
+            max-width: 60%;
+        }
+
+        .info-big {
+            text-align: center;
+            padding: 2mm;
+            background: #f0f0f0;
+            border: 1px solid #000;
+            margin: 1mm 0;
+        }
+
+        .info-big .label {
+            font-size: 8pt;
+            color: #666;
+        }
+
+        .info-big .value {
+            font-size: 16pt;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
         }
 
         .footer {
             text-align: center;
-            border-top: 1px solid #000;
-            padding-top: 1mm;
+            border-top: 2px solid #000;
+            padding-top: 2mm;
             font-size: 7pt;
             color: #666;
         }
 
+        /* Linha de corte */
+        .cut-line {
+            border: none;
+            border-top: 1px dashed #999;
+            margin: 2mm 0;
+        }
+
         /* Botões de controle (não imprimem) */
         .controls {
-            position: fixed;
-            top: 10px;
-            right: 10px;
             background: white;
-            padding: 10px;
+            padding: 15px;
             border: 1px solid #ccc;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .controls h2 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .info-box {
+            background: #e0f2fe;
+            border: 1px solid #0284c7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
         }
 
         .btn {
-            padding: 8px 16px;
+            padding: 10px 20px;
             margin: 5px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: bold;
         }
 
         .btn-primary {
@@ -142,10 +184,19 @@
             background: #64748b;
             color: white;
         }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
     <div class="controls no-print">
+        <h2>🖨️ Etiqueta de Corte - 57mm</h2>
+        <div class="info-box">
+            <strong>Formato:</strong> 57mm (largura) × altura automática<br>
+            <strong>Impressora:</strong> Térmica de rolo contínuo
+        </div>
         <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
         <button class="btn btn-secondary" onclick="window.close()">✖ Fechar</button>
     </div>
@@ -156,37 +207,37 @@
             <div class="codigo" id="codigo-display">COR-2025-00001</div>
         </div>
 
-        <div class="content">
-            <div class="qr-container">
-                <img id="qr-image" src="" alt="QR Code">
+        <div class="qr-container">
+            <img id="qr-image" src="" alt="QR Code">
+        </div>
+
+        <div class="info-big">
+            <div class="label">METRAGEM</div>
+            <div class="value" id="metragem-display">-</div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-row">
+                <span class="info-label">PRODUTO:</span>
+                <span class="info-value" id="produto-display">-</span>
             </div>
 
-            <div class="info">
-                <div class="info-row">
-                    <span class="info-label">METRAGEM:</span>
-                    <span class="info-value" id="metragem-display">-</span>
-                </div>
+            <div class="info-row">
+                <span class="info-label">ORIGEM:</span>
+                <span class="info-value" id="origem-display">-</span>
+            </div>
 
-                <div class="info-row">
-                    <span class="info-label">PRODUTO:</span>
-                    <span class="info-value" id="produto-display">-</span>
-                </div>
-
-                <div class="info-row">
-                    <span class="info-label">ORIGEM:</span>
-                    <span class="info-value" id="origem-display">-</span>
-                </div>
-
-                <div class="info-row">
-                    <span class="info-label">DATA:</span>
-                    <span class="info-value" id="data-display">-</span>
-                </div>
+            <div class="info-row">
+                <span class="info-label">DATA:</span>
+                <span class="info-value" id="data-display">-</span>
             </div>
         </div>
 
         <div class="footer">
-            Cortinave & BN - Sistema de Controle de Bobinas
+            Cortinave & BN - Controle de Bobinas
         </div>
+
+        <hr class="cut-line">
     </div>
 
     <script>
@@ -228,6 +279,26 @@
 
             } catch (error) {
                 alert('Erro ao carregar corte: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function formatarData(dataString) {
+            const data = new Date(dataString);
+            return data.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Carregar ao abrir a página
+        carregarCorte();
+    </script>
+</body>
+</html>
                 console.error(error);
             }
         }

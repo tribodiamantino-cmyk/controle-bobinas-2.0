@@ -1,6 +1,6 @@
 // ===============================================
 // SISTEMA DE IMPRESSÃO DE ETIQUETAS
-// Elgin L42 PRO Full - 60mm x 28mm
+// Impressora Térmica 57mm - Rolo Contínuo
 // ===============================================
 
 // Funções auxiliares para uso no sistema
@@ -28,7 +28,7 @@ async function imprimirEtiquetaRetalho(retalho) {
     }
 }
 
-// Gerar HTML completo para etiqueta de bobina (60mm x 28mm)
+// Gerar HTML completo para etiqueta de bobina (57mm largura, altura contínua)
 function gerarHTMLEtiquetaBobina(bobina) {
     const idBobina = bobina.codigo_interno || `BOB-${bobina.id}`;
     const produto = bobina.produto_codigo || '';
@@ -52,7 +52,7 @@ function gerarHTMLEtiquetaBobina(bobina) {
             <title>Etiqueta ${idBobina}</title>
             <style>
                 @page {
-                    size: 60mm 28mm;
+                    size: 57mm auto;
                     margin: 0;
                 }
                 * {
@@ -63,41 +63,74 @@ function gerarHTMLEtiquetaBobina(bobina) {
                 body {
                     font-family: 'Arial', sans-serif;
                     font-weight: bold;
-                    width: 60mm;
-                    height: 28mm;
-                    padding: 2mm 3mm;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
+                    width: 57mm;
+                    padding: 3mm;
                     background: white;
                 }
-                .linha-1 {
-                    font-size: 20pt;
-                    line-height: 1;
+                .etiqueta {
+                    border: 2px solid #000;
+                    padding: 2mm;
+                }
+                .header {
                     text-align: center;
                     border-bottom: 2px solid #000;
-                    padding-bottom: 1mm;
+                    padding-bottom: 2mm;
+                    margin-bottom: 2mm;
                 }
-                .linha-2 {
-                    font-size: 11pt;
-                    line-height: 1.1;
+                .tipo {
+                    font-size: 10pt;
+                    color: #333;
+                }
+                .codigo {
+                    font-size: 14pt;
+                    font-family: 'Courier New', monospace;
+                    letter-spacing: 0.5px;
+                }
+                .metragem-box {
+                    text-align: center;
+                    background: #f0f0f0;
+                    border: 1px solid #000;
+                    padding: 2mm;
+                    margin: 2mm 0;
+                }
+                .metragem-label {
+                    font-size: 8pt;
+                    color: #666;
+                }
+                .metragem-value {
+                    font-size: 18pt;
+                    font-family: 'Courier New', monospace;
+                }
+                .info-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 0.5mm 0;
+                    font-size: 9pt;
+                    padding: 1mm 0;
+                    border-bottom: 1px dotted #ccc;
                 }
-                .linha-3 {
-                    font-size: 11pt;
-                    line-height: 1.1;
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 0.5mm 0;
+                .info-row:last-child {
+                    border-bottom: none;
                 }
-                .linha-4 {
-                    font-size: 16pt;
-                    line-height: 1;
+                .info-label {
+                    color: #666;
+                }
+                .info-value {
+                    font-weight: bold;
+                    text-align: right;
+                    max-width: 55%;
+                }
+                .footer {
                     text-align: center;
                     border-top: 2px solid #000;
+                    margin-top: 2mm;
                     padding-top: 1mm;
+                    font-size: 7pt;
+                    color: #666;
+                }
+                .cut-line {
+                    border: none;
+                    border-top: 1px dashed #999;
+                    margin-top: 2mm;
                 }
                 @media print {
                     body {
@@ -108,22 +141,43 @@ function gerarHTMLEtiquetaBobina(bobina) {
             </style>
         </head>
         <body>
-            <div class="linha-1">${idBobina}</div>
-            <div class="linha-2">
-                <span>PROD: ${produto}</span>
-                <span>COR: ${cor}</span>
+            <div class="etiqueta">
+                <div class="header">
+                    <div class="tipo">📦 BOBINA</div>
+                    <div class="codigo">${idBobina}</div>
+                </div>
+                
+                <div class="metragem-box">
+                    <div class="metragem-label">METRAGEM</div>
+                    <div class="metragem-value">${metragem}m</div>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">PRODUTO:</span>
+                    <span class="info-value">${produto}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">COR:</span>
+                    <span class="info-value">${cor}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">GRAMATURA:</span>
+                    <span class="info-value">${gramatura}g</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">LARGURA:</span>
+                    <span class="info-value">${largura}</span>
+                </div>
+                
+                <div class="footer">Cortinave & BN</div>
             </div>
-            <div class="linha-3">
-                <span>GRAM: ${gramatura}</span>
-                <span>LARG: ${largura}</span>
-            </div>
-            <div class="linha-4">${metragem}m</div>
+            <hr class="cut-line">
         </body>
         </html>
     `;
 }
 
-// Gerar HTML completo para etiqueta de retalho (60mm x 28mm)
+// Gerar HTML completo para etiqueta de retalho (57mm largura, altura contínua)
 function gerarHTMLEtiquetaRetalho(retalho) {
     const idRetalho = retalho.codigo_retalho || `RET-${retalho.id}`;
     const produto = retalho.produto_codigo || '';
@@ -147,7 +201,7 @@ function gerarHTMLEtiquetaRetalho(retalho) {
             <title>Etiqueta ${idRetalho}</title>
             <style>
                 @page {
-                    size: 60mm 28mm;
+                    size: 57mm auto;
                     margin: 0;
                 }
                 * {
@@ -158,41 +212,74 @@ function gerarHTMLEtiquetaRetalho(retalho) {
                 body {
                     font-family: 'Arial', sans-serif;
                     font-weight: bold;
-                    width: 60mm;
-                    height: 28mm;
-                    padding: 2mm 3mm;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
+                    width: 57mm;
+                    padding: 3mm;
                     background: white;
                 }
-                .linha-1 {
-                    font-size: 20pt;
-                    line-height: 1;
+                .etiqueta {
+                    border: 2px solid #000;
+                    padding: 2mm;
+                }
+                .header {
                     text-align: center;
                     border-bottom: 2px solid #000;
-                    padding-bottom: 1mm;
+                    padding-bottom: 2mm;
+                    margin-bottom: 2mm;
                 }
-                .linha-2 {
-                    font-size: 11pt;
-                    line-height: 1.1;
+                .tipo {
+                    font-size: 10pt;
+                    color: #333;
+                }
+                .codigo {
+                    font-size: 14pt;
+                    font-family: 'Courier New', monospace;
+                    letter-spacing: 0.5px;
+                }
+                .metragem-box {
+                    text-align: center;
+                    background: #fff3cd;
+                    border: 1px solid #000;
+                    padding: 2mm;
+                    margin: 2mm 0;
+                }
+                .metragem-label {
+                    font-size: 8pt;
+                    color: #666;
+                }
+                .metragem-value {
+                    font-size: 18pt;
+                    font-family: 'Courier New', monospace;
+                }
+                .info-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 0.5mm 0;
+                    font-size: 9pt;
+                    padding: 1mm 0;
+                    border-bottom: 1px dotted #ccc;
                 }
-                .linha-3 {
-                    font-size: 11pt;
-                    line-height: 1.1;
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 0.5mm 0;
+                .info-row:last-child {
+                    border-bottom: none;
                 }
-                .linha-4 {
-                    font-size: 16pt;
-                    line-height: 1;
+                .info-label {
+                    color: #666;
+                }
+                .info-value {
+                    font-weight: bold;
+                    text-align: right;
+                    max-width: 55%;
+                }
+                .footer {
                     text-align: center;
                     border-top: 2px solid #000;
+                    margin-top: 2mm;
                     padding-top: 1mm;
+                    font-size: 7pt;
+                    color: #666;
+                }
+                .cut-line {
+                    border: none;
+                    border-top: 1px dashed #999;
+                    margin-top: 2mm;
                 }
                 @media print {
                     body {
@@ -203,16 +290,37 @@ function gerarHTMLEtiquetaRetalho(retalho) {
             </style>
         </head>
         <body>
-            <div class="linha-1">${idRetalho}</div>
-            <div class="linha-2">
-                <span>PROD: ${produto}</span>
-                <span>COR: ${cor}</span>
+            <div class="etiqueta">
+                <div class="header">
+                    <div class="tipo">🧵 RETALHO</div>
+                    <div class="codigo">${idRetalho}</div>
+                </div>
+                
+                <div class="metragem-box">
+                    <div class="metragem-label">METRAGEM</div>
+                    <div class="metragem-value">${metragem}m</div>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">PRODUTO:</span>
+                    <span class="info-value">${produto}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">COR:</span>
+                    <span class="info-value">${cor}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">GRAMATURA:</span>
+                    <span class="info-value">${gramatura}g</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">LARGURA:</span>
+                    <span class="info-value">${largura}</span>
+                </div>
+                
+                <div class="footer">Cortinave & BN</div>
             </div>
-            <div class="linha-3">
-                <span>GRAM: ${gramatura}</span>
-                <span>LARG: ${largura}</span>
-            </div>
-            <div class="linha-4">${metragem}m</div>
+            <hr class="cut-line">
         </body>
         </html>
     `;
