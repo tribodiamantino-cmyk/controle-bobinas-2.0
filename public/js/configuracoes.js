@@ -868,29 +868,53 @@ async function salvarLocacao(event) {
     }
 }
 
-// Formatar código da locação enquanto digita
+// Formatar código da locação enquanto digita (máscara 0000-X-0000)
 function formatarCodigoLocacao(input) {
+    // Pega posição do cursor
+    const cursorPos = input.selectionStart;
+    const valorOriginal = input.value;
+    
+    // Remove tudo que não for número ou letra
     let valor = input.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
     
-    // Limitar comprimento
+    // Limitar comprimento (9 caracteres sem hífen = 4 + 1 + 4)
     if (valor.length > 9) {
         valor = valor.substring(0, 9);
+    }
+    
+    // Garantir que posição 5 (index 4) seja letra
+    if (valor.length > 4) {
+        const parte1 = valor.substring(0, 4).replace(/[^0-9]/g, ''); // só números
+        const letra = valor.substring(4, 5).replace(/[^A-Z]/g, '');  // só letra
+        const parte2 = valor.substring(5, 9).replace(/[^0-9]/g, ''); // só números
+        valor = parte1 + letra + parte2;
     }
 
     // Aplicar máscara 0000-X-0000
     let formatado = '';
     
+    // Primeiros 4 dígitos (números)
     if (valor.length > 0) {
-        formatado = valor.substring(0, 4);
+        formatado = valor.substring(0, Math.min(4, valor.length));
     }
+    
+    // Hífen + letra
     if (valor.length > 4) {
         formatado += '-' + valor.substring(4, 5);
     }
+    
+    // Hífen + últimos 4 dígitos
     if (valor.length > 5) {
         formatado += '-' + valor.substring(5, 9);
     }
 
     input.value = formatado;
+    
+    // Ajustar posição do cursor
+    if (cursorPos < valorOriginal.length) {
+        const novoPos = Math.min(cursorPos + (formatado.length - valorOriginal.length), formatado.length);
+        input.setSelectionRange(novoPos, novoPos);
+    }
 }
 
 // ======================
