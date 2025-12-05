@@ -183,9 +183,9 @@ router.post('/criar-cenario-teste', async (req, res) => {
         
         const [planoResult] = await connection.query(
             `INSERT INTO planos_corte 
-             (codigo_plano, cliente, aviario, status, observacoes, created_at) 
-             VALUES (?, ?, ?, 'em_producao', ?, NOW())`,
-            [codigoPlano, 'Granja São José', 'Aviário 3 - Frangos de Corte', 'Plano de teste para validação do fluxo mobile']
+             (codigo_plano, cliente, aviario, status) 
+             VALUES (?, ?, ?, 'em_producao')`,
+            [codigoPlano, 'Granja São José - TESTE', 'Aviário 3 - Frangos de Corte']
         );
         
         const planoId = planoResult.insertId;
