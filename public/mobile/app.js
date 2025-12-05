@@ -11,6 +11,9 @@ let corteAtual = null; // Para função de impressão
 const MODO_TESTE = new URLSearchParams(window.location.search).get('teste') === '1';
 const API_BASE = MODO_TESTE ? '/api/mobile/teste' : '/api/mobile';
 
+// Estado de itens validados no modo teste (persiste na sessão)
+let itensValidadosTeste = [];
+
 // Mostra banner de teste se ativo
 if (MODO_TESTE) {
     document.addEventListener('DOMContentLoaded', () => {
@@ -89,6 +92,19 @@ async function carregarOrdensProducao() {
         
         if (data.success) {
             ordensProducao = data.data;
+            
+            // No modo teste, filtrar itens já validados localmente
+            if (MODO_TESTE) {
+                ordensProducao.forEach(ordem => {
+                    if (ordem.itens) {
+                        ordem.itens = ordem.itens.filter(item => 
+                            !itensValidadosTeste.includes(item.alocacao_id || item.item_id)
+                        );
+                        ordem.qtd_itens = ordem.itens.length;
+                    }
+                });
+            }
+            
             renderizarOrdensProducao();
         } else {
             throw new Error(data.message || 'Erro ao carregar ordens');
@@ -467,13 +483,22 @@ async function confirmarValidacao(event) {
         const data = await response.json();
         
         if (data.success) {
-            if (data.data.ordem_concluida) {
+            // No modo teste, marcar item como validado localmente
+            if (MODO_TESTE) {
+                const itemId = itemValidando.alocacao_id || itemValidando.item_id;
+                itensValidadosTeste.push(itemId);
+                console.log('🧪 [TESTE] Item marcado como validado:', itemId);
+                console.log('🧪 [TESTE] Total validados:', itensValidadosTeste.length);
+            }
+            
+            if (data.data.ordem_concluida || (MODO_TESTE && ordemAtual.itens.length <= 1)) {
                 mostrarToast('✅ Item validado! Ordem concluída!', 'success');
             } else {
                 mostrarToast('✅ Item validado com sucesso!', 'success');
             }
             
             // Limpar estado e foto
+            const itemIdValidado = itemValidando.alocacao_id || itemValidando.item_id;
             bobinaAtual = null;
             itemValidando = null;
             removerFotoValidacao();
@@ -481,8 +506,10 @@ async function confirmarValidacao(event) {
             // Recarregar ordens e voltar para lista
             await carregarOrdensProducao();
             
-            // Se ordem foi concluída ou não tem mais itens, voltar para lista
-            if (data.data.ordem_concluida) {
+            // Verificar se ordem foi concluída
+            const ordemConcluida = data.data.ordem_concluida || (MODO_TESTE && (!ordemAtual || ordemAtual.itens.length === 0));
+            
+            if (ordemConcluida) {
                 mostrarPasso('passo-lista-ordens');
             } else {
                 // Atualizar ordem atual com dados atualizados
