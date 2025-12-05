@@ -7,6 +7,22 @@ let ordemAtual = null;
 let itemValidando = null;
 let corteAtual = null; // Para função de impressão
 
+// MODO TESTE - detecta ?teste=1 na URL
+const MODO_TESTE = new URLSearchParams(window.location.search).get('teste') === '1';
+const API_BASE = MODO_TESTE ? '/api/mobile/teste' : '/api/mobile';
+
+// Mostra banner de teste se ativo
+if (MODO_TESTE) {
+    document.addEventListener('DOMContentLoaded', () => {
+        const banner = document.createElement('div');
+        banner.id = 'teste-banner';
+        banner.innerHTML = '🧪 MODO TESTE ATIVO - Nenhuma alteração será salva no banco';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ffc107;color:#000;text-align:center;padding:8px;font-weight:bold;z-index:9999;font-size:12px;';
+        document.body.prepend(banner);
+        document.body.style.paddingTop = '40px';
+    });
+}
+
 // ========== NAVEGAÇÃO ENTRE TELAS ==========
 async function mostrarTela(telaId) {
     // Esconder todas as telas
@@ -66,7 +82,9 @@ async function carregarOrdensProducao() {
     mostrarLoading(true);
     
     try {
-        const response = await fetch('/api/mobile/ordens-producao');
+        // Usa endpoint de teste ou produção conforme o modo
+        const endpoint = MODO_TESTE ? '/api/mobile/teste/plano' : '/api/mobile/ordens-producao';
+        const response = await fetch(endpoint);
         const data = await response.json();
         
         if (data.success) {
@@ -355,7 +373,9 @@ async function confirmarValidacao(event) {
     mostrarLoading(true);
     
     try {
-        const response = await fetch('/api/mobile/validar-item', {
+        // Usa endpoint de teste ou produção conforme o modo
+        const endpoint = MODO_TESTE ? '/api/mobile/teste/validar-item' : '/api/mobile/validar-item';
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -579,7 +599,9 @@ async function carregarBobina(bobinaId, tipo) {
     mostrarLoading(true);
     
     try {
-        const response = await fetch(`/api/mobile/bobina/${bobinaId}`);
+        // Usa endpoint de teste ou produção conforme o modo
+        const endpoint = MODO_TESTE ? `/api/mobile/teste/bobina/${bobinaId}` : `/api/mobile/bobina/${bobinaId}`;
+        const response = await fetch(endpoint);
         const data = await response.json();
         
         if (data.success) {

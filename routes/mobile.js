@@ -30,6 +30,86 @@ router.get('/bobina/:id', async (req, res) => {
     }
 });
 
+// ========================================
+// MODO TESTE - Plano fictício para testar o fluxo
+// ========================================
+router.get('/teste/plano', (req, res) => {
+    // Dados fictícios para teste do fluxo mobile
+    const produtos = [
+        { id: 1, codigo: 'AZUL-150-500', cor: 'Azul', gramatura: '150g', largura: '5.00m' },
+        { id: 2, codigo: 'VERDE-180-600', cor: 'Verde', gramatura: '180g', largura: '6.00m' },
+        { id: 3, codigo: 'AMAR-200-500', cor: 'Amarelo', gramatura: '200g', largura: '5.00m' }
+    ];
+    
+    const bobinas = [
+        { id: 101, codigo: 'BOB-TEST-001', produto: produtos[0], metragem: 250, localizacao: '1-A-1' },
+        { id: 102, codigo: 'BOB-TEST-002', produto: produtos[1], metragem: 300, localizacao: '2-B-2' },
+        { id: 103, codigo: 'BOB-TEST-003', produto: produtos[2], metragem: 200, localizacao: '3-C-3' }
+    ];
+    
+    const planoTeste = {
+        id: 9999,
+        numero_ordem: 'TESTE-2025-001',
+        codigo_plano: 'TESTE-2025-001',
+        status: 'em_producao',
+        cliente: 'TESTE MOBILE',
+        aviario: 'Galpão de Testes',
+        observacoes: 'Plano fictício para testar o fluxo do app mobile',
+        data_criacao: new Date().toISOString(),
+        fonte: 'teste',
+        qtd_itens: 10,
+        qtd_total: 10,
+        itens: [
+            { item_id: 1, alocacao_id: 1, bobina_id: 101, origem_id: 101, tipo: 'bobina', origem_codigo: 'BOB-TEST-001', metragem_alocada: 25, metragem_atual: 250, localizacao_atual: '1-A-1', produto_codigo: 'AZUL-150-500', nome_cor: 'Azul' },
+            { item_id: 2, alocacao_id: 2, bobina_id: 102, origem_id: 102, tipo: 'bobina', origem_codigo: 'BOB-TEST-002', metragem_alocada: 30, metragem_atual: 300, localizacao_atual: '2-B-2', produto_codigo: 'VERDE-180-600', nome_cor: 'Verde' },
+            { item_id: 3, alocacao_id: 3, bobina_id: 103, origem_id: 103, tipo: 'bobina', origem_codigo: 'BOB-TEST-003', metragem_alocada: 20, metragem_atual: 200, localizacao_atual: '3-C-3', produto_codigo: 'AMAR-200-500', nome_cor: 'Amarelo' },
+            { item_id: 4, alocacao_id: 4, bobina_id: 101, origem_id: 101, tipo: 'bobina', origem_codigo: 'BOB-TEST-001', metragem_alocada: 35, metragem_atual: 250, localizacao_atual: '1-A-1', produto_codigo: 'AZUL-150-500', nome_cor: 'Azul' },
+            { item_id: 5, alocacao_id: 5, bobina_id: 102, origem_id: 102, tipo: 'bobina', origem_codigo: 'BOB-TEST-002', metragem_alocada: 28, metragem_atual: 300, localizacao_atual: '2-B-2', produto_codigo: 'VERDE-180-600', nome_cor: 'Verde' },
+            { item_id: 6, alocacao_id: 6, bobina_id: 103, origem_id: 103, tipo: 'bobina', origem_codigo: 'BOB-TEST-003', metragem_alocada: 22, metragem_atual: 200, localizacao_atual: '3-C-3', produto_codigo: 'AMAR-200-500', nome_cor: 'Amarelo' },
+            { item_id: 7, alocacao_id: 7, bobina_id: 101, origem_id: 101, tipo: 'bobina', origem_codigo: 'BOB-TEST-001', metragem_alocada: 40, metragem_atual: 250, localizacao_atual: '1-A-1', produto_codigo: 'AZUL-150-500', nome_cor: 'Azul' },
+            { item_id: 8, alocacao_id: 8, bobina_id: 102, origem_id: 102, tipo: 'bobina', origem_codigo: 'BOB-TEST-002', metragem_alocada: 32, metragem_atual: 300, localizacao_atual: '2-B-2', produto_codigo: 'VERDE-180-600', nome_cor: 'Verde' },
+            { item_id: 9, alocacao_id: 9, bobina_id: 103, origem_id: 103, tipo: 'bobina', origem_codigo: 'BOB-TEST-003', metragem_alocada: 18, metragem_atual: 200, localizacao_atual: '3-C-3', produto_codigo: 'AMAR-200-500', nome_cor: 'Amarelo' },
+            { item_id: 10, alocacao_id: 10, bobina_id: 101, origem_id: 101, tipo: 'bobina', origem_codigo: 'BOB-TEST-001', metragem_alocada: 30, metragem_atual: 250, localizacao_atual: '1-A-1', produto_codigo: 'AZUL-150-500', nome_cor: 'Azul' }
+        ]
+    };
+    
+    return res.json({ success: true, data: [planoTeste] });
+});
+
+// Validar item de TESTE (não altera banco real)
+router.post('/teste/validar-item', (req, res) => {
+    const { item_id, metragem_cortada } = req.body;
+    
+    // Simula validação bem-sucedida
+    return res.json({ 
+        success: true, 
+        message: '✅ [TESTE] Corte validado com sucesso!', 
+        data: { 
+            item_id,
+            metragem_cortada, 
+            metragem_restante: '999.00',
+            modo: 'teste'
+        } 
+    });
+});
+
+// Bobina de TESTE
+router.get('/teste/bobina/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    
+    const bobinas = {
+        101: { id: 101, codigo_interno: 'BOB-TEST-001', metragem_atual: 250, localizacao_atual: '1-A-1', nome_cor: 'Azul', produto_codigo: 'AZUL-150-500' },
+        102: { id: 102, codigo_interno: 'BOB-TEST-002', metragem_atual: 300, localizacao_atual: '2-B-2', nome_cor: 'Verde', produto_codigo: 'VERDE-180-600' },
+        103: { id: 103, codigo_interno: 'BOB-TEST-003', metragem_atual: 200, localizacao_atual: '3-C-3', nome_cor: 'Amarelo', produto_codigo: 'AMAR-200-500' }
+    };
+    
+    if (bobinas[id]) {
+        return res.json({ success: true, data: bobinas[id] });
+    }
+    
+    return res.status(404).json({ success: false, message: 'Bobina de teste não encontrada' });
+});
+
 // Debug: ver todas as ordens no banco
 router.get('/debug-ordens', async (req, res) => {
     try {

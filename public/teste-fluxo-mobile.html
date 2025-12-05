@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste do Fluxo Mobile - Plano de Corte</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+        
+        .instrucoes {
+            background: #16213e;
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .instrucoes h2 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+        
+        .instrucoes ol {
+            margin-left: 20px;
+        }
+        
+        .instrucoes li {
+            margin-bottom: 8px;
+        }
+        
+        .instrucoes code {
+            background: #0f3460;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #e94560;
+        }
+        
+        /* Plano de Corte */
+        .plano {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .plano-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .plano-titulo {
+            font-size: 24px;
+            color: #00d4ff;
+        }
+        
+        .plano-info {
+            text-align: right;
+        }
+        
+        .plano-info div {
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        .plano-info strong {
+            color: #fff;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .status-em-producao {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        /* Tabela de Itens */
+        .tabela-itens {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .tabela-itens th {
+            background: #0f3460;
+            color: #00d4ff;
+            padding: 12px;
+            text-align: left;
+            font-size: 14px;
+        }
+        
+        .tabela-itens td {
+            padding: 12px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .tabela-itens tr:hover {
+            background: #0f3460;
+        }
+        
+        .item-pendente {
+            background: #2a2a4a;
+        }
+        
+        .item-concluido {
+            background: #1a4a2a;
+            opacity: 0.7;
+        }
+        
+        .produto-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .produto-azul { background: #1e88e5; }
+        .produto-verde { background: #43a047; }
+        .produto-amarelo { background: #fdd835; color: #000; }
+        
+        /* Seção de Etiquetas */
+        .secao-etiquetas {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .secao-etiquetas h2 {
+            color: #e94560;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .etiquetas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .etiqueta {
+            background: #fff;
+            color: #000;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        
+        .etiqueta-titulo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a1a2e;
+            margin-bottom: 5px;
+        }
+        
+        .etiqueta-codigo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e94560;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+        
+        .etiqueta-qr {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        
+        .etiqueta-qr canvas {
+            border: 3px solid #1a1a2e;
+            border-radius: 5px;
+        }
+        
+        .etiqueta-info {
+            font-size: 14px;
+            color: #555;
+            margin-top: 10px;
+        }
+        
+        .etiqueta-info div {
+            margin: 3px 0;
+        }
+        
+        .etiqueta-produto {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        
+        /* Separador */
+        .separador {
+            border: none;
+            border-top: 3px dashed #00d4ff;
+            margin: 40px 0;
+        }
+        
+        /* Link Mobile */
+        .link-mobile {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .link-mobile a {
+            display: inline-block;
+            background: #e94560;
+            color: #fff;
+            padding: 15px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .link-mobile a:hover {
+            transform: scale(1.05);
+            background: #ff6b8a;
+        }
+        
+        /* Checklist */
+        .checklist {
+            background: #0f3460;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .checklist h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+        }
+        
+        .checklist label {
+            display: block;
+            padding: 10px;
+            background: #16213e;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .checklist label:hover {
+            background: #1a3a6e;
+        }
+        
+        .checklist input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.3);
+        }
+        
+        .checklist input:checked + span {
+            text-decoration: line-through;
+            color: #888;
+        }
+        
+        /* Print */
+        @media print {
+            body {
+                background: #fff;
+                color: #000;
+            }
+            
+            .instrucoes, .link-mobile, .checklist, .plano {
+                display: none;
+            }
+            
+            .secao-etiquetas {
+                background: #fff;
+            }
+            
+            .etiqueta {
+                border: 2px solid #000;
+                break-inside: avoid;
+            }
+        }
+        
+        /* Responsivo */
+        @media (max-width: 600px) {
+            .plano-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .plano-info {
+                text-align: center;
+            }
+            
+            .tabela-itens {
+                font-size: 12px;
+            }
+            
+            .tabela-itens th, .tabela-itens td {
+                padding: 8px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste do Fluxo Mobile</h1>
+    <p style="text-align: center; color: #888; margin-bottom: 20px;">Plano de Corte Fictício para Testar o App</p>
+    
+    <!-- Instruções -->
+    <div class="instrucoes">
+        <h2>📋 Como Testar</h2>
+        <ol>
+            <li>Clique no botão <strong>"Abrir App Mobile (MODO TESTE)"</strong> abaixo</li>
+            <li>O plano <code>TESTE-2025-001</code> aparecerá automaticamente</li>
+            <li>Clique no plano para ver os 10 itens de corte</li>
+            <li>Para cada item, escaneie o <strong>QR Code</strong> da bobina correspondente (role esta página)</li>
+            <li>Confirme a metragem e valide o corte</li>
+            <li>Marque na checklist abaixo conforme avança ✅</li>
+        </ol>
+        <p style="margin-top: 15px; color: #ffc107;">
+            ⚠️ <strong>MODO TESTE:</strong> Nenhuma alteração será feita no banco de dados real!
+        </p>
+    </div>
+    
+    <!-- Link para Mobile -->
+    <div class="link-mobile">
+        <a href="/mobile/?teste=1" target="_blank">📱 Abrir App Mobile (MODO TESTE)</a>
+    </div>
+    
+    <!-- Plano de Corte -->
+    <div class="plano">
+        <div class="plano-header">
+            <div>
+                <div class="plano-titulo">TESTE-2025-001</div>
+                <span class="status-badge status-em-producao">EM PRODUÇÃO</span>
+            </div>
+            <div class="plano-info">
+                <div>Cliente: <strong>TESTE MOBILE</strong></div>
+                <div>Aviário: <strong>Galpão de Testes</strong></div>
+                <div>Data: <strong>05/12/2025</strong></div>
+            </div>
+        </div>
+        
+        <table class="tabela-itens">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Produto</th>
+                    <th>Bobina Origem</th>
+                    <th>Metragem</th>
+                    <th>Localização</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-itens-body">
+                <!-- Preenchido via JS -->
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Checklist de Progresso -->
+    <div class="checklist">
+        <h3>✅ Checklist de Testes</h3>
+        <div id="checklist-container">
+            <!-- Preenchido via JS -->
+        </div>
+    </div>
+    
+    <hr class="separador">
+    
+    <!-- Etiquetas das Bobinas -->
+    <div class="secao-etiquetas">
+        <h2>🏷️ Etiquetas das Bobinas para Escanear</h2>
+        <p style="text-align: center; color: #888; margin-bottom: 20px;">
+            Role para baixo e escaneie o QR code correspondente a cada item do plano
+        </p>
+        <div class="etiquetas-grid" id="etiquetas-container">
+            <!-- Preenchido via JS -->
+        </div>
+    </div>
+    
+    <script>
+        // Dados de teste - 3 produtos diferentes, 10 cortes
+        const produtos = [
+            { id: 1, codigo: 'AZUL-150-500', cor: 'Azul', classe: 'produto-azul', gramatura: '150g', largura: '5.00m' },
+            { id: 2, codigo: 'VERDE-180-600', cor: 'Verde', classe: 'produto-verde', gramatura: '180g', largura: '6.00m' },
+            { id: 3, codigo: 'AMAR-200-500', cor: 'Amarelo', classe: 'produto-amarelo', gramatura: '200g', largura: '5.00m' }
+        ];
+        
+        // Bobinas de teste (3 bobinas, uma de cada produto)
+        const bobinas = [
+            { id: 101, codigo: 'BOB-TEST-001', produto: produtos[0], metragem: 250, localizacao: '1-A-1' },
+            { id: 102, codigo: 'BOB-TEST-002', produto: produtos[1], metragem: 300, localizacao: '2-B-2' },
+            { id: 103, codigo: 'BOB-TEST-003', produto: produtos[2], metragem: 200, localizacao: '3-C-3' }
+        ];
+        
+        // 10 itens de corte distribuídos entre as 3 bobinas
+        const itensCorte = [
+            { ordem: 1, bobina: bobinas[0], metragem: 25 },
+            { ordem: 2, bobina: bobinas[1], metragem: 30 },
+            { ordem: 3, bobina: bobinas[2], metragem: 20 },
+            { ordem: 4, bobina: bobinas[0], metragem: 35 },
+            { ordem: 5, bobina: bobinas[1], metragem: 28 },
+            { ordem: 6, bobina: bobinas[2], metragem: 22 },
+            { ordem: 7, bobina: bobinas[0], metragem: 40 },
+            { ordem: 8, bobina: bobinas[1], metragem: 32 },
+            { ordem: 9, bobina: bobinas[2], metragem: 18 },
+            { ordem: 10, bobina: bobinas[0], metragem: 30 }
+        ];
+        
+        // Renderizar tabela de itens
+        function renderizarTabela() {
+            const tbody = document.getElementById('tabela-itens-body');
+            tbody.innerHTML = itensCorte.map(item => `
+                <tr class="item-pendente" id="item-row-${item.ordem}">
+                    <td><strong>${item.ordem}</strong></td>
+                    <td>
+                        <span class="produto-tag ${item.bobina.produto.classe}">
+                            ${item.bobina.produto.cor}
+                        </span>
+                        <br><small>${item.bobina.produto.codigo}</small>
+                    </td>
+                    <td>
+                        <strong>${item.bobina.codigo}</strong>
+                        <br><small>ID: ${item.bobina.id}</small>
+                    </td>
+                    <td><strong>${item.metragem}m</strong></td>
+                    <td>${item.bobina.localizacao}</td>
+                </tr>
+            `).join('');
+        }
+        
+        // Renderizar checklist
+        function renderizarChecklist() {
+            const container = document.getElementById('checklist-container');
+            container.innerHTML = itensCorte.map(item => `
+                <label>
+                    <input type="checkbox" id="check-${item.ordem}">
+                    <span>Item ${item.ordem}: ${item.bobina.produto.cor} - ${item.metragem}m (${item.bobina.codigo})</span>
+                </label>
+            `).join('');
+        }
+        
+        // Renderizar etiquetas com QR codes
+        function renderizarEtiquetas() {
+            const container = document.getElementById('etiquetas-container');
+            
+            // Criar uma etiqueta para cada bobina única
+            const bobinasUnicas = [...new Map(itensCorte.map(i => [i.bobina.id, i.bobina])).values()];
+            
+            container.innerHTML = bobinasUnicas.map(bobina => `
+                <div class="etiqueta" id="etiqueta-${bobina.id}">
+                    <div class="etiqueta-titulo">BOBINA</div>
+                    <div class="etiqueta-codigo">${bobina.codigo}</div>
+                    <div class="etiqueta-qr" id="qr-${bobina.id}"></div>
+                    <div class="etiqueta-info">
+                        <div><strong>ID:</strong> ${bobina.id}</div>
+                        <div><strong>Metragem:</strong> ${bobina.metragem}m</div>
+                        <div><strong>Local:</strong> ${bobina.localizacao}</div>
+                        <div class="etiqueta-produto ${bobina.produto.classe}">
+                            ${bobina.produto.cor} - ${bobina.produto.gramatura} - ${bobina.produto.largura}
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                        <strong>Usado nos itens:</strong><br>
+                        ${itensCorte.filter(i => i.bobina.id === bobina.id).map(i => `#${i.ordem} (${i.metragem}m)`).join(', ')}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Gerar QR codes
+            setTimeout(() => {
+                bobinasUnicas.forEach(bobina => {
+                    const qrContainer = document.getElementById(`qr-${bobina.id}`);
+                    if (qrContainer) {
+                        // O QR code contém o padrão BOB-{id} que o mobile espera
+                        new QRCode(qrContainer, {
+                            text: `BOB-${bobina.id}`,
+                            width: 150,
+                            height: 150,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    }
+                });
+            }, 100);
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            renderizarTabela();
+            renderizarChecklist();
+            renderizarEtiquetas();
+        });
+    </script>
+</body>
+</html>
