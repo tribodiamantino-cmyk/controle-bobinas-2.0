@@ -594,7 +594,15 @@ async function limparReservasOrfas() {
     }
 }
 
+// ======================
+// IMPRESSÃO DE ETIQUETAS
+// ======================
+function abrirImpressaoLocacoes() {
+    window.open('/impressao/etiquetas-locacoes.html', '_blank', 'width=1200,height=800');
+}
+
 // Carregar dados ao iniciar
 document.addEventListener('DOMContentLoaded', () => {
     carregarCores();
 });
+

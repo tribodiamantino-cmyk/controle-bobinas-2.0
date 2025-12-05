@@ -5,6 +5,7 @@ let bobinaAtual = null;
 let ordensProducao = [];
 let ordemAtual = null;
 let itemValidando = null;
+let corteAtual = null; // Para função de impressão
 
 // ========== NAVEGAÇÃO ENTRE TELAS ==========
 async function mostrarTela(telaId) {
@@ -1344,6 +1345,7 @@ async function processarConsultaCorte(qrData) {
         if (!data.success) throw new Error(data.error);
         
         const corte = data.data;
+        corteAtual = corte; // Armazenar para função de impressão
         
         // Renderizar detalhes
         document.getElementById('corte-detalhes-container').innerHTML = `
@@ -1397,7 +1399,14 @@ async function escanearOutroCorte() {
 }
 
 function imprimirEtiquetaCorte() {
-    mostrarToast('Função de impressão em desenvolvimento', 'info');
+    if (!corteAtual) {
+        mostrarToast('Erro: nenhum corte selecionado', 'error');
+        return;
+    }
+    
+    // Abrir página de impressão em nova janela
+    const url = `/impressao/etiqueta-corte.html?codigo=${corteAtual.codigo_corte}`;
+    window.open(url, '_blank', 'width=800,height=600');
 }
 
 // ========== CARREGAMENTO - LISTAR PLANOS ==========

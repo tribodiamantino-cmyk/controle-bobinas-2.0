@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etiqueta de Corte</title>
+    <style>
+        /* Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Configuração para impressora térmica 100x50mm */
+        @page {
+            size: 100mm 50mm;
+            margin: 0;
+        }
+
+        @media print {
+            body {
+                width: 100mm;
+                height: 50mm;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: white;
+            padding: 5mm;
+            width: 100mm;
+            height: 50mm;
+        }
+
+        .etiqueta {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #000;
+            padding: 3mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #000;
+            padding-bottom: 2mm;
+            margin-bottom: 2mm;
+        }
+
+        .header h1 {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 1mm;
+        }
+
+        .codigo {
+            font-size: 14pt;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+        }
+
+        .content {
+            display: flex;
+            gap: 3mm;
+        }
+
+        .qr-container {
+            flex-shrink: 0;
+        }
+
+        .qr-container img {
+            width: 30mm;
+            height: 30mm;
+            border: 1px solid #000;
+        }
+
+        .info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .info-row {
+            margin-bottom: 1mm;
+        }
+
+        .info-label {
+            font-size: 7pt;
+            color: #666;
+            font-weight: bold;
+            display: block;
+        }
+
+        .info-value {
+            font-size: 10pt;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            border-top: 1px solid #000;
+            padding-top: 1mm;
+            font-size: 7pt;
+            color: #666;
+        }
+
+        /* Botões de controle (não imprimem) */
+        .controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls no-print">
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
+        <button class="btn btn-secondary" onclick="window.close()">✖ Fechar</button>
+    </div>
+
+    <div class="etiqueta">
+        <div class="header">
+            <h1>✂️ CORTE</h1>
+            <div class="codigo" id="codigo-display">COR-2025-00001</div>
+        </div>
+
+        <div class="content">
+            <div class="qr-container">
+                <img id="qr-image" src="" alt="QR Code">
+            </div>
+
+            <div class="info">
+                <div class="info-row">
+                    <span class="info-label">METRAGEM:</span>
+                    <span class="info-value" id="metragem-display">-</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">PRODUTO:</span>
+                    <span class="info-value" id="produto-display">-</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">ORIGEM:</span>
+                    <span class="info-value" id="origem-display">-</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">DATA:</span>
+                    <span class="info-value" id="data-display">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Cortinave & BN - Sistema de Controle de Bobinas
+        </div>
+    </div>
+
+    <script>
+        // Pegar parâmetros da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const codigoCorte = urlParams.get('codigo');
+
+        if (!codigoCorte) {
+            alert('Código de corte não fornecido!');
+            window.close();
+        }
+
+        // Carregar dados do corte
+        async function carregarCorte() {
+            try {
+                const response = await fetch(`/api/mobile/corte/${codigoCorte}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                const corte = data.data;
+
+                // Preencher dados
+                document.getElementById('codigo-display').textContent = corte.codigo_corte;
+                document.getElementById('metragem-display').textContent = `${corte.metragem_cortada}m`;
+                document.getElementById('produto-display').textContent = `${corte.cor} ${corte.gramatura}g ${corte.largura}cm`;
+                document.getElementById('origem-display').textContent = `${corte.origem_tipo} #${corte.origem_id}`;
+                document.getElementById('data-display').textContent = formatarData(corte.created_at);
+
+                // Carregar QR Code
+                const qrResponse = await fetch(`/api/qrcodes/corte/${corte.codigo_corte}`);
+                const qrData = await qrResponse.json();
+                document.getElementById('qr-image').src = qrData.data.qr;
+
+                // Auto-imprimir após carregar (opcional)
+                // setTimeout(() => window.print(), 500);
+
+            } catch (error) {
+                alert('Erro ao carregar corte: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function formatarData(dataString) {
+            const data = new Date(dataString);
+            return data.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Carregar ao abrir a página
+        carregarCorte();
+    </script>
+</body>
+</html>
