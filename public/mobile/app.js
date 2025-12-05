@@ -341,6 +341,15 @@ function mostrarConfirmacaoCorte() {
             </div>
 
             <div class="form-group">
+                <label for="foto-medidor-validacao">📸 Foto do Medidor (contraprova) *</label>
+                <input type="file" id="foto-medidor-validacao" accept="image/*" capture="environment" required>
+                <div id="preview-foto-validacao" class="hidden" style="margin-top: 10px;">
+                    <img id="preview-img-validacao" style="max-width: 100%; border-radius: 8px; border: 2px solid var(--primary);">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="removerFotoValidacao()" style="margin-top: 5px;">🗑️ Remover</button>
+                </div>
+            </div>
+
+            <div class="form-group">
                 <label for="observacoes-validacao">Observações (opcional)</label>
                 <textarea id="observacoes-validacao" rows="2"></textarea>
             </div>
@@ -352,7 +361,33 @@ function mostrarConfirmacaoCorte() {
         </form>
     `;
     
+    // Configurar preview da foto
+    const fotoInputValidacao = document.getElementById('foto-medidor-validacao');
+    if (fotoInputValidacao) {
+        fotoInputValidacao.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    document.getElementById('preview-img-validacao').src = event.target.result;
+                    document.getElementById('preview-foto-validacao').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
     mostrarPasso('passo-confirma-corte');
+}
+
+// Remover foto do formulário de validação
+function removerFotoValidacao() {
+    const fotoInput = document.getElementById('foto-medidor-validacao');
+    if (fotoInput) fotoInput.value = '';
+    const preview = document.getElementById('preview-foto-validacao');
+    if (preview) preview.classList.add('hidden');
+    const img = document.getElementById('preview-img-validacao');
+    if (img) img.src = '';
 }
 
 async function confirmarValidacao(event) {
@@ -360,7 +395,14 @@ async function confirmarValidacao(event) {
     
     const metragemCortada = parseFloat(document.getElementById('metragem-validacao').value);
     const observacoes = document.getElementById('observacoes-validacao').value;
+    const fotoInput = document.getElementById('foto-medidor-validacao');
     const metragemAtual = Number(bobinaAtual.metragem_atual || bobinaAtual.metragem || 0);
+    
+    // Validar foto obrigatória
+    if (!fotoInput || !fotoInput.files[0]) {
+        mostrarToast('📸 Por favor, tire uma foto do medidor', 'error');
+        return;
+    }
     
     // Validar metragem
     if (metragemCortada > metragemAtual) {
@@ -376,6 +418,29 @@ async function confirmarValidacao(event) {
     mostrarLoading(true);
     
     try {
+        let fotoPath = null;
+        
+        // Upload da foto (apenas no modo real)
+        if (!MODO_TESTE) {
+            const formData = new FormData();
+            formData.append('foto', fotoInput.files[0]);
+            
+            const uploadResponse = await fetch('/api/mobile/upload-foto-medidor', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const uploadData = await uploadResponse.json();
+            if (!uploadData.success) {
+                throw new Error(uploadData.error || 'Erro ao fazer upload da foto');
+            }
+            fotoPath = uploadData.data.filePath;
+        } else {
+            // No modo teste, simular path da foto
+            fotoPath = '/uploads/teste/foto-simulada.jpg';
+            console.log('🧪 [TESTE] Foto simulada:', fotoPath);
+        }
+        
         // Usa endpoint de teste ou produção conforme o modo
         const endpoint = MODO_TESTE ? '/api/mobile/teste/validar-item' : '/api/mobile/validar-item';
         const response = await fetch(endpoint, {
@@ -388,6 +453,7 @@ async function confirmarValidacao(event) {
                 origem_id: bobinaAtual.id,
                 tipo_origem: bobinaAtual.tipo_origem || 'bobina',
                 metragem_cortada: metragemCortada,
+                foto_medidor: fotoPath,
                 observacoes: observacoes || null
             })
         });
@@ -401,9 +467,10 @@ async function confirmarValidacao(event) {
                 mostrarToast('✅ Item validado com sucesso!', 'success');
             }
             
-            // Limpar estado
+            // Limpar estado e foto
             bobinaAtual = null;
             itemValidando = null;
+            removerFotoValidacao();
             
             // Recarregar ordens e voltar para lista
             await carregarOrdensProducao();
