@@ -714,12 +714,12 @@ async function salvarCampoLocacao(id, campo) {
     
     let valor = input.value;
     
-    // Validar código com máscara
+    // Validar código com máscara flexível (1-4 dígitos cada parte)
     if (campo === 'codigo') {
         valor = valor.trim().toUpperCase();
-        const regex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+        const regex = /^[0-9]{1,4}-[A-Z]-[0-9]{1,4}$/;
         if (!regex.test(valor)) {
-            alert('Código inválido! Use o formato 0000-X-0000');
+            alert('Código inválido! Use o formato N-X-N (ex: 1-A-1, 12-B-34, 0001-A-0001)');
             input.focus();
             return;
         }
@@ -821,10 +821,10 @@ async function salvarLocacao(event) {
     const codigo = document.getElementById('locacao-codigo').value.trim().toUpperCase();
     const descricao = document.getElementById('locacao-descricao').value.trim();
 
-    // Validar formato da máscara
-    const regex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+    // Validar formato da máscara flexível (1-4 dígitos cada parte)
+    const regex = /^[0-9]{1,4}-[A-Z]-[0-9]{1,4}$/;
     if (!regex.test(codigo)) {
-        alert('Código inválido! Use o formato 0000-X-0000');
+        alert('Código inválido! Use o formato N-X-N (ex: 1-A-1, 12-B-34, 0001-A-0001)');
         return;
     }
 
