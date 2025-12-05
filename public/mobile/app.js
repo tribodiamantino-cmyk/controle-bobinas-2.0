@@ -1396,21 +1396,26 @@ async function abrirFinalizarPlano(planoId) {
 async function processarScanLocacao(qrData) {
     try {
         // Verificar se é QR de locação válido
-        if (!qrData.startsWith('LOC-')) {
-            mostrarToast('QR Code inválido. Escaneie uma locação.', 'error');
+        // Formato aceito: N-X-N (ex: 1-A-1, 12-B-34, etc.)
+        const regexLocacao = /^\d{1,4}-[A-Za-z]-\d{1,4}$/;
+        
+        if (!regexLocacao.test(qrData)) {
+            mostrarToast('QR Code inválido. Escaneie uma locação (formato: N-X-N).', 'error');
             return;
         }
         
-        const locacaoId = qrData.replace('LOC-', '');
+        const codigoLocacao = qrData.toUpperCase();
         
         // Verificar se já foi escaneada
-        if (locacoesEscaneadas.some(loc => loc.id == locacaoId)) {
+        if (locacoesEscaneadas.some(loc => loc.codigo === codigoLocacao)) {
             mostrarToast('Locação já escaneada!', 'warning');
             return;
         }
         
         // Buscar info da locação (endpoint de teste ou real)
-        const endpoint = MODO_TESTE ? `/api/mobile/teste/locacao/${locacaoId}` : `/api/locacoes/${locacaoId}`;
+        const endpoint = MODO_TESTE 
+            ? `/api/mobile/teste/locacao/${encodeURIComponent(codigoLocacao)}` 
+            : `/api/locacoes/codigo/${encodeURIComponent(codigoLocacao)}`;
         const response = await fetch(endpoint);
         const data = await response.json();
         
@@ -1423,6 +1428,8 @@ async function processarScanLocacao(qrData) {
             if (locacoesEscaneadas.length > 0) {
                 document.getElementById('btn-confirmar-finalizacao').disabled = false;
             }
+        } else {
+            mostrarToast(data.message || 'Locação não encontrada', 'error');
         }
     } catch (error) {
         mostrarToast('Erro ao processar locação: ' + error.message, 'error');

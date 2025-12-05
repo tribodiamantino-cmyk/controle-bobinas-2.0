@@ -560,9 +560,9 @@
                 locacoes.forEach(loc => {
                     const qrContainer = document.getElementById(`qr-loc-${loc.id}`);
                     if (qrContainer) {
-                        // O QR code contém o padrão LOC-{id} que o mobile espera
+                        // O QR code contém o código da locação no formato N-X-N
                         new QRCode(qrContainer, {
-                            text: `LOC-${loc.id}`,
+                            text: loc.codigo,
                             width: 150,
                             height: 150,
                             colorDark: "#2e7d32",

@@ -128,18 +128,18 @@ router.get('/teste/plano/:id', (req, res) => {
     return res.json({ success: true, data: planoTeste });
 });
 
-// Locação de TESTE
-router.get('/teste/locacao/:id', (req, res) => {
-    const id = parseInt(req.params.id);
+// Locação de TESTE - busca pelo código no formato N-X-N
+router.get('/teste/locacao/:codigo', (req, res) => {
+    const codigo = req.params.codigo;
     
     const locacoes = {
-        201: { id: 201, codigo: '1-A-1', descricao: 'Corredor A - Prateleira 1', ativa: true },
-        202: { id: 202, codigo: '2-B-2', descricao: 'Corredor B - Prateleira 2', ativa: true },
-        203: { id: 203, codigo: '3-C-3', descricao: 'Corredor C - Prateleira 3', ativa: true }
+        '1-A-1': { id: 201, codigo: '1-A-1', descricao: 'Corredor A - Prateleira 1', ativa: true },
+        '2-B-2': { id: 202, codigo: '2-B-2', descricao: 'Corredor B - Prateleira 2', ativa: true },
+        '3-C-3': { id: 203, codigo: '3-C-3', descricao: 'Corredor C - Prateleira 3', ativa: true }
     };
     
-    if (locacoes[id]) {
-        return res.json({ success: true, data: locacoes[id] });
+    if (locacoes[codigo]) {
+        return res.json({ success: true, data: locacoes[codigo] });
     }
     
     return res.status(404).json({ success: false, message: 'Locação de teste não encontrada' });
