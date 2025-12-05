@@ -12,9 +12,9 @@
             box-sizing: border-box;
         }
 
-        /* Configuração para impressora térmica 100x50mm */
+        /* Configuração para impressora térmica 30x60mm */
         @page {
-            size: 100mm 50mm;
+            size: 30mm 60mm;
             margin: 0;
         }
 
@@ -64,7 +64,8 @@
             margin-bottom: 5px;
         }
 
-        .form-group select {
+        .form-group select,
+        .form-group input {
             width: 100%;
             max-width: 400px;
             padding: 8px;
@@ -114,7 +115,7 @@
         .preview-container {
             padding: 20px;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100mm, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(30mm, 1fr));
             gap: 20px;
         }
 
@@ -134,84 +135,82 @@
             }
         }
 
-        /* Etiqueta em si */
+        /* Etiqueta em si - 30mm x 60mm */
         .etiqueta {
-            width: 100mm;
-            height: 50mm;
+            width: 30mm;
+            height: 60mm;
             border: 2px solid #000;
-            padding: 3mm;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             background: white;
+            overflow: hidden;
         }
 
+        /* Cabeçalho - 8mm */
         .header {
             text-align: center;
-            border-bottom: 1px solid #000;
-            padding-bottom: 2mm;
-            margin-bottom: 2mm;
+            border-bottom: 2px solid #000;
+            padding: 2mm 0;
+            height: 8mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .header h2 {
-            font-size: 14pt;
+            font-size: 11pt;
             font-weight: bold;
-            margin-bottom: 1mm;
+            margin: 0;
         }
 
-        .codigo-locacao {
-            font-size: 18pt;
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 2px;
-        }
-
-        .content {
-            display: flex;
-            gap: 3mm;
-            align-items: center;
-        }
-
-        .qr-container {
-            flex-shrink: 0;
-        }
-
-        .qr-container img {
-            width: 35mm;
-            height: 35mm;
-            border: 1px solid #000;
-        }
-
-        .info {
+        /* QR Code - 26mm (ocupa maior parte) */
+        .qr-section {
             flex: 1;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            gap: 2mm;
+            padding: 1mm;
+            border-bottom: 2px solid #000;
         }
 
-        .info-row {
-            margin-bottom: 1mm;
-        }
-
-        .info-label {
-            font-size: 8pt;
-            color: #666;
-            font-weight: bold;
+        .qr-section img {
+            width: 25mm;
+            height: 25mm;
             display: block;
         }
 
-        .info-value {
-            font-size: 11pt;
-            font-weight: bold;
+        /* Código - 10mm */
+        .codigo-section {
+            text-align: center;
+            padding: 2mm 1mm;
+            height: 10mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 2px solid #000;
         }
 
+        .codigo-locacao {
+            font-size: 10pt;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            letter-spacing: -0.5px;
+            line-height: 1;
+        }
+
+        /* Rodapé - 6mm */
         .footer {
             text-align: center;
-            border-top: 1px solid #000;
-            padding-top: 1mm;
+            padding: 1mm 0;
+            height: 6mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .footer-text {
             font-size: 7pt;
-            color: #666;
+            color: #333;
         }
 
         .loading {
@@ -227,19 +226,20 @@
         <h1>📍 Etiquetas de Locações - Impressão em Lote</h1>
 
         <div class="info-box">
-            <strong>ℹ️ Instruções:</strong><br>
-            Selecione quais locações deseja imprimir. As etiquetas serão geradas com QR Code para facilitar a identificação.
+            <strong>ℹ️ Formato:</strong> 30mm x 60mm | <strong>QR Code:</strong> 25mm x 25mm (otimizado para leitura rápida)
         </div>
 
         <div class="form-group">
             <label for="filtro-locacoes">Filtrar locações:</label>
             <select id="filtro-locacoes" onchange="filtrarLocacoes()">
                 <option value="todas">Todas as Locações Ativas</option>
-                <option value="rua-a">Apenas Rua A</option>
-                <option value="rua-b">Apenas Rua B</option>
-                <option value="prateleira-1">Apenas Prateleira 1</option>
-                <option value="prateleira-2">Apenas Prateleira 2</option>
+                <option value="custom">Filtro Personalizado (por letra ou número)</option>
             </select>
+        </div>
+
+        <div class="form-group" id="filtro-custom" style="display: none;">
+            <label for="filtro-custom-input">Digite o filtro (ex: A, 0001, B-1):</label>
+            <input type="text" id="filtro-custom-input" placeholder="Ex: A, 0001, B" oninput="aplicarFiltroCustom()">
         </div>
 
         <div>
@@ -262,6 +262,7 @@
     <script>
         let locacoesData = [];
         let filtroAtual = 'todas';
+        let filtroCustomValue = '';
 
         // Carregar locações do backend
         async function carregarLocacoes() {
@@ -292,6 +293,19 @@
         function filtrarLocacoes() {
             const select = document.getElementById('filtro-locacoes');
             filtroAtual = select.value;
+            
+            const customDiv = document.getElementById('filtro-custom');
+            if (filtroAtual === 'custom') {
+                customDiv.style.display = 'block';
+            } else {
+                customDiv.style.display = 'none';
+                filtroCustomValue = '';
+                renderizarEtiquetas();
+            }
+        }
+
+        function aplicarFiltroCustom() {
+            filtroCustomValue = document.getElementById('filtro-custom-input').value.toUpperCase();
             renderizarEtiquetas();
         }
 
@@ -302,14 +316,10 @@
             // Aplicar filtro
             let locacoesFiltradas = [...locacoesData];
 
-            if (filtroAtual === 'rua-a') {
-                locacoesFiltradas = locacoesFiltradas.filter(loc => loc.codigo.startsWith('A'));
-            } else if (filtroAtual === 'rua-b') {
-                locacoesFiltradas = locacoesFiltradas.filter(loc => loc.codigo.startsWith('B'));
-            } else if (filtroAtual === 'prateleira-1') {
-                locacoesFiltradas = locacoesFiltradas.filter(loc => loc.codigo.includes('-B1-'));
-            } else if (filtroAtual === 'prateleira-2') {
-                locacoesFiltradas = locacoesFiltradas.filter(loc => loc.codigo.includes('-B2-'));
+            if (filtroAtual === 'custom' && filtroCustomValue) {
+                locacoesFiltradas = locacoesFiltradas.filter(loc => 
+                    loc.codigo.includes(filtroCustomValue)
+                );
             }
 
             // Atualizar contador
@@ -333,35 +343,19 @@
                         <div class="etiqueta-wrapper">
                             <div class="etiqueta">
                                 <div class="header">
-                                    <h2>📍 LOCAÇÃO</h2>
+                                    <h2>LOCAÇÃO</h2>
+                                </div>
+
+                                <div class="qr-section">
+                                    <img src="${qrData.data.qr}" alt="QR ${locacao.codigo}">
+                                </div>
+
+                                <div class="codigo-section">
                                     <div class="codigo-locacao">${locacao.codigo}</div>
                                 </div>
 
-                                <div class="content">
-                                    <div class="qr-container">
-                                        <img src="${qrData.data.qr}" alt="QR Code ${locacao.codigo}">
-                                    </div>
-
-                                    <div class="info">
-                                        <div class="info-row">
-                                            <span class="info-label">DESCRIÇÃO:</span>
-                                            <span class="info-value">${locacao.descricao || 'Locação de armazenamento'}</span>
-                                        </div>
-
-                                        <div class="info-row">
-                                            <span class="info-label">CAPACIDADE:</span>
-                                            <span class="info-value">${locacao.capacidade || 'Ilimitada'}</span>
-                                        </div>
-
-                                        <div class="info-row">
-                                            <span class="info-label">ID:</span>
-                                            <span class="info-value">#${locacao.id}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div class="footer">
-                                    Cortinave & BN - Sistema de Controle de Bobinas
+                                    <div class="footer-text">ID: ${locacao.id}</div>
                                 </div>
                             </div>
                         </div>

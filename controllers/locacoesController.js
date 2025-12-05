@@ -1,12 +1,12 @@
 const db = require('../config/database');
 
-// Listar todas as locações
+// Listar todas as locações (ativas e inativas)
 exports.listarLocacoes = async (req, res) => {
     try {
         const [locacoes] = await db.query(`
-            SELECT * FROM locacoes 
-            WHERE ativo = TRUE
-            ORDER BY codigo_locacao
+            SELECT id, codigo, descricao, capacidade, ativa, created_at, updated_at
+            FROM locacoes 
+            ORDER BY codigo
         `);
         
         res.json({ 
@@ -23,15 +23,16 @@ exports.listarLocacoes = async (req, res) => {
     }
 };
 
-// Buscar locação por código
+// Buscar locação por ID
 exports.buscarLocacao = async (req, res) => {
     try {
-        const { codigo_locacao } = req.params;
+        const { id } = req.params;
         
         const [locacao] = await db.query(`
-            SELECT * FROM locacoes 
-            WHERE codigo_locacao = ?
-        `, [codigo_locacao]);
+            SELECT id, codigo, descricao, capacidade, ativa, created_at, updated_at
+            FROM locacoes 
+            WHERE id = ?
+        `, [id]);
         
         if (!locacao || locacao.length === 0) {
             return res.status(404).json({ 
@@ -57,25 +58,37 @@ exports.buscarLocacao = async (req, res) => {
 // Criar nova locação
 exports.criarLocacao = async (req, res) => {
     try {
-        const { codigo_locacao, descricao, corredor, prateleira, posicao } = req.body;
+        const { codigo, descricao, capacidade } = req.body;
         
-        if (!codigo_locacao) {
+        // Validação: código obrigatório
+        if (!codigo) {
             return res.status(400).json({ 
                 success: false, 
                 error: 'Código da locação é obrigatório' 
             });
         }
         
+        // Validação: formato da máscara 0000-X-0000
+        const mascaraRegex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+        if (!mascaraRegex.test(codigo)) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Código deve seguir o formato 0000-X-0000 (ex: 0001-A-0001)' 
+            });
+        }
+        
         const [result] = await db.query(`
-            INSERT INTO locacoes (codigo_locacao, descricao, corredor, prateleira, posicao)
-            VALUES (?, ?, ?, ?, ?)
-        `, [codigo_locacao, descricao, corredor, prateleira, posicao]);
+            INSERT INTO locacoes (codigo, descricao, capacidade, ativa)
+            VALUES (?, ?, ?, TRUE)
+        `, [codigo, descricao || null, capacidade || null]);
         
         res.json({ 
             success: true, 
             data: {
                 id: result.insertId,
-                codigo_locacao
+                codigo,
+                descricao,
+                capacidade
             },
             message: 'Locação criada com sucesso!' 
         });
@@ -84,7 +97,7 @@ exports.criarLocacao = async (req, res) => {
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Locação já existe' 
+                error: 'Código de locação já existe' 
             });
         }
         console.error('Erro ao criar locação:', error);
@@ -99,17 +112,28 @@ exports.criarLocacao = async (req, res) => {
 exports.atualizarLocacao = async (req, res) => {
     try {
         const { id } = req.params;
-        const { descricao, corredor, prateleira, posicao, ativo } = req.body;
+        const { codigo, descricao, capacidade, ativa } = req.body;
+        
+        // Se forneceu código, validar formato
+        if (codigo) {
+            const mascaraRegex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+            if (!mascaraRegex.test(codigo)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Código deve seguir o formato 0000-X-0000 (ex: 0001-A-0001)' 
+                });
+            }
+        }
         
         await db.query(`
             UPDATE locacoes
-            SET descricao = COALESCE(?, descricao),
-                corredor = COALESCE(?, corredor),
-                prateleira = COALESCE(?, prateleira),
-                posicao = COALESCE(?, posicao),
-                ativo = COALESCE(?, ativo)
+            SET codigo = COALESCE(?, codigo),
+                descricao = COALESCE(?, descricao),
+                capacidade = COALESCE(?, capacidade),
+                ativa = COALESCE(?, ativa),
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        `, [descricao, corredor, prateleira, posicao, ativo, id]);
+        `, [codigo, descricao, capacidade, ativa, id]);
         
         res.json({ 
             success: true, 
@@ -117,6 +141,12 @@ exports.atualizarLocacao = async (req, res) => {
         });
         
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Código de locação já existe' 
+            });
+        }
         console.error('Erro ao atualizar locação:', error);
         res.status(500).json({ 
             success: false, 
@@ -125,14 +155,15 @@ exports.atualizarLocacao = async (req, res) => {
     }
 };
 
-// Desativar locação
+// Desativar locação (soft delete)
 exports.desativarLocacao = async (req, res) => {
     try {
         const { id } = req.params;
         
         await db.query(`
             UPDATE locacoes
-            SET ativo = FALSE
+            SET ativa = FALSE,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `, [id]);
         
@@ -143,6 +174,32 @@ exports.desativarLocacao = async (req, res) => {
         
     } catch (error) {
         console.error('Erro ao desativar locação:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
+// Reativar locação
+exports.reativarLocacao = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        await db.query(`
+            UPDATE locacoes
+            SET ativa = TRUE,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `, [id]);
+        
+        res.json({ 
+            success: true, 
+            message: 'Locação reativada com sucesso!' 
+        });
+        
+    } catch (error) {
+        console.error('Erro ao reativar locação:', error);
         res.status(500).json({ 
             success: false, 
             error: error.message 

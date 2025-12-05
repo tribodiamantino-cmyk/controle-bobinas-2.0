@@ -200,6 +200,8 @@ function showTab(tabName) {
         carregarCores();
     } else if (tabName === 'gramaturas') {
         carregarGramaturas();
+    } else if (tabName === 'locacoes') {
+        carregarLocacoes();
     }
 }
 
@@ -592,6 +594,262 @@ async function limparReservasOrfas() {
         btn.disabled = false;
         btn.textContent = '🧹 Executar Limpeza de Reservas';
     }
+}
+
+// ======================
+// LOCAÇÕES
+// ======================
+let locacoes = [];
+let locacaoEditando = null;
+
+async function carregarLocacoes() {
+    try {
+        document.getElementById('loading-locacoes').style.display = 'block';
+        document.getElementById('table-locacoes').style.display = 'none';
+        document.getElementById('empty-locacoes').style.display = 'none';
+
+        const response = await fetch('/api/locacoes');
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+
+        locacoes = data.data;
+        renderizarLocacoes();
+
+    } catch (error) {
+        console.error('Erro ao carregar locações:', error);
+        document.getElementById('alert-locacoes').innerHTML = `
+            <div class="alert alert-error">
+                Erro ao carregar locações: ${error.message}
+            </div>
+        `;
+    } finally {
+        document.getElementById('loading-locacoes').style.display = 'none';
+    }
+}
+
+function renderizarLocacoes() {
+    const tbody = document.getElementById('tbody-locacoes');
+    const emptyState = document.getElementById('empty-locacoes');
+    const table = document.getElementById('table-locacoes');
+
+    if (locacoes.length === 0) {
+        table.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    table.style.display = 'table';
+    emptyState.style.display = 'none';
+
+    tbody.innerHTML = locacoes.map(loc => `
+        <tr>
+            <td><strong>${loc.codigo}</strong></td>
+            <td>${loc.descricao || '-'}</td>
+            <td>${loc.capacidade || 'Ilimitada'}</td>
+            <td>
+                <span class="badge ${loc.ativa ? 'badge-success' : 'badge-danger'}">
+                    ${loc.ativa ? 'Ativa' : 'Inativa'}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-secondary" onclick="editarLocacao(${loc.id})" title="Editar">
+                    ✏️
+                </button>
+                ${loc.ativa ? `
+                    <button class="btn btn-sm btn-danger" onclick="desativarLocacao(${loc.id})" title="Desativar">
+                        🗑️
+                    </button>
+                ` : `
+                    <button class="btn btn-sm btn-success" onclick="ativarLocacao(${loc.id})" title="Reativar">
+                        ♻️
+                    </button>
+                `}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function abrirModalLocacao() {
+    locacaoEditando = null;
+    document.getElementById('modal-locacao-title').textContent = 'Nova Locação';
+    document.getElementById('form-locacao').reset();
+    document.getElementById('locacao-id').value = '';
+    document.getElementById('modal-locacao').classList.add('show');
+}
+
+function fecharModalLocacao() {
+    document.getElementById('modal-locacao').classList.remove('show');
+    locacaoEditando = null;
+}
+
+function editarLocacao(id) {
+    const locacao = locacoes.find(l => l.id === id);
+    if (!locacao) return;
+
+    locacaoEditando = locacao;
+    document.getElementById('modal-locacao-title').textContent = 'Editar Locação';
+    document.getElementById('locacao-id').value = locacao.id;
+    document.getElementById('locacao-codigo').value = locacao.codigo;
+    document.getElementById('locacao-descricao').value = locacao.descricao || '';
+    document.getElementById('locacao-capacidade').value = locacao.capacidade || '';
+    document.getElementById('modal-locacao').classList.add('show');
+}
+
+async function salvarLocacao(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('locacao-id').value;
+    const codigo = document.getElementById('locacao-codigo').value.trim().toUpperCase();
+    const descricao = document.getElementById('locacao-descricao').value.trim();
+    const capacidade = document.getElementById('locacao-capacidade').value.trim();
+
+    // Validar formato da máscara
+    const regex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+    if (!regex.test(codigo)) {
+        alert('Código inválido! Use o formato 0000-X-0000');
+        return;
+    }
+
+    try {
+        const url = id ? `/api/locacoes/${id}` : '/api/locacoes';
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                codigo: codigo,
+                descricao: descricao || null,
+                capacidade: capacidade || null,
+                ativa: true
+            })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+
+        document.getElementById('alert-locacoes').innerHTML = `
+            <div class="alert alert-success">
+                Locação ${id ? 'atualizada' : 'criada'} com sucesso!
+            </div>
+        `;
+
+        setTimeout(() => {
+            document.getElementById('alert-locacoes').innerHTML = '';
+        }, 3000);
+
+        fecharModalLocacao();
+        await carregarLocacoes();
+
+    } catch (error) {
+        alert('Erro ao salvar locação: ' + error.message);
+    }
+}
+
+async function desativarLocacao(id) {
+    if (!confirm('Deseja realmente desativar esta locação?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/locacoes/${id}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+
+        document.getElementById('alert-locacoes').innerHTML = `
+            <div class="alert alert-success">
+                Locação desativada com sucesso!
+            </div>
+        `;
+
+        setTimeout(() => {
+            document.getElementById('alert-locacoes').innerHTML = '';
+        }, 3000);
+
+        await carregarLocacoes();
+
+    } catch (error) {
+        alert('Erro ao desativar locação: ' + error.message);
+    }
+}
+
+async function ativarLocacao(id) {
+    try {
+        const locacao = locacoes.find(l => l.id === id);
+        
+        const response = await fetch(`/api/locacoes/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                codigo: locacao.codigo,
+                descricao: locacao.descricao,
+                capacidade: locacao.capacidade,
+                ativa: true
+            })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+
+        document.getElementById('alert-locacoes').innerHTML = `
+            <div class="alert alert-success">
+                Locação reativada com sucesso!
+            </div>
+        `;
+
+        setTimeout(() => {
+            document.getElementById('alert-locacoes').innerHTML = '';
+        }, 3000);
+
+        await carregarLocacoes();
+
+    } catch (error) {
+        alert('Erro ao reativar locação: ' + error.message);
+    }
+}
+
+// Formatar código da locação enquanto digita
+function formatarCodigoLocacao(input) {
+    let valor = input.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    
+    // Limitar comprimento
+    if (valor.length > 9) {
+        valor = valor.substring(0, 9);
+    }
+
+    // Aplicar máscara 0000-X-0000
+    let formatado = '';
+    
+    if (valor.length > 0) {
+        formatado = valor.substring(0, 4);
+    }
+    if (valor.length > 4) {
+        formatado += '-' + valor.substring(4, 5);
+    }
+    if (valor.length > 5) {
+        formatado += '-' + valor.substring(5, 9);
+    }
+
+    input.value = formatado;
 }
 
 // ======================

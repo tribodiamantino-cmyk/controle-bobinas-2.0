@@ -34,6 +34,9 @@
                 <button class="tab" onclick="showTab('gramaturas')">
                     📏 Gramaturas
                 </button>
+                <button class="tab" onclick="showTab('locacoes')">
+                    📍 Locações
+                </button>
                 <button class="tab" onclick="showTab('manutencao')">
                     🔧 Manutenção
                 </button>
@@ -110,6 +113,49 @@
                     <div class="empty-state-icon">📏</div>
                     <h3>Nenhuma gramatura cadastrada</h3>
                     <p>Clique em "Nova Gramatura" para começar</p>
+                </div>
+            </div>
+
+            <!-- TAB: LOCAÇÕES -->
+            <div id="tab-locacoes" class="tab-content">
+                <div class="flex flex-between mb-3">
+                    <h2>Gerenciar Locações do Armazém</h2>
+                    <div>
+                        <button class="btn btn-secondary" onclick="abrirImpressaoLocacoes()" style="margin-right: 10px;">
+                            🖨️ Imprimir Etiquetas
+                        </button>
+                        <button class="btn btn-primary" onclick="abrirModalLocacao()">
+                            ➕ Nova Locação
+                        </button>
+                    </div>
+                </div>
+
+                <div id="loading-locacoes" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Carregando locações...</p>
+                </div>
+
+                <div id="alert-locacoes"></div>
+
+                <table class="table" id="table-locacoes">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Código</th>
+                            <th style="width: 35%;">Descrição</th>
+                            <th style="width: 15%;">Capacidade</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 15%;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-locacoes">
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+
+                <div id="empty-locacoes" class="empty-state" style="display: none;">
+                    <div class="empty-state-icon">📍</div>
+                    <h3>Nenhuma locação cadastrada</h3>
+                    <p>Clique em "Nova Locação" para começar</p>
                 </div>
             </div>
 
@@ -236,6 +282,62 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="fecharModalGramatura()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        💾 Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL LOCAÇÃO -->
+    <div id="modal-locacao" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-locacao-title">Nova Locação</h2>
+                <button class="modal-close" onclick="fecharModalLocacao()">✕</button>
+            </div>
+
+            <form id="form-locacao" onsubmit="salvarLocacao(event)">
+                <input type="hidden" id="locacao-id">
+
+                <div class="form-group">
+                    <label for="locacao-codigo">
+                        Código da Locação *
+                        <small style="display: block; color: #666; font-weight: normal; margin-top: 5px;">
+                            Formato: 0000-X-0000 (ex: 0001-A-0001, 1234-B-9999)
+                        </small>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="locacao-codigo" 
+                        placeholder="0000-A-0000" 
+                        maxlength="11"
+                        required
+                        pattern="[0-9]{4}-[A-Z]{1}-[0-9]{4}"
+                        title="Use o formato 0000-X-0000 (números de 0000 a 9999, letra maiúscula)"
+                        oninput="formatarCodigoLocacao(this)"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="locacao-descricao">
+                        Descrição (opcional)
+                    </label>
+                    <input type="text" id="locacao-descricao" placeholder="Ex: Rua A, Prateleira 1, Coluna 1">
+                </div>
+
+                <div class="form-group">
+                    <label for="locacao-capacidade">
+                        Capacidade (opcional)
+                    </label>
+                    <input type="text" id="locacao-capacidade" placeholder="Ex: 10 planos, Ilimitada">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalLocacao()">
                         Cancelar
                     </button>
                     <button type="submit" class="btn btn-primary">
