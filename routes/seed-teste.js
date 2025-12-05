@@ -177,6 +177,8 @@ router.post('/criar-cenario-teste', async (req, res) => {
         // =====================================================
         // 6. CRIAR PLANO DE CORTE
         // =====================================================
+        const agora = new Date();
+        const ano = agora.getFullYear();
         const codigoPlano = `PC-${ano}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
         
         const [planoResult] = await connection.query(
