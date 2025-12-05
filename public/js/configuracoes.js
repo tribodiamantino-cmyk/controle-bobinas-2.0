@@ -597,10 +597,9 @@ async function limparReservasOrfas() {
 }
 
 // ======================
-// LOCAÇÕES
+// LOCAÇÕES (Edição Inline igual Cores)
 // ======================
 let locacoes = [];
-let locacaoEditando = null;
 
 async function carregarLocacoes() {
     try {
@@ -646,33 +645,165 @@ function renderizarLocacoes() {
 
     tbody.innerHTML = locacoes.map(loc => `
         <tr>
-            <td><strong>${loc.codigo}</strong></td>
-            <td>${loc.descricao || '-'}</td>
-            <td>
-                <span class="badge ${loc.ativa ? 'badge-success' : 'badge-danger'}">
-                    ${loc.ativa ? 'Ativa' : 'Inativa'}
+            <td onclick="editarCampoLocacao('loc-codigo-${loc.id}')">
+                <span id="loc-codigo-${loc.id}-display" class="campo-display" style="font-family: monospace; font-weight: bold;">${loc.codigo}</span>
+                <input type="text" 
+                       value="${loc.codigo}" 
+                       id="loc-codigo-${loc.id}"
+                       class="campo-edit"
+                       style="display: none; font-family: monospace; font-weight: bold;"
+                       maxlength="11"
+                       oninput="formatarCodigoLocacao(this)"
+                       onblur="salvarCampoLocacao(${loc.id}, 'codigo')"
+                       onkeypress="if(event.key==='Enter') this.blur()">
+            </td>
+            <td onclick="editarCampoLocacao('loc-descricao-${loc.id}')">
+                <span id="loc-descricao-${loc.id}-display" class="campo-display">${loc.descricao || '-'}</span>
+                <input type="text" 
+                       value="${loc.descricao || ''}" 
+                       id="loc-descricao-${loc.id}"
+                       class="campo-edit"
+                       style="display: none;"
+                       placeholder="Descrição (opcional)"
+                       onblur="salvarCampoLocacao(${loc.id}, 'descricao')"
+                       onkeypress="if(event.key==='Enter') this.blur()">
+            </td>
+            <td onclick="editarCampoLocacao('loc-ativa-${loc.id}')">
+                <span id="loc-ativa-${loc.id}-display" class="campo-display">
+                    ${loc.ativa ? '<span class="badge badge-success">Ativa</span>' : '<span class="badge badge-danger">Inativa</span>'}
                 </span>
+                <select id="loc-ativa-${loc.id}" 
+                        class="campo-edit"
+                        style="display: none;"
+                        onblur="salvarCampoLocacao(${loc.id}, 'ativa')"
+                        onchange="this.blur()">
+                    <option value="1" ${loc.ativa ? 'selected' : ''}>Ativa</option>
+                    <option value="0" ${!loc.ativa ? 'selected' : ''}>Inativa</option>
+                </select>
             </td>
             <td>
-                <button class="btn btn-sm btn-secondary" onclick="editarLocacao(${loc.id})" title="Editar">
-                    ✏️
+                <button class="btn btn-sm btn-danger" onclick="excluirLocacao(${loc.id})" title="Excluir">
+                    🗑️
                 </button>
-                ${loc.ativa ? `
-                    <button class="btn btn-sm btn-danger" onclick="desativarLocacao(${loc.id})" title="Desativar">
-                        🗑️
-                    </button>
-                ` : `
-                    <button class="btn btn-sm btn-success" onclick="ativarLocacao(${loc.id})" title="Reativar">
-                        ♻️
-                    </button>
-                `}
             </td>
         </tr>
     `).join('');
 }
 
+// Editar campo inline de locação
+function editarCampoLocacao(campoId) {
+    const display = document.getElementById(campoId + '-display');
+    const input = document.getElementById(campoId);
+    
+    if (display && input) {
+        display.style.display = 'none';
+        input.style.display = 'block';
+        input.focus();
+        if (input.tagName === 'INPUT') {
+            input.select();
+        }
+    }
+}
+
+// Salvar campo inline de locação
+async function salvarCampoLocacao(id, campo) {
+    const input = document.getElementById(`loc-${campo}-${id}`);
+    const display = document.getElementById(`loc-${campo}-${id}-display`);
+    
+    if (!input || !display) return;
+    
+    let valor = input.value;
+    
+    // Validar código com máscara
+    if (campo === 'codigo') {
+        valor = valor.trim().toUpperCase();
+        const regex = /^[0-9]{4}-[A-Z]{1}-[0-9]{4}$/;
+        if (!regex.test(valor)) {
+            alert('Código inválido! Use o formato 0000-X-0000');
+            input.focus();
+            return;
+        }
+    }
+    
+    // Converter ativa para boolean
+    if (campo === 'ativa') {
+        valor = valor === '1';
+    }
+    
+    try {
+        const body = {};
+        body[campo] = campo === 'descricao' ? (valor.trim() || null) : valor;
+        
+        const response = await fetch(`/api/locacoes/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        
+        // Atualizar display
+        if (campo === 'codigo') {
+            display.textContent = valor;
+        } else if (campo === 'descricao') {
+            display.textContent = valor.trim() || '-';
+        } else if (campo === 'ativa') {
+            display.innerHTML = valor 
+                ? '<span class="badge badge-success">Ativa</span>' 
+                : '<span class="badge badge-danger">Inativa</span>';
+        }
+        
+        // Atualizar array local
+        const loc = locacoes.find(l => l.id === id);
+        if (loc) {
+            loc[campo] = campo === 'descricao' ? (valor.trim() || null) : valor;
+        }
+        
+        // Esconder input, mostrar display
+        input.style.display = 'none';
+        display.style.display = 'inline';
+        
+    } catch (error) {
+        alert('Erro ao salvar: ' + error.message);
+        input.focus();
+    }
+}
+
+// Excluir locação
+async function excluirLocacao(id) {
+    if (!confirm('Deseja desativar esta locação?')) return;
+    
+    try {
+        const response = await fetch(`/api/locacoes/${id}`, { method: 'DELETE' });
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        
+        await carregarLocacoes();
+        mostrarAlerta('locacoes', 'Locação desativada com sucesso!', 'success');
+        
+    } catch (error) {
+        alert('Erro: ' + error.message);
+    }
+}
+
+// Mostrar alerta
+function mostrarAlerta(area, mensagem, tipo) {
+    const alertDiv = document.getElementById(`alert-${area}`);
+    if (alertDiv) {
+        alertDiv.innerHTML = `<div class="alert alert-${tipo}">${mensagem}</div>`;
+        setTimeout(() => { alertDiv.innerHTML = ''; }, 3000);
+    }
+}
+
+// Abrir modal para NOVA locação
 function abrirModalLocacao() {
-    locacaoEditando = null;
     document.getElementById('modal-locacao-title').textContent = 'Nova Locação';
     document.getElementById('form-locacao').reset();
     document.getElementById('locacao-id').value = '';
@@ -681,22 +812,6 @@ function abrirModalLocacao() {
 
 function fecharModalLocacao() {
     document.getElementById('modal-locacao').classList.remove('show');
-    locacaoEditando = null;
-}
-
-function editarLocacao(id) {
-    const locacao = locacoes.find(l => l.id === id);
-    if (!locacao) {
-        alert('Locação não encontrada');
-        return;
-    }
-
-    locacaoEditando = locacao;
-    document.getElementById('modal-locacao-title').textContent = 'Editar Locação';
-    document.getElementById('locacao-id').value = locacao.id;
-    document.getElementById('locacao-codigo').value = locacao.codigo;
-    document.getElementById('locacao-descricao').value = locacao.descricao || '';
-    document.getElementById('modal-locacao').classList.add('show');
 }
 
 async function salvarLocacao(event) {
@@ -750,79 +865,6 @@ async function salvarLocacao(event) {
 
     } catch (error) {
         alert('Erro ao salvar locação: ' + error.message);
-    }
-}
-
-async function desativarLocacao(id) {
-    if (!confirm('Deseja realmente desativar esta locação?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/locacoes/${id}`, {
-            method: 'DELETE'
-        });
-
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.error);
-        }
-
-        document.getElementById('alert-locacoes').innerHTML = `
-            <div class="alert alert-success">
-                Locação desativada com sucesso!
-            </div>
-        `;
-
-        setTimeout(() => {
-            document.getElementById('alert-locacoes').innerHTML = '';
-        }, 3000);
-
-        await carregarLocacoes();
-
-    } catch (error) {
-        alert('Erro ao desativar locação: ' + error.message);
-    }
-}
-
-async function ativarLocacao(id) {
-    try {
-        const locacao = locacoes.find(l => l.id === id);
-        
-        const response = await fetch(`/api/locacoes/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                codigo: locacao.codigo,
-                descricao: locacao.descricao,
-                capacidade: locacao.capacidade,
-                ativa: true
-            })
-        });
-
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.error);
-        }
-
-        document.getElementById('alert-locacoes').innerHTML = `
-            <div class="alert alert-success">
-                Locação reativada com sucesso!
-            </div>
-        `;
-
-        setTimeout(() => {
-            document.getElementById('alert-locacoes').innerHTML = '';
-        }, 3000);
-
-        await carregarLocacoes();
-
-    } catch (error) {
-        alert('Erro ao reativar locação: ' + error.message);
     }
 }
 
