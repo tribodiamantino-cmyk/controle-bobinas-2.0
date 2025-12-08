@@ -5,8 +5,8 @@
 
 (function() {
     // Configuração da versão (atualizar aqui quando fizer novos deploys)
-    const VERSION = '2.1.0';
-    const BUILD_DATE = '27/11/2025';
+    const VERSION = '2.2.0';
+    const BUILD_DATE = '08/12/2025';
     const ENVIRONMENT = window.location.hostname === 'localhost' ? 'DEV' : 'PROD';
     
     // Criar elemento do carimbo

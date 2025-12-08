@@ -1,8 +1,8 @@
 {
   "name": "controle-bobinas",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Sistema de controle de bobinas",
-  "buildDate": "2025-11-27",
+  "buildDate": "2025-12-08",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
