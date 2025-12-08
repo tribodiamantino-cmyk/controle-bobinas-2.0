@@ -228,12 +228,12 @@ exports.buscarBobinaPorCodigo = async (req, res) => {
 // Buscar produto por loja + fabricante + código
 exports.buscarProduto = async (req, res) => {
     try {
-        const { loja, fabricante, codigo } = req.query;
+        const { loja, codigo } = req.query;
         
-        if (!loja || !fabricante || !codigo) {
+        if (!loja || !codigo) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Loja, fabricante e código são obrigatórios' 
+                error: 'Loja e código são obrigatórios' 
             });
         }
         
@@ -245,8 +245,8 @@ exports.buscarProduto = async (req, res) => {
             FROM produtos p
             JOIN configuracoes_cores c ON p.cor_id = c.id
             JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-            WHERE p.loja = ? AND p.fabricante = ? AND p.codigo = ? AND p.ativo = 1`,
-            [loja, fabricante, codigo]
+            WHERE p.loja = ? AND p.codigo = ? AND p.ativo = 1`,
+            [loja, codigo]
         );
         
         if (produto.length === 0) {

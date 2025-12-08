@@ -81,21 +81,13 @@ function abrirModalNovaBobina() {
                             </div>
 
                             <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label" for="fabricante">Fabricante *</label>
-                                    <select class="form-control" id="fabricante" required onchange="resetarBusca()">
-                                        <option value="">Selecione...</option>
-                                        <option value="Propex">Propex</option>
-                                        <option value="Textiloeste">Textiloeste</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
+                                <div class="form-group" style="flex: 1;">
                                     <label class="form-label" for="codigo">Código do Produto *</label>
                                     <div style="display: flex; gap: 8px;">
-                                        <input type="text" class="form-control" id="codigo" required placeholder="Ex: BR-001" onchange="buscarProduto()">
+                                        <input type="text" class="form-control" id="codigo" required placeholder="Ex: CTV-0001 ou BN-0001" onchange="buscarProduto()">
                                         <button type="button" class="btn btn-secondary" onclick="buscarProduto()" title="Buscar produto">🔍</button>
                                     </div>
+                                    <small class="form-text text-muted">O fabricante será obtido automaticamente do produto</small>
                                 </div>
                             </div>
 
@@ -204,17 +196,16 @@ function resetarBusca() {
 // Buscar produto por loja + fabricante + código
 async function buscarProduto() {
     const loja = document.getElementById('loja').value;
-    const fabricante = document.getElementById('fabricante').value;
     const codigo = document.getElementById('codigo').value;
     
-    if (!loja || !fabricante || !codigo) {
-        mostrarAlerta('Selecione loja, fabricante e digite o código', 'warning');
+    if (!loja || !codigo) {
+        mostrarAlerta('Selecione a loja e digite o código do produto', 'warning');
         return;
     }
     
     try {
         const response = await fetch(
-            `/api/bobinas/buscar-produto?loja=${loja}&fabricante=${fabricante}&codigo=${codigo}`
+            `/api/bobinas/buscar-produto?loja=${loja}&codigo=${codigo}`
         );
         const data = await response.json();
         
@@ -257,9 +248,10 @@ function mostrarProdutoEncontrado(produto) {
     
     document.getElementById('produto-dados').innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-            <div><strong>Cor:</strong> ${produto.nome_cor}</div>
-            <div><strong>Gramatura:</strong> ${produto.gramatura}</div>
-            <div><strong>Tipo:</strong> ${produto.tipo_tecido || 'Normal'}</div>
+            <div><strong>🏭 Fabricante:</strong> ${produto.fabricante}</div>
+            <div><strong>🎨 Cor:</strong> ${produto.nome_cor}</div>
+            <div><strong>⚖️ Gramatura:</strong> ${produto.gramatura}</div>
+            <div><strong>📐 Tipo:</strong> ${produto.tipo_tecido || 'Normal'}</div>
             ${medidas}
         </div>
     `;
@@ -274,12 +266,10 @@ function mostrarProdutoNaoEncontrado() {
 // Abrir modal de cadastro rápido de produto
 function abrirModalCadastroProduto() {
     const loja = document.getElementById('loja').value;
-    const fabricante = document.getElementById('fabricante').value;
     const codigo = document.getElementById('codigo').value;
     
     // Preencher dados no modal
     document.getElementById('quick-loja').textContent = loja;
-    document.getElementById('quick-fabricante').textContent = fabricante;
     document.getElementById('quick-codigo').textContent = codigo;
     
     // Mostrar modal
