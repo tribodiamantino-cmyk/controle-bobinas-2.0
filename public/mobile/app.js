@@ -478,8 +478,10 @@ function mostrarConfirmacaoCorte() {
                 <label for="metragem-validacao">Metragem Cortada (metros)</label>
                 <input type="number" id="metragem-validacao" step="0.01" min="0.01" 
                        value="${metragemSolicitada}" 
-                       max="${metragemAtual}" required>
-                <small style="color: var(--text-light);">Solicitado: ${metragemSolicitada}m</small>
+                       max="${Math.max(metragemAtual, metragemSolicitada)}" required>
+                <small style="color: var(--text-light);">
+                    Solicitado: ${metragemSolicitada}m | Disponível: ${metragemAtual}m
+                </small>
             </div>
 
             <div class="form-group">
