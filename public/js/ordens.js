@@ -664,6 +664,80 @@ function renderizarDetalhesPlano(plano) {
 
 function fecharModalDetalhes() {
     document.getElementById('modalDetalhesPlano').style.display = 'none';
+    // Voltar para aba de itens quando fechar
+    trocarAba('itens');
+}
+
+// ========== TABS DO MODAL ==========
+function trocarAba(aba) {
+    // Atualizar botões
+    document.getElementById('tabItens').classList.toggle('tab-active', aba === 'itens');
+    document.getElementById('tabHistorico').classList.toggle('tab-active', aba === 'historico');
+    
+    // Mostrar/esconder abas
+    document.getElementById('abaItens').style.display = aba === 'itens' ? 'block' : 'none';
+    document.getElementById('abaHistorico').style.display = aba === 'historico' ? 'block' : 'none';
+    
+    // Carregar histórico se necessário
+    if (aba === 'historico' && planoAtual) {
+        carregarHistorico(planoAtual.id);
+    }
+}
+
+async function carregarHistorico(planoId) {
+    const container = document.getElementById('conteudoHistorico');
+    container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Carregando histórico...</p>';
+    
+    try {
+        const response = await fetch(`${API_BASE}/ordens-corte/${planoId}/historico`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Erro ao carregar histórico');
+        }
+        
+        const eventos = data.data;
+        
+        if (eventos.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Nenhum evento registrado</p>';
+            return;
+        }
+        
+        // Renderizar timeline
+        let html = '<div class="timeline">';
+        
+        eventos.forEach(evento => {
+            const data = new Date(evento.data);
+            const dataFormatada = data.toLocaleDateString('pt-BR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            html += `
+                <div class="timeline-item tipo-${evento.tipo}">
+                    <div class="timeline-icon">${evento.icone}</div>
+                    <div class="timeline-content">
+                        <div class="timeline-time">${dataFormatada}</div>
+                        <div class="timeline-description">${evento.descricao}</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        container.innerHTML = `
+            <p style="text-align: center; color: #dc3545; padding: 40px;">
+                ❌ Erro ao carregar histórico: ${error.message}
+            </p>
+        `;
+    }
 }
 
 // ========== MODO DE EDIÇÃO ==========
@@ -1630,3 +1704,144 @@ window.addEventListener('DOMContentLoaded', () => {
         console.error('Formulário formSalvarTemplate não encontrado');
     }
 });
+
+
+// ========== MODAL: FINALIZAR PLANO ==========
+let planoParaFinalizar = null;
+
+async function abrirModalFinalizacao(planoId) {
+    planoParaFinalizar = planoId;
+    
+    // Mostrar modal
+    document.getElementById('modalFinalizarPlano').style.display = 'flex';
+    document.getElementById('conteudoFinalizacao').style.display = 'block';
+    document.getElementById('resultadoFinalizacao').style.display = 'none';
+    
+    // Carregar resumo do plano
+    try {
+        const response = await fetch(`${API_BASE}/ordens-corte/${planoId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Erro ao carregar dados');
+        }
+        
+        const plano = data.data;
+        const itens = plano.itens || [];
+        
+        // Contar bobinas únicas
+        const bobinasUnicas = new Set();
+        const retalhosUnicos = new Set();
+        
+        itens.forEach(item => {
+            if (item.tipo_origem === 'bobina' && item.bobina_id) {
+                bobinasUnicas.add(item.bobina_id);
+            } else if (item.tipo_origem === 'retalho' && item.retalho_id) {
+                retalhosUnicos.add(item.retalho_id);
+            }
+        });
+        
+        const totalMetragem = itens.reduce((acc, item) => acc + parseFloat(item.metragem_necessaria || 0), 0);
+        const itensConfirmados = itens.filter(item => item.status_confirmacao === 'confirmado').length;
+        
+        const resumoHtml = `
+            <p style="margin: 0 0 10px 0; color: #333;">
+                <strong>Plano:</strong> ${plano.codigo_plano}<br>
+                <strong>Cliente:</strong> ${plano.cliente}<br>
+                <strong>Aviário:</strong> ${plano.aviario}
+            </p>
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
+            <p style="margin: 0; color: #333;">
+                <strong>📦 Total de cortes:</strong> ${itens.length}<br>
+                <strong>✅ Confirmados:</strong> ${itensConfirmados}/${itens.length}<br>
+                <strong>📏 Metragem total:</strong> ${totalMetragem.toFixed(2)}m<br>
+                <strong>🎯 Bobinas utilizadas:</strong> ${bobinasUnicas.size}<br>
+                <strong>♻️ Retalhos utilizados:</strong> ${retalhosUnicos.size}
+            </p>
+        `;
+        
+        document.getElementById('resumoFinalizacao').innerHTML = resumoHtml;
+        
+        // Avisar se nem todos estão confirmados
+        if (itensConfirmados < itens.length) {
+            document.getElementById('resumoFinalizacao').innerHTML += `
+                <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-top: 15px;">
+                    ⚠️ <strong>Atenção:</strong> Apenas ${itensConfirmados} de ${itens.length} cortes foram confirmados pelo app mobile.
+                </div>
+            `;
+        }
+        
+    } catch (error) {
+        console.error('Erro ao carregar resumo:', error);
+        document.getElementById('resumoFinalizacao').innerHTML = `
+            <p style="color: #dc3545;">❌ Erro ao carregar informações do plano</p>
+        `;
+    }
+}
+
+function fecharModalFinalizarPlano() {
+    document.getElementById('modalFinalizarPlano').style.display = 'none';
+    planoParaFinalizar = null;
+}
+
+async function confirmarFinalizacaoPlano() {
+    if (!planoParaFinalizar) {
+        showNotification('Nenhum plano selecionado', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/mobile/finalizar-plano/${planoParaFinalizar}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Erro ao finalizar plano');
+        }
+        
+        // Esconder conteúdo de confirmação
+        document.getElementById('conteudoFinalizacao').style.display = 'none';
+        
+        // Mostrar resultado
+        const resultadoDiv = document.getElementById('resultadoFinalizacao');
+        resultadoDiv.style.display = 'block';
+        
+        // Criar lista de retalhos gerados
+        let retalhosHtml = '';
+        if (data.data.retalhos_criados > 0) {
+            retalhosHtml = `
+                <div style="background: #d1ecf1; color: #0c5460; padding: 15px; border-radius: 8px;">
+                    <strong>♻️ Retalhos Gerados:</strong> ${data.data.retalhos_criados}
+                    <ul style="margin: 10px 0 0 20px;">
+                        ${data.data.retalhos.map(r => `
+                            <li>
+                                <strong>${r.codigo_retalho}</strong> - 
+                                ${r.produto_nome} - 
+                                ${r.metragem}m
+                                ${r.localizacao ? ` (${r.localizacao})` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+        } else {
+            retalhosHtml = `
+                <div style="background: #f8f9fa; color: #6c757d; padding: 15px; border-radius: 8px;">
+                    ℹ️ Nenhum retalho foi gerado (sobras menores que 10m)
+                </div>
+            `;
+        }
+        
+        document.getElementById('retalhosGerados').innerHTML = retalhosHtml;
+        
+        showNotification('✅ Plano finalizado com sucesso!', 'success');
+        
+    } catch (error) {
+        console.error('Erro ao finalizar plano:', error);
+        showNotification('Erro ao finalizar: ' + error.message, 'error');
+    }
+}
+

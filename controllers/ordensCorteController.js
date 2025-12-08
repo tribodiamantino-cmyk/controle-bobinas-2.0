@@ -1381,3 +1381,145 @@ exports.limparReservasOrfas = async (req, res) => {
         });
     }
 };
+
+// Buscar histórico do plano (eventos, mudanças de status, alocações, cortes)
+exports.buscarHistoricoPlano = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Buscar info do plano
+        const [planos] = await db.query(`
+            SELECT codigo_plano, status, data_criacao, data_finalizacao 
+            FROM planos_corte WHERE id = ?
+        `, [id]);
+        
+        if (planos.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Plano não encontrado' 
+            });
+        }
+        
+        const plano = planos[0];
+        const eventos = [];
+        
+        // Evento 1: Criação do plano
+        eventos.push({
+            tipo: 'criacao',
+            data: plano.data_criacao,
+            descricao: `Plano ${plano.codigo_plano} criado`,
+            icone: '📝'
+        });
+        
+        // Evento 2: Alocações (quando foram alocadas)
+        const [alocacoes] = await db.query(`
+            SELECT 
+                ac.created_at as data_alocacao,
+                ac.tipo_origem,
+                COALESCE(b.codigo_interno, r.codigo_retalho) as codigo_origem,
+                ac.metragem_alocada,
+                p.codigo as produto_codigo
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+            JOIN produtos p ON ipc.produto_id = p.id
+            LEFT JOIN bobinas b ON ac.bobina_id = b.id
+            LEFT JOIN retalhos r ON ac.retalho_id = r.id
+            WHERE ipc.plano_corte_id = ?
+            ORDER BY ac.created_at ASC
+        `, [id]);
+        
+        alocacoes.forEach(a => {
+            eventos.push({
+                tipo: 'alocacao',
+                data: a.data_alocacao,
+                descricao: `${a.tipo_origem === 'bobina' ? '📦' : '♻️'} ${a.codigo_origem} alocado para ${a.produto_codigo} (${a.metragem_alocada}m)`,
+                icone: '🔗'
+            });
+        });
+        
+        // Evento 3: Início de produção (quando status mudou para em_producao)
+        // Não temos log de mudanças de status, então vamos inferir pela primeira confirmação de corte
+        const [primeiroCorte] = await db.query(`
+            SELECT MIN(ac.data_confirmacao) as primeira_confirmacao
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+            WHERE ipc.plano_corte_id = ? AND ac.status_confirmacao = 'confirmado'
+        `, [id]);
+        
+        if (primeiroCorte[0].primeira_confirmacao) {
+            eventos.push({
+                tipo: 'inicio_producao',
+                data: primeiroCorte[0].primeira_confirmacao,
+                descricao: 'Produção iniciada (primeiro corte confirmado)',
+                icone: '▶️'
+            });
+        }
+        
+        // Evento 4: Cortes confirmados
+        const [cortes] = await db.query(`
+            SELECT 
+                ac.data_confirmacao,
+                COALESCE(b.codigo_interno, r.codigo_retalho) as codigo_origem,
+                ac.metragem_alocada,
+                p.codigo as produto_codigo
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+            JOIN produtos p ON ipc.produto_id = p.id
+            LEFT JOIN bobinas b ON ac.bobina_id = b.id
+            LEFT JOIN retalhos r ON ac.retalho_id = r.id
+            WHERE ipc.plano_corte_id = ? AND ac.status_confirmacao = 'confirmado'
+            ORDER BY ac.data_confirmacao ASC
+        `, [id]);
+        
+        cortes.forEach(c => {
+            eventos.push({
+                tipo: 'corte',
+                data: c.data_confirmacao,
+                descricao: `✂️ Corte confirmado: ${c.produto_codigo} - ${c.metragem_alocada}m de ${c.codigo_origem}`,
+                icone: '✅'
+            });
+        });
+        
+        // Evento 5: Finalização
+        if (plano.data_finalizacao) {
+            eventos.push({
+                tipo: 'finalizacao',
+                data: plano.data_finalizacao,
+                descricao: 'Plano finalizado',
+                icone: '🏁'
+            });
+            
+            // Buscar retalhos gerados
+            const [retalhos] = await db.query(`
+                SELECT codigo_retalho, metragem
+                FROM retalhos
+                WHERE observacoes LIKE ?
+                ORDER BY id ASC
+            `, [`%plano ${plano.codigo_plano}%`]);
+            
+            if (retalhos.length > 0) {
+                eventos.push({
+                    tipo: 'retalhos',
+                    data: plano.data_finalizacao,
+                    descricao: `♻️ ${retalhos.length} retalho(s) gerado(s): ${retalhos.map(r => `${r.codigo_retalho} (${r.metragem}m)`).join(', ')}`,
+                    icone: '📦'
+                });
+            }
+        }
+        
+        // Ordenar eventos por data
+        eventos.sort((a, b) => new Date(a.data) - new Date(b.data));
+        
+        res.json({ 
+            success: true, 
+            data: eventos
+        });
+        
+    } catch (error) {
+        console.error('Erro ao buscar histórico:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};

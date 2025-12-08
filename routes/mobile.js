@@ -775,4 +775,174 @@ router.post('/atualizar-localizacao-retalho', async (req, res) => {
     }
 });
 
+// Finalizar plano de corte
+router.post('/finalizar-plano/:planoId', async (req, res) => {
+    const connection = await db.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+        
+        const { planoId } = req.params;
+        
+        // Verificar se plano existe e está em produção
+        const [plano] = await connection.query(
+            'SELECT * FROM planos_corte WHERE id = ?',
+            [planoId]
+        );
+        
+        if (!plano || plano.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: 'Plano não encontrado' });
+        }
+        
+        if (plano[0].status === 'finalizado') {
+            await connection.rollback();
+            return res.status(400).json({ success: false, message: 'Plano já está finalizado' });
+        }
+        
+        // Verificar se todos os itens foram confirmados
+        const [stats] = await connection.query(`
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN confirmado = TRUE THEN 1 ELSE 0 END) as confirmadas
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+            WHERE ipc.plano_corte_id = ?
+        `, [planoId]);
+        
+        if (stats[0].total !== stats[0].confirmadas) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                success: false, 
+                message: `Ainda há ${stats[0].total - stats[0].confirmadas} item(ns) pendente(s)` 
+            });
+        }
+        
+        // Atualizar status do plano
+        await connection.query(
+            `UPDATE planos_corte 
+             SET status = 'finalizado', data_finalizacao = NOW() 
+             WHERE id = ?`,
+            [planoId]
+        );
+        
+        // Buscar bobinas/retalhos utilizados com sobras
+        const [origens] = await connection.query(`
+            SELECT DISTINCT
+                ac.bobina_id,
+                ac.retalho_id,
+                ac.tipo_origem,
+                b.metragem_atual as bobina_metragem,
+                b.metragem_reservada as bobina_reservada,
+                b.codigo_interno as bobina_codigo,
+                b.produto_id as bobina_produto_id,
+                b.localizacao_atual as bobina_localizacao,
+                r.metragem as retalho_metragem,
+                r.metragem_reservada as retalho_reservada,
+                r.codigo_retalho as retalho_codigo
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+            LEFT JOIN bobinas b ON ac.bobina_id = b.id
+            LEFT JOIN retalhos r ON ac.retalho_id = r.id
+            WHERE ipc.plano_corte_id = ? AND ac.confirmado = TRUE
+        `, [planoId]);
+        
+        const retalhosCriados = [];
+        const METRAGEM_MINIMA_RETALHO = 10; // Configurável
+        
+        // Criar retalhos das sobras
+        for (const origem of origens) {
+            if (origem.tipo_origem === 'bobina' && origem.bobina_id) {
+                const sobra = parseFloat(origem.bobina_metragem) - parseFloat(origem.bobina_reservada || 0);
+                
+                if (sobra >= METRAGEM_MINIMA_RETALHO) {
+                    // Gerar código do retalho
+                    const ano = new Date().getFullYear();
+                    const [ultimoRetalho] = await connection.query(
+                        `SELECT codigo_retalho FROM retalhos 
+                         WHERE codigo_retalho LIKE 'RET-${ano}-%' 
+                         ORDER BY id DESC LIMIT 1`
+                    );
+                    
+                    let sequencial = 1;
+                    if (ultimoRetalho.length > 0) {
+                        const partes = ultimoRetalho[0].codigo_retalho.split('-');
+                        sequencial = parseInt(partes[2]) + 1;
+                    }
+                    
+                    const codigoRetalho = `RET-${ano}-${String(sequencial).padStart(5, '0')}`;
+                    
+                    // Criar retalho
+                    const [retalhoResult] = await connection.query(
+                        `INSERT INTO retalhos 
+                         (codigo_retalho, produto_id, bobina_origem_id, metragem, metragem_reservada,
+                          localizacao_atual, status, data_entrada, observacoes)
+                         VALUES (?, ?, ?, ?, 0, ?, 'disponivel', NOW(), ?)`,
+                        [
+                            codigoRetalho,
+                            origem.bobina_produto_id,
+                            origem.bobina_id,
+                            sobra,
+                            origem.bobina_localizacao,
+                            `Gerado automaticamente do plano ${plano[0].codigo_plano} - Sobra da bobina ${origem.bobina_codigo}`
+                        ]
+                    );
+                    
+                    // Gerar QR code para o retalho (formato: R-{id})
+                    const qrCode = `R-${retalhoResult.insertId}`;
+                    await connection.query(
+                        'UPDATE retalhos SET qr_code = ? WHERE id = ?',
+                        [qrCode, retalhoResult.insertId]
+                    );
+                    
+                    retalhosCriados.push({
+                        id: retalhoResult.insertId,
+                        codigo: codigoRetalho,
+                        qr_code: qrCode,
+                        metragem: sobra,
+                        origem: origem.bobina_codigo
+                    });
+                    
+                    console.log(`✅ Retalho criado: ${codigoRetalho} (QR: ${qrCode}) - ${sobra}m da bobina ${origem.bobina_codigo}`);
+
+                }
+            }
+        }
+        
+        // Liberar reservas restantes (não deveria ter, mas por segurança)
+        await connection.query(`
+            UPDATE bobinas b
+            JOIN alocacoes_corte ac ON ac.bobina_id = b.id
+            JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+            SET b.metragem_reservada = 0
+            WHERE ipc.plano_corte_id = ? AND b.metragem_reservada > 0
+        `, [planoId]);
+        
+        await connection.query(`
+            UPDATE retalhos r
+            JOIN alocacoes_corte ac ON ac.retalho_id = r.id
+            JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+            SET r.metragem_reservada = 0
+            WHERE ipc.plano_corte_id = ? AND r.metragem_reservada > 0
+        `, [planoId]);
+        
+        await connection.commit();
+        
+        res.json({ 
+            success: true, 
+            message: 'Plano finalizado com sucesso!',
+            data: {
+                retalhos_criados: retalhosCriados.length,
+                retalhos: retalhosCriados
+            }
+        });
+    } catch (error) {
+        await connection.rollback();
+        console.error('Erro ao finalizar plano:', error);
+        res.status(500).json({ success: false, message: error.message });
+    } finally {
+        connection.release();
+    }
+});
+
 module.exports = router;

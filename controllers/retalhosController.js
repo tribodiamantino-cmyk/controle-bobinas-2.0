@@ -43,6 +43,13 @@ exports.criarRetalho = async (req, res) => {
             [codigo_retalho, produto_id, metragem, localizacao_atual || null, observacoes || null]
         );
         
+        // Gerar QR code (formato: R-{id})
+        const qr_code = `R-${result.insertId}`;
+        await db.query(
+            'UPDATE retalhos SET qr_code = ? WHERE id = ?',
+            [qr_code, result.insertId]
+        );
+        
         // Buscar retalho criado com dados do produto
         const [retalho] = await db.query(
             `SELECT 
@@ -74,6 +81,7 @@ exports.criarRetalho = async (req, res) => {
         });
     }
 };
+
 
 // Converter bobina em retalho
 exports.converterBobinaEmRetalho = async (req, res) => {

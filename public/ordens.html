@@ -161,23 +161,36 @@
                 </div>
                 <button class="btn-close" onclick="fecharModalDetalhes()">✕</button>
             </div>
+            
+            <!-- Tabs de navegação -->
+            <div style="display: flex; gap: 10px; padding: 0 24px; border-bottom: 2px solid #eee;">
+                <button id="tabItens" class="tab-button tab-active" onclick="trocarAba('itens')">
+                    📦 Itens do Plano
+                </button>
+                <button id="tabHistorico" class="tab-button" onclick="trocarAba('historico')">
+                    📅 Histórico
+                </button>
+            </div>
+            
             <div class="modal-body">
-                <!-- Modo Visualização -->
-                <div id="modoVisualizacao">
-                    <div id="conteudoDetalhes">
-                        <!-- Conteúdo será inserido dinamicamente -->
+                <!-- Aba: Itens -->
+                <div id="abaItens">
+                    <!-- Modo Visualização -->
+                    <div id="modoVisualizacao">
+                        <div id="conteudoDetalhes">
+                            <!-- Conteúdo será inserido dinamicamente -->
+                        </div>
                     </div>
-                </div>
 
-                <!-- Modo Edição (só aparece em planejamento) -->
-                <div id="modoEdicao" style="display: none;">
-                    <div class="alert alert-info">
-                        ℹ️ Você está editando o plano. Adicione, remova ou modifique os cortes abaixo.
-                    </div>
-                    
-                    <!-- Seletor de produto para adicionar novos cortes -->
-                    <div class="produto-selector-container">
-                        <div class="form-group">
+                    <!-- Modo Edição (só aparece em planejamento) -->
+                    <div id="modoEdicao" style="display: none;">
+                        <div class="alert alert-info">
+                            ℹ️ Você está editando o plano. Adicione, remova ou modifique os cortes abaixo.
+                        </div>
+                        
+                        <!-- Seletor de produto para adicionar novos cortes -->
+                        <div class="produto-selector-container">
+                            <div class="form-group">
                             <label>Adicionar cortes de outro produto</label>
                             <select id="produtoSelecionadoEdicao" class="form-control" onchange="selecionarProdutoEdicao()">
                                 <option value="">Selecione um produto...</option>
@@ -216,6 +229,16 @@
                     <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
                         <button class="btn btn-secondary" onclick="cancelarEdicao()">Cancelar</button>
                         <button class="btn btn-success" onclick="salvarEdicao()">💾 Salvar Alterações</button>
+                    </div>
+                </div>
+                </div>
+                
+                <!-- Aba: Histórico -->
+                <div id="abaHistorico" style="display: none;">
+                    <div id="conteudoHistorico" style="max-width: 800px; margin: 0 auto;">
+                        <p style="text-align: center; color: #999; padding: 40px;">
+                            Carregando histórico...
+                        </p>
                     </div>
                 </div>
             </div>
@@ -320,6 +343,52 @@
                         <button type="submit" class="btn btn-primary">✨ Criar Plano</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Finalizar Plano -->
+    <div id="modalFinalizarPlano" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="min-width: 600px; max-width: 700px;">
+            <div class="modal-header">
+                <h2>✅ Finalizar Plano de Corte</h2>
+                <button class="btn-close" onclick="fecharModalFinalizarPlano()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="conteudoFinalizacao">
+                    <p style="color: #666; margin-bottom: 20px;">
+                        Ao finalizar este plano:
+                    </p>
+                    <ul style="color: #666; margin-left: 20px; margin-bottom: 20px;">
+                        <li>Todos os cortes serão confirmados como concluídos</li>
+                        <li>Retalhos ≥10m serão criados automaticamente</li>
+                        <li>Metragem reservada será liberada</li>
+                        <li>O plano será movido para "Finalizado"</li>
+                    </ul>
+                    
+                    <div id="resumoFinalizacao" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <p style="margin: 0; color: #333;"><strong>Carregando informações...</strong></p>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalFinalizarPlano()">Cancelar</button>
+                        <button type="button" class="btn btn-success" onclick="confirmarFinalizacaoPlano()">
+                            ✅ Confirmar Finalização
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="resultadoFinalizacao" style="display: none;">
+                    <div id="mensagemSucesso" style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <strong>✅ Plano finalizado com sucesso!</strong>
+                    </div>
+                    <div id="retalhosGerados"></div>
+                    <div style="margin-top: 20px;">
+                        <button type="button" class="btn btn-primary" onclick="fecharModalFinalizarPlano(); carregarPlanos();">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
