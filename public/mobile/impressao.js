@@ -3,6 +3,47 @@ let tipoAtual = null;
 let dadosAtual = null;
 let html5QrCode = null;
 
+// ========== MENSAGENS (TOAST) ==========
+
+function mostrarMensagem(mensagem, tipo = 'info') {
+    // Criar toast se não existir
+    let toast = document.getElementById('toast-impressao');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast-impressao';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            display: none;
+        `;
+        document.body.appendChild(toast);
+    }
+    
+    // Cores por tipo
+    const cores = {
+        'success': '#10b981',
+        'error': '#ef4444',
+        'info': '#3b82f6',
+        'warning': '#f59e0b'
+    };
+    
+    toast.style.background = cores[tipo] || cores.info;
+    toast.textContent = mensagem;
+    toast.style.display = 'block';
+    
+    // Remover após 3 segundos
+    setTimeout(() => {
+        toast.style.display = 'none';
+    }, 3000);
+}
+
 // ========== FLUXO PRINCIPAL ==========
 
 function selecionarTipo(tipo) {
@@ -121,6 +162,96 @@ async function onScanSucesso(decodedText, decodedResult) {
 function onScanErro(error) {
     // Ignorar erros de leitura (muito verboso)
 }
+
+// ========== BUSCAR POR CÓDIGO DIGITADO ==========
+
+async function buscarPorCodigoDigitado() {
+    const input = document.getElementById('input-codigo');
+    const codigo = input.value.trim().toUpperCase();
+    
+    if (!codigo) {
+        mostrarMensagem('Digite um código!', 'error');
+        return;
+    }
+    
+    // Validar formato básico do código
+    const prefixos = {
+        'bobina': 'B-',
+        'retalho': 'R-',
+        'corte': 'COR-',
+        'localizacao': 'LOC-'
+    };
+    
+    // Detectar tipo pelo prefixo se não estiver selecionado
+    let tipoDetectado = tipoAtual;
+    
+    if (!tipoDetectado) {
+        if (codigo.startsWith('B-')) tipoDetectado = 'bobina';
+        else if (codigo.startsWith('R-')) tipoDetectado = 'retalho';
+        else if (codigo.startsWith('COR-')) tipoDetectado = 'corte';
+        else if (codigo.startsWith('LOC-') || codigo.match(/^\d+-[A-Z]+-\d+$/)) tipoDetectado = 'localizacao';
+    }
+    
+    if (!tipoDetectado) {
+        mostrarMensagem('Código inválido! Use formato: B-101, R-50, COR-2025-00001 ou LOC-001', 'error');
+        return;
+    }
+    
+    console.log('Buscando código digitado:', codigo, 'Tipo:', tipoDetectado);
+    
+    // Parar scanner se estiver ativo
+    pararScanner();
+    
+    // Buscar dados do código
+    try {
+        mostrarMensagem('Buscando...', 'info');
+        
+        const response = await fetch(`${API_BASE}/mobile/imprimir/buscar-codigo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo: codigo })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Código não encontrado');
+        }
+        
+        dadosAtual = data.data;
+        tipoAtual = tipoDetectado;
+        
+        // Gerar preview
+        gerarPreview();
+        
+        // Ir para passo de preview
+        mostrarPasso('passo-preview');
+        
+        // Limpar input
+        input.value = '';
+        
+    } catch (error) {
+        console.error('Erro ao buscar código:', error);
+        mostrarMensagem('Erro: ' + error.message, 'error');
+    }
+}
+
+// Permitir Enter no input
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('input-codigo');
+    if (input) {
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                buscarPorCodigoDigitado();
+            }
+        });
+        
+        // Auto-uppercase
+        input.addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
+    }
+});
 
 // ========== GERAÇÃO DE PREVIEW ==========
 

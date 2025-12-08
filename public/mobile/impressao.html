@@ -61,8 +61,43 @@
         <!-- Passo 2: Escanear código -->
         <div id="passo-scanner" class="passo">
             <div class="card">
-                <h2>Escaneie o código <span id="tipo-selecionado"></span></h2>
-                <div id="reader"></div>
+                <h2>Código <span id="tipo-selecionado"></span></h2>
+                
+                <!-- Opção 1: Digitar Código -->
+                <div style="margin-bottom: 30px; padding: 20px; background: #f0f9ff; border-radius: 8px; border: 2px solid #0ea5e9;">
+                    <h3 style="margin: 0 0 15px 0; color: #0c4a6e; font-size: 16px;">
+                        ⌨️ Digitar Código
+                    </h3>
+                    <input 
+                        type="text" 
+                        id="input-codigo" 
+                        placeholder="Ex: B-101 ou LOC-001 ou COR-2025-00001"
+                        style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #0ea5e9; border-radius: 8px; text-transform: uppercase;"
+                    />
+                    <button 
+                        class="btn btn-primary" 
+                        onclick="buscarPorCodigoDigitado()"
+                        style="width: 100%; margin-top: 10px; font-size: 16px; padding: 12px;">
+                        🔍 Buscar e Gerar Etiqueta
+                    </button>
+                </div>
+                
+                <!-- Divisor -->
+                <div style="text-align: center; margin: 20px 0; color: #94a3b8; font-weight: bold;">
+                    ─── OU ───
+                </div>
+                
+                <!-- Opção 2: Escanear QR -->
+                <div style="padding: 20px; background: #f1f5f9; border-radius: 8px; border: 2px solid #64748b;">
+                    <h3 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px;">
+                        📱 Escanear QR Code
+                    </h3>
+                    <p style="margin: 0 0 15px 0; color: #475569; font-size: 14px;">
+                        Apenas se a etiqueta já existe (reimprimir)
+                    </p>
+                    <div id="reader"></div>
+                </div>
+                
                 <div style="margin-top: 20px;">
                     <button class="btn btn-secondary" onclick="voltarParaTipos()">
                         ← Voltar
