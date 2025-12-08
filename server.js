@@ -127,6 +127,7 @@ const mobileRoutes = require('./routes/mobile');
 const qrcodesRoutes = require('./routes/qrcodes');
 const locacoesRoutes = require('./routes/locacoes');
 const seedTesteRoutes = require('./routes/seed-teste');
+const adminRoutes = require('./routes/admin');
 
 // Usar rotas
 app.use('/api/cores', coresRoutes);
@@ -143,6 +144,7 @@ app.use('/api/mobile', mobileRoutes);
 app.use('/api/qrcodes', qrcodesRoutes);
 app.use('/api/locacoes', locacoesRoutes);
 app.use('/api/seed', seedTesteRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Servir arquivos de upload
 app.use('/uploads', express.static('uploads'));
