@@ -150,13 +150,18 @@ function abrirModalNovaBobina() {
 
 // Fechar modal de nova bobina
 function fecharModalNovaBobina(event) {
+    // Se for clique dentro do conteúdo do modal (não no overlay), não fechar
     if (event && event.target.closest('.modal-dialog') && !event.target.classList.contains('modal-overlay')) {
         return;
     }
+    
+    // Remover o modal do DOM
     const modal = document.getElementById('modalNovaBobina');
     if (modal) {
         modal.remove();
     }
+    
+    // Limpar estado global
     produtoSelecionado = null;
 }
 
@@ -409,15 +414,12 @@ async function registrarBobina(e) {
             // Mostrar alerta de sucesso
             mostrarAlerta(`✅ Bobina ${data.data.codigo_interno} registrada com sucesso! NF: ${data.data.nota_fiscal}`, 'success');
             
-            // Limpar formulário
-            limparFormulario();
+            // Fechar o modal
+            fecharModalNovaBobina();
             
-            // Recarregar estoque
-            carregarEstoque();
+            // Recarregar estoque para mostrar a nova bobina
+            await carregarEstoque();
             
-            // Reabilitar botão
-            btnSalvar.disabled = false;
-            btnSalvar.innerHTML = btnTextOriginal;
         } else {
             mostrarAlerta(data.error || 'Erro ao registrar bobina', 'danger');
             // Reabilitar botão em caso de erro
@@ -977,14 +979,6 @@ function gerarZPL(bobina, tipo = 'completa') {
 }
 
 // Limpar formulário
-function limparFormulario() {
-    document.getElementById('form-bobina').reset();
-    document.getElementById('produto-encontrado').style.display = 'none';
-    document.getElementById('produto-nao-encontrado').style.display = 'none';
-    document.getElementById('btn-salvar').disabled = true;
-    produtoSelecionado = null;
-}
-
 // Carregar estoque (produtos com bobinas)
 async function carregarEstoque() {
     try {
