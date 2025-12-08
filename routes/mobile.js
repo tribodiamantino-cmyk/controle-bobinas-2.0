@@ -352,8 +352,7 @@ router.post('/validar-item', async (req, res) => {
         // Marcar alocacao como confirmada
         await db.query(`
             UPDATE alocacoes_corte 
-            SET status_confirmacao = 'confirmado',
-                data_confirmacao = NOW()
+            SET confirmado = 1
             WHERE id = ?
         `, [item_id]);
         
@@ -408,7 +407,7 @@ router.post('/validar-item', async (req, res) => {
             const [statsOrigem] = await db.query(`
                 SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN status_confirmacao = 'confirmado' THEN 1 ELSE 0 END) as confirmadas
+                    SUM(CASE WHEN confirmado = 1 THEN 1 ELSE 0 END) as confirmadas
                 FROM alocacoes_corte
                 WHERE ${campo} = ?
             `, [origemId]);
@@ -427,7 +426,7 @@ router.post('/validar-item', async (req, res) => {
             const [stats] = await db.query(`
                 SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN status_confirmacao = 'confirmado' THEN 1 ELSE 0 END) as confirmadas
+                    SUM(CASE WHEN confirmado = 1 THEN 1 ELSE 0 END) as confirmadas
                 FROM alocacoes_corte ac
                 JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
                 WHERE ipc.plano_corte_id = ?

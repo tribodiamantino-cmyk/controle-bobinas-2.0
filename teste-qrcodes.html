@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Codes - Plano PLA-0001</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .qr-card {
+            border: 2px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            background: #fafafa;
+        }
+        .qr-card h3 {
+            margin: 0 0 15px 0;
+            color: #2196F3;
+            font-size: 24px;
+        }
+        .qr-card img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: white;
+        }
+        .qr-info {
+            margin-top: 15px;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .qr-info div {
+            margin: 5px 0;
+        }
+        .qr-info strong {
+            color: #555;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .badge-bobina {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .badge-locacao {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        .print-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+        }
+        .print-btn:hover {
+            background: #45a049;
+        }
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+            }
+            .print-btn {
+                display: none;
+            }
+            .qr-card {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 QR Codes - Plano PLA-0001</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+            Cliente: <strong>teste final</strong> | Aviário: <strong>av2</strong>
+        </p>
+
+        <button class="print-btn" onclick="window.print()">🖨️ Imprimir QR Codes</button>
+
+        <div class="qr-grid">
+            <!-- BOB-0001 -->
+            <div class="qr-card">
+                <span class="badge badge-bobina">BOBINA</span>
+                <h3>BOB-0001</h3>
+                <img id="qr-bob-1" src="" alt="Carregando QR Code...">
+                <div class="qr-info">
+                    <div><strong>📄 NF:</strong> 123</div>
+                    <div><strong>🏪 Loja:</strong> BN</div>
+                    <div><strong>📦 Produto:</strong> BN-1234</div>
+                    <div><strong>🎨 Cor:</strong> Preta/Prata</div>
+                    <div><strong>⚖️ Gramatura:</strong> 190 g/m²</div>
+                    <div><strong>📏 Metragem Original:</strong> 500m</div>
+                    <div><strong>✂️ Alocado:</strong> 220m (itens 1 e 2)</div>
+                </div>
+            </div>
+
+            <!-- BOB-0003 -->
+            <div class="qr-card">
+                <span class="badge badge-bobina">BOBINA</span>
+                <h3>BOB-0003</h3>
+                <img id="qr-bob-3" src="" alt="Carregando QR Code...">
+                <div class="qr-info">
+                    <div><strong>📄 NF:</strong> 142</div>
+                    <div><strong>🏪 Loja:</strong> BN</div>
+                    <div><strong>📦 Produto:</strong> BN-1222</div>
+                    <div><strong>🎨 Cor:</strong> Branco</div>
+                    <div><strong>⚖️ Gramatura:</strong> 120 g/m²</div>
+                    <div><strong>📏 Metragem Original:</strong> 500m</div>
+                    <div><strong>✂️ Alocado:</strong> 220m (itens 3 e 4)</div>
+                </div>
+            </div>
+
+            <!-- Locação 1 -->
+            <div class="qr-card">
+                <span class="badge badge-locacao">LOCALIZAÇÃO</span>
+                <h3>0001-A-0001</h3>
+                <img id="qr-loc-1" src="" alt="Carregando QR Code...">
+                <div class="qr-info">
+                    <div><strong>📍 Código:</strong> 0001-A-0001</div>
+                    <div><strong>🏢 Descrição:</strong> Prateleira A - Posição 1</div>
+                    <div><strong>📦 Capacidade:</strong> 10 bobinas</div>
+                    <div><strong>✅ Status:</strong> Ativa</div>
+                </div>
+            </div>
+
+            <!-- Locação 2 -->
+            <div class="qr-card">
+                <span class="badge badge-locacao">LOCALIZAÇÃO</span>
+                <h3>0001-B-0001</h3>
+                <img id="qr-loc-2" src="" alt="Carregando QR Code...">
+                <div class="qr-info">
+                    <div><strong>📍 Código:</strong> 0001-B-0001</div>
+                    <div><strong>🏢 Descrição:</strong> Prateleira B - Posição 1</div>
+                    <div><strong>📦 Capacidade:</strong> 10 bobinas</div>
+                    <div><strong>✅ Status:</strong> Ativa</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; padding: 20px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #4CAF50;">
+            <h3 style="margin-top: 0; color: #2e7d32;">📋 Resumo do Plano PLA-0001</h3>
+            <ul style="line-height: 1.8;">
+                <li><strong>Total de Itens:</strong> 4</li>
+                <li><strong>Bobinas Envolvidas:</strong> 2 (BOB-0001 e BOB-0003)</li>
+                <li><strong>Metragem Total:</strong> 440m</li>
+                <li><strong>Produto 1:</strong> BN-1234 (Preta/Prata 190g) - 220m</li>
+                <li><strong>Produto 2:</strong> BN-1222 (Branco 120g) - 220m</li>
+                <li><strong>Locações para armazenamento:</strong> 2 opções disponíveis</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 20px; padding: 20px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800;">
+            <h3 style="margin-top: 0; color: #e65100;">🔍 Como usar os QR Codes:</h3>
+            <ol style="line-height: 1.8;">
+                <li><strong>Validação de Bobina:</strong> Escaneie BOB-0001 ou BOB-0003 no mobile antes de cortar</li>
+                <li><strong>Registro de Corte:</strong> Após cortar, tire foto do medidor e registre no sistema</li>
+                <li><strong>Armazenamento:</strong> Após finalizar plano, escaneie locações 0001-A-0001 ou 0001-B-0001</li>
+                <li><strong>Etiquetas:</strong> Cada corte recebe QR único: COR-0001-PLA-0001, COR-0002-PLA-0001, etc</li>
+            </ol>
+        </div>
+
+        <button class="print-btn" onclick="window.print()">🖨️ Imprimir QR Codes</button>
+    </div>
+
+    <script>
+        const API_BASE = 'https://controle-bobinas-20-production.up.railway.app/api/qrcodes';
+        
+        // Função para carregar QR Code
+        async function carregarQRCode(tipo, id, elementId) {
+            try {
+                const response = await fetch(`${API_BASE}/${tipo}/${id}`);
+                const data = await response.json();
+                
+                if (data.success && data.qrCodeDataURL) {
+                    document.getElementById(elementId).src = data.qrCodeDataURL;
+                    console.log(`✅ QR ${tipo} ${id} carregado`);
+                } else {
+                    document.getElementById(elementId).alt = 'Erro ao carregar QR Code';
+                    console.error(`❌ Erro ao carregar QR ${tipo} ${id}:`, data.error);
+                }
+            } catch (error) {
+                document.getElementById(elementId).alt = 'Erro ao carregar QR Code';
+                console.error(`❌ Erro ao carregar QR ${tipo} ${id}:`, error);
+            }
+        }
+        
+        // Carregar todos os QR Codes quando a página carregar
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('📦 Carregando QR Codes do Plano PLA-0001...');
+            
+            // Carregar QR das bobinas
+            await carregarQRCode('bobina', 1, 'qr-bob-1');
+            await carregarQRCode('bobina', 3, 'qr-bob-3');
+            
+            // Carregar QR das locações (usando código ao invés de ID)
+            await carregarQRCode('locacao', '0001-A-0001', 'qr-loc-1');
+            await carregarQRCode('locacao', '0001-B-0001', 'qr-loc-2');
+            
+            console.log('✅ Todos os QR Codes carregados!');
+            console.log('📦 Bobinas: BOB-0001, BOB-0003');
+            console.log('📍 Locações: 0001-A-0001, 0001-B-0001');
+            console.log('📋 Plano: PLA-0001 (teste final - av2)');
+        });
+    </script>
+</body>
+</html>
