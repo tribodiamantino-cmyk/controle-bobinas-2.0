@@ -202,30 +202,10 @@ function renderizarDetalhesOrdem() {
         ` : ''}
         
         <div class="itens-lista">
-            ${!todosItensConcluidos ? '<h4>📦 Itens Prontos para Corte</h4>' : ''}
+            ${!todosItensConcluidos ? '<h4>📦 Bobinas para Cortar</h4>' : ''}
             ${itensComOrigem.length === 0 && !todosItensConcluidos ? 
                 '<p style="color: var(--text-light);">Nenhum item com origem alocada</p>' :
-                itensComOrigem.map(item => {
-                    const tipoIcon = item.tipo === 'retalho' ? '🧵' : '📦';
-                    const tipoLabel = item.tipo === 'retalho' ? 'Retalho' : 'Bobina';
-                    return `
-                    <div class="item-card" onclick="iniciarValidacaoItem(${item.alocacao_id || item.item_id})">
-                        <div class="item-header">
-                            <span class="item-bobina">${tipoIcon} ${item.origem_codigo || tipoLabel + ' #' + item.origem_id}</span>
-                            <span class="item-metragem">${item.metragem_alocada}m</span>
-                        </div>
-                        <div class="item-info">
-                            <span>${item.produto_codigo || ''} ${item.nome_cor ? '- ' + item.nome_cor : ''}</span>
-                            <span>📍 ${item.localizacao_atual || 'N/A'}</span>
-                        </div>
-                        <div class="item-disponivel">
-                            Disponível: <strong>${item.metragem_atual}m</strong>
-                        </div>
-                        <div class="item-action">
-                            👆 Toque para validar corte
-                        </div>
-                    </div>
-                `}).join('')
+                renderizarItensAgrupados(itensComOrigem)
             }
             
             ${itensSemOrigem.length > 0 ? `
@@ -253,10 +233,113 @@ function renderizarDetalhesOrdem() {
     `;
 }
 
+// Agrupar itens pela mesma bobina/retalho
+function renderizarItensAgrupados(itens) {
+    const grupos = {};
+    
+    // Agrupar por origem_id + tipo
+    itens.forEach(item => {
+        const chave = `${item.tipo || 'bobina'}-${item.origem_id}`;
+        if (!grupos[chave]) {
+            grupos[chave] = {
+                tipo: item.tipo || 'bobina',
+                origem_id: item.origem_id,
+                origem_codigo: item.origem_codigo,
+                localizacao_atual: item.localizacao_atual,
+                metragem_atual: item.metragem_atual,
+                produto_codigo: item.produto_codigo,
+                nome_cor: item.nome_cor,
+                itens: []
+            };
+        }
+        grupos[chave].itens.push(item);
+    });
+    
+    // Renderizar cada grupo
+    return Object.values(grupos).map(grupo => {
+        const tipoIcon = grupo.tipo === 'retalho' ? '🧵' : '📦';
+        const tipoLabel = grupo.tipo === 'retalho' ? 'Retalho' : 'Bobina';
+        const totalMetragem = grupo.itens.reduce((sum, i) => sum + parseFloat(i.metragem_alocada), 0);
+        
+        return `
+        <div class="item-card item-grupo" onclick="iniciarValidacaoGrupo('${grupo.tipo}', ${grupo.origem_id})" style="cursor: pointer; border: 2px solid #e5e7eb;">
+            <div class="item-header">
+                <span class="item-bobina">${tipoIcon} ${grupo.origem_codigo || tipoLabel + ' #' + grupo.origem_id}</span>
+                <span class="item-metragem" style="background: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px;">
+                    ${grupo.itens.length} corte${grupo.itens.length > 1 ? 's' : ''}
+                </span>
+            </div>
+            <div class="item-info">
+                <span>${grupo.produto_codigo || ''} ${grupo.nome_cor ? '- ' + grupo.nome_cor : ''}</span>
+                <span>📍 ${grupo.localizacao_atual || 'N/A'}</span>
+            </div>
+            <div class="item-disponivel">
+                Total a cortar: <strong>${totalMetragem.toFixed(1)}m</strong> | Disponível: <strong>${grupo.metragem_atual}m</strong>
+            </div>
+            
+            <!-- Lista de cortes -->
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #d1d5db;">
+                ${grupo.itens.map((item, idx) => `
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.875rem;">
+                        <span style="color: #6b7280;">Corte ${idx + 1}</span>
+                        <span style="font-weight: 600;">${item.metragem_alocada}m</span>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="item-action" style="margin-top: 10px; background: #dbeafe; color: #1e40af; padding: 8px; border-radius: 4px; text-align: center;">
+                👆 Toque para iniciar cortes
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
 function voltarListaOrdens() {
     ordemAtual = null;
     itemValidando = null;
+    bobinaAtual = null;
     mostrarPasso('passo-lista-ordens');
+}
+
+let itensGrupoAtual = [];
+let indiceItemAtual = 0;
+
+async function iniciarValidacaoGrupo(tipo, origemId) {
+    // Filtrar todos os itens desta bobina/retalho
+    itensGrupoAtual = ordemAtual.itens.filter(i => 
+        (i.tipo || 'bobina') === tipo && i.origem_id === origemId
+    );
+    
+    if (itensGrupoAtual.length === 0) return;
+    
+    indiceItemAtual = 0;
+    console.log(`📦 Iniciando grupo de ${itensGrupoAtual.length} cortes da mesma origem`);
+    
+    // Iniciar com o primeiro item
+    await validarProximoItemGrupo();
+}
+
+async function validarProximoItemGrupo() {
+    if (indiceItemAtual >= itensGrupoAtual.length) {
+        console.log('✅ Todos os itens do grupo foram cortados!');
+        return;
+    }
+    
+    itemValidando = itensGrupoAtual[indiceItemAtual];
+    
+    const tipoIcon = itemValidando.tipo === 'retalho' ? '🧵' : '📦';
+    const tipoLabel = itemValidando.tipo === 'retalho' ? 'retalho' : 'bobina';
+    
+    // Atualizar instrução do scanner
+    document.getElementById('instrucao-validacao').innerHTML = `
+        📱 Escaneie ${tipoLabel === 'retalho' ? 'o' : 'a'} ${tipoLabel} <strong>${itemValidando.origem_codigo || '#' + itemValidando.origem_id}</strong>
+        <br><small style="color: #6b7280;">Corte ${indiceItemAtual + 1} de ${itensGrupoAtual.length}</small>
+    `;
+    
+    mostrarPasso('passo-scanner-validacao');
+    await pararScanner();
+    iniciarScanner('validacao');
 }
 
 async function iniciarValidacaoItem(alocacaoId) {
@@ -555,9 +638,47 @@ async function confirmarValidacao(event) {
                 console.log('🧪 [TESTE] Total validados:', itensValidadosTeste.length);
             }
             
-            mostrarToast('✅ Item validado com sucesso!', 'success');
+            mostrarToast('✅ Corte validado!', 'success');
             
-            // Verificar se acabaram os cortes DESTA BOBINA (não do plano todo)
+            // Limpar foto
+            removerFotoValidacao();
+            
+            // Verificar se estamos em um grupo de cortes
+            if (itensGrupoAtual.length > 0) {
+                indiceItemAtual++;
+                console.log(`📊 Progresso: ${indiceItemAtual}/${itensGrupoAtual.length} cortes concluídos`);
+                
+                // Se ainda tem itens no grupo, continuar com o próximo
+                if (indiceItemAtual < itensGrupoAtual.length) {
+                    mostrarToast(`✅ Próximo corte: ${itensGrupoAtual[indiceItemAtual].metragem_alocada}m`, 'info');
+                    // Pequeno delay para mostrar o toast
+                    setTimeout(async () => {
+                        await validarProximoItemGrupo();
+                    }, 1000);
+                    return;
+                }
+                
+                // Acabaram todos os cortes deste grupo/bobina
+                console.log('📦 Todos os cortes desta bobina foram concluídos!');
+                
+                // Guardar ID da bobina que precisa ser guardada
+                const bobinaParaGuardar = {
+                    id: bobinaAtual.id,
+                    codigo: bobinaAtual.codigo_interno,
+                    tipo: bobinaAtual.tipo_origem || 'bobina'
+                };
+                
+                // Limpar estado do grupo
+                itensGrupoAtual = [];
+                indiceItemAtual = 0;
+                itemValidando = null;
+                
+                // Pedir para guardar bobina e escanear locação
+                await solicitarLocalizacaoBobina(bobinaParaGuardar);
+                return;
+            }
+            
+            // Fluxo antigo (caso não esteja em grupo) - verificar bobina_concluida
             if (data.data.bobina_concluida) {
                 console.log('📦 Todos os cortes desta bobina foram concluídos!');
                 console.log('📍 Bobina ID:', bobinaAtual.id);
@@ -571,7 +692,6 @@ async function confirmarValidacao(event) {
                 
                 // Limpar estado do corte
                 itemValidando = null;
-                removerFotoValidacao();
                 
                 // Pedir para guardar bobina e escanear locação
                 await solicitarLocalizacaoBobina(bobinaParaGuardar);
@@ -582,7 +702,6 @@ async function confirmarValidacao(event) {
             const itemIdValidado = itemValidando.alocacao_id || itemValidando.item_id;
             bobinaAtual = null;
             itemValidando = null;
-            removerFotoValidacao();
             
             // Recarregar ordens e voltar para lista
             await carregarOrdensProducao();
