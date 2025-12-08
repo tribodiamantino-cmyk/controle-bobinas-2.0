@@ -21,30 +21,17 @@
  * - Estrutura do banco (tabelas, índices, triggers)
  */
 
-const mysql = require('mysql2/promise');
 require('dotenv').config();
+const db = require('../config/database');
 
 async function limparBancoDados() {
-    let connection;
-    
     try {
         console.log('🔌 Conectando ao banco de dados...');
-        
-        // Configuração da conexão (compatível com Railway)
-        const config = {
-            host: process.env.MYSQLHOST || 'localhost',
-            port: process.env.MYSQLPORT || 3306,
-            user: process.env.MYSQLUSER || 'root',
-            password: process.env.MYSQLPASSWORD || '',
-            database: process.env.MYSQLDATABASE || 'controle_bobinas'
-        };
-        
-        connection = await mysql.createConnection(config);
-        console.log('✅ Conectado ao banco:', config.database);
+        console.log('✅ Usando pool de conexões do sistema');
         
         // Desabilitar checagens de FK temporariamente
         console.log('\n🔓 Desabilitando checagens de Foreign Key...');
-        await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+        await db.query('SET FOREIGN_KEY_CHECKS = 0');
         
         // Ordem de deleção (respeitando dependências)
         const tabelasParaLimpar = [
@@ -69,15 +56,15 @@ async function limparBancoDados() {
         for (const tabela of tabelasParaLimpar) {
             try {
                 // Contar registros antes
-                const [count] = await connection.query(`SELECT COUNT(*) as total FROM ${tabela.nome}`);
+                const [count] = await db.query(`SELECT COUNT(*) as total FROM ${tabela.nome}`);
                 const registros = count[0].total;
                 
                 if (registros > 0) {
                     // Deletar todos os registros
-                    await connection.query(`DELETE FROM ${tabela.nome}`);
+                    await db.query(`DELETE FROM ${tabela.nome}`);
                     
                     // Resetar AUTO_INCREMENT
-                    await connection.query(`ALTER TABLE ${tabela.nome} AUTO_INCREMENT = 1`);
+                    await db.query(`ALTER TABLE ${tabela.nome} AUTO_INCREMENT = 1`);
                     
                     console.log(`  ✅ ${tabela.descricao.padEnd(40)} | ${registros} registro(s) apagado(s)`);
                     totalRegistrosApagados += registros;
@@ -96,7 +83,7 @@ async function limparBancoDados() {
         
         // Reabilitar checagens de FK
         console.log('\n🔒 Reabilitando checagens de Foreign Key...');
-        await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+        await db.query('SET FOREIGN_KEY_CHECKS = 1');
         
         console.log('\n' + '='.repeat(70));
         console.log(`✅ LIMPEZA CONCLUÍDA!`);
@@ -104,8 +91,8 @@ async function limparBancoDados() {
         console.log('='.repeat(70));
         
         console.log('\n📝 O que foi MANTIDO:');
-        const [cores] = await connection.query('SELECT COUNT(*) as total FROM configuracoes_cores');
-        const [gramaturas] = await connection.query('SELECT COUNT(*) as total FROM configuracoes_gramaturas');
+        const [cores] = await db.query('SELECT COUNT(*) as total FROM configuracoes_cores');
+        const [gramaturas] = await db.query('SELECT COUNT(*) as total FROM configuracoes_gramaturas');
         
         console.log(`  ✓ ${cores[0].total} cores cadastradas`);
         console.log(`  ✓ ${gramaturas[0].total} gramaturas cadastradas`);
@@ -119,12 +106,15 @@ async function limparBancoDados() {
     } catch (error) {
         console.error('\n❌ ERRO durante limpeza:', error.message);
         console.error('Stack:', error.stack);
-        process.exit(1);
-    } finally {
-        if (connection) {
-            await connection.end();
-            console.log('\n🔌 Conexão encerrada\n');
+        
+        // Tentar reabilitar FK checks mesmo em caso de erro
+        try {
+            await db.query('SET FOREIGN_KEY_CHECKS = 1');
+        } catch (e) {
+            // Ignorar erro ao tentar reabilitar
         }
+        
+        process.exit(1);
     }
 }
 
