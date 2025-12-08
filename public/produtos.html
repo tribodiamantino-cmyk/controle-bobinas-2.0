@@ -45,8 +45,18 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="codigo">Código *</label>
-                        <input type="text" class="form-control" id="codigo" placeholder="Ex: PROD001" required>
+                        <label class="form-label" for="codigo">Código Numérico *</label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="codigo" 
+                            placeholder="Ex: 0001" 
+                            maxlength="4"
+                            pattern="[0-9]{1,4}"
+                            required>
+                        <small class="form-hint" id="codigo-preview" style="display: block; margin-top: 4px; color: #666;">
+                            Código final: -
+                        </small>
                     </div>
 
                     <div class="form-group">

@@ -24,6 +24,36 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('form-produto').addEventListener('submit', cadastrarProduto);
     
+    // Máscara para código (apenas números)
+    const inputCodigo = document.getElementById('codigo');
+    const selectLoja = document.getElementById('loja');
+    const codigoPreview = document.getElementById('codigo-preview');
+    
+    // Permitir apenas números
+    inputCodigo.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        atualizarPreviewCodigo();
+    });
+    
+    // Atualizar preview ao mudar loja
+    selectLoja.addEventListener('change', atualizarPreviewCodigo);
+    
+    function atualizarPreviewCodigo() {
+        const loja = selectLoja.value;
+        const codigo = inputCodigo.value.padStart(4, '0');
+        
+        if (loja && inputCodigo.value) {
+            const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+            codigoPreview.textContent = `Código final: ${prefixo}-${codigo}`;
+            codigoPreview.style.color = '#10b981';
+            codigoPreview.style.fontWeight = 'bold';
+        } else {
+            codigoPreview.textContent = 'Código final: -';
+            codigoPreview.style.color = '#666';
+            codigoPreview.style.fontWeight = 'normal';
+        }
+    }
+    
     // Fechar dropdowns ao clicar fora
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.multi-select-dropdown')) {
@@ -391,9 +421,14 @@ async function cadastrarProduto(e) {
         return;
     }
     
+    const loja = document.getElementById('loja').value;
+    const codigoNumerico = document.getElementById('codigo').value.padStart(4, '0');
+    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+    const codigoFinal = `${prefixo}-${codigoNumerico}`;
+    
     const produto = {
-        loja: document.getElementById('loja').value,
-        codigo: document.getElementById('codigo').value,
+        loja: loja,
+        codigo: codigoFinal, // Envia código formatado: CTV-0001 ou BN-0001
         cor_id: parseInt(document.getElementById('cor_id').value),
         gramatura_id: parseInt(document.getElementById('gramatura_id').value),
         fabricante: document.getElementById('fabricante').value,
@@ -423,7 +458,7 @@ async function cadastrarProduto(e) {
         console.log('Resposta do servidor:', response.status, data);
         
         if (response.ok) {
-            mostrarAlerta('Produto cadastrado com sucesso!', 'success');
+            mostrarAlerta(`Produto ${codigoFinal} cadastrado com sucesso!`, 'success');
             
             // Limpar formulário completamente
             document.getElementById('form-produto').reset();
@@ -431,6 +466,10 @@ async function cadastrarProduto(e) {
             // Resetar tipo de tecido para Normal e mostrar campos corretos
             document.getElementById('tipo_tecido').value = 'Normal';
             toggleCamposTecido();
+            
+            // Limpar preview
+            document.getElementById('codigo-preview').textContent = 'Código final: -';
+            document.getElementById('codigo-preview').style.color = '#666';
             
             // Recarregar lista de produtos
             carregarProdutos();

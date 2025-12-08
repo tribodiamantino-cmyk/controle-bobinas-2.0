@@ -44,6 +44,17 @@ exports.criarProduto = async (req, res) => {
         return res.status(400).json({ success: false, error: 'Campos obrigatórios: loja, código, cor, gramatura e fabricante' });
     }
 
+    // Validar formato do código (CTV-0001 ou BN-0001)
+    const prefixoEsperado = loja === 'Cortinave' ? 'CTV' : 'BN';
+    const regexCodigo = new RegExp(`^${prefixoEsperado}-\\d{4}$`);
+    
+    if (!regexCodigo.test(codigo)) {
+        return res.status(400).json({ 
+            success: false, 
+            error: `Código inválido! Formato esperado: ${prefixoEsperado}-0001 (4 dígitos numéricos)` 
+        });
+    }
+
     // Validar campos específicos do tipo de tecido
     if (tipo_tecido === 'Bando Y') {
         if (!largura_maior || !largura_y) {
@@ -83,8 +94,8 @@ exports.criarProduto = async (req, res) => {
             ]
         );
 
-        console.log('Produto criado com sucesso, ID:', result.insertId);
-        res.json({ success: true, message: 'Produto criado com sucesso', id: result.insertId });
+        console.log('✅ Produto criado:', codigo, '- ID:', result.insertId);
+        res.json({ success: true, message: `Produto ${codigo} criado com sucesso`, id: result.insertId });
     } catch (error) {
         console.error('Erro ao criar produto:', error);
         console.error('Stack:', error.stack);
