@@ -1,24 +1,22 @@
 const db = require('../config/database');
 const { validarECorrigirReservas } = require('../middleware/validarReservas');
 
-// Gerar código único para plano de corte: PC-2025-00001
+// Gerar código QR único para plano de corte (formato: PLA-0001)
 async function gerarCodigoPlano() {
-    const ano = new Date().getFullYear();
-    const prefixo = 'PC';
-    
-    const [ultimoCodigo] = await db.query(
+    const [rows] = await db.query(
         `SELECT codigo_plano FROM planos_corte 
-         WHERE codigo_plano LIKE '${prefixo}-${ano}-%' 
+         WHERE codigo_plano LIKE 'PLA-%' 
          ORDER BY id DESC LIMIT 1`
     );
     
-    let numero = 1;
-    if (ultimoCodigo.length > 0) {
-        const partes = ultimoCodigo[0].codigo_plano.split('-');
-        numero = parseInt(partes[2]) + 1;
+    let proximoNumero = 1;
+    if (rows.length > 0) {
+        const ultimoCodigo = rows[0].codigo_plano;
+        const numeroAtual = parseInt(ultimoCodigo.split('-')[1]);
+        proximoNumero = numeroAtual + 1;
     }
     
-    return `${prefixo}-${ano}-${String(numero).padStart(5, '0')}`;
+    return `PLA-${proximoNumero.toString().padStart(4, '0')}`;
 }
 
 // Criar novo plano de corte

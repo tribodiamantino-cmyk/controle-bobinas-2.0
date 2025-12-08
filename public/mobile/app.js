@@ -1374,18 +1374,28 @@ async function onScanSucesso(qrData, tipo) {
             return;
         }
         
-        // Novo formato simplificado: B-123 ou R-456
+        // Novo formato simplificado: BOB-0001 ou RET-0001
         let bobinaId = null;
         let tipoBobina = null;
         
-        if (qrData.startsWith('B-')) {
+        if (qrData.startsWith('BOB-')) {
             tipoBobina = 'bobina';
-            bobinaId = qrData.substring(2); // Remove "B-"
-            console.log('✅ Formato bobina detectado. ID:', bobinaId);
-        } else if (qrData.startsWith('R-')) {
+            bobinaId = qrData.substring(4); // Remove "BOB-"
+            console.log('✅ Formato bobina detectado. Código:', qrData);
+        } else if (qrData.startsWith('RET-')) {
             tipoBobina = 'retalho';
-            bobinaId = qrData.substring(2); // Remove "R-"
-            console.log('✅ Formato retalho detectado. ID:', bobinaId);
+            bobinaId = qrData.substring(4); // Remove "RET-"
+            console.log('✅ Formato retalho detectado. Código:', qrData);
+        } else if (qrData.startsWith('B-')) {
+            // Formato legado (compatibilidade)
+            tipoBobina = 'bobina';
+            bobinaId = qrData.substring(2);
+            console.log('⚠️ Formato legado B- detectado. ID:', bobinaId);
+        } else if (qrData.startsWith('R-')) {
+            // Formato legado (compatibilidade)
+            tipoBobina = 'retalho';
+            bobinaId = qrData.substring(2);
+            console.log('⚠️ Formato legado R- detectado. ID:', bobinaId);
         } else {
             // Tentar formato antigo (JSON)
             console.log('⚠️ Formato não reconhecido. Tentando JSON...');

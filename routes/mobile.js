@@ -357,23 +357,28 @@ router.post('/validar-item', async (req, res) => {
             WHERE id = ?
         `, [item_id]);
         
-        // NOVO: Gerar código sequencial para o corte (COR-2025-00001)
-        const ano = new Date().getFullYear();
-        const prefixo = 'COR';
+        // NOVO: Buscar código do plano para incluir no código do corte
+        const [planoInfo] = await db.query(`
+            SELECT codigo_plano FROM planos_corte WHERE id = ?
+        `, [planoCorteId]);
         
+        const codigoPlano = planoInfo[0].codigo_plano;
+        
+        // NOVO: Gerar código sequencial para o corte (COR-0001-PLA-0123)
         const [ultimoCodigo] = await db.query(`
             SELECT codigo_corte FROM cortes_realizados 
-            WHERE codigo_corte LIKE '${prefixo}-${ano}-%' 
+            WHERE codigo_corte LIKE 'COR-%' 
             ORDER BY id DESC LIMIT 1
         `);
         
         let sequencial = 1;
         if (ultimoCodigo.length > 0) {
+            // Extrair número do formato COR-0001-PLA-0123
             const partes = ultimoCodigo[0].codigo_corte.split('-');
-            sequencial = parseInt(partes[2]) + 1;
+            sequencial = parseInt(partes[1]) + 1;
         }
         
-        const codigoCorte = `${prefixo}-${ano}-${String(sequencial).padStart(5, '0')}`;
+        const codigoCorte = `COR-${String(sequencial).padStart(4, '0')}-${codigoPlano}`;
         
         // NOVO: Criar registro em cortes_realizados
         const [corteResult] = await db.query(`
@@ -1049,10 +1054,9 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
         let tipo = null;
         
         // Identificar tipo do código
-        if (codigo.startsWith('B-')) {
-            // Bobina: B-123
+        if (codigo.startsWith('BOB-')) {
+            // Bobina: BOB-0001
             tipo = 'bobina';
-            const id = codigo.replace('B-', '');
             const [bobinas] = await db.query(`
                 SELECT 
                     b.id,
@@ -1060,8 +1064,8 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                     b.qr_code,
                     b.metragem_atual,
                     b.localizacao_atual,
+                    b.loja,
                     p.codigo as produto_codigo,
-                    p.loja,
                     p.fabricante,
                     c.nome_cor,
                     g.gramatura,
@@ -1070,17 +1074,16 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                 JOIN produtos p ON b.produto_id = p.id
                 LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
                 LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-                WHERE b.id = ?
-            `, [id]);
+                WHERE b.codigo_interno = ?
+            `, [codigo]);
             
             if (bobinas.length > 0) {
                 resultado = bobinas[0];
             }
             
-        } else if (codigo.startsWith('R-')) {
-            // Retalho: R-123
+        } else if (codigo.startsWith('RET-')) {
+            // Retalho: RET-0001
             tipo = 'retalho';
-            const id = codigo.replace('R-', '');
             const [retalhos] = await db.query(`
                 SELECT 
                     r.id,
@@ -1099,15 +1102,15 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                 LEFT JOIN bobinas b ON r.bobina_origem_id = b.id
                 LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
                 LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-                WHERE r.id = ?
-            `, [id]);
+                WHERE r.codigo_retalho = ?
+            `, [codigo]);
             
             if (retalhos.length > 0) {
                 resultado = retalhos[0];
             }
             
         } else if (codigo.startsWith('COR-')) {
-            // Corte: COR-2025-00001
+            // Corte: COR-0001-PLA-0123
             tipo = 'corte';
             const [cortes] = await db.query(`
                 SELECT 
@@ -1138,10 +1141,32 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                 resultado = cortes[0];
             }
             
-        } else if (codigo.startsWith('LOC-')) {
-            // Localização: LOC-123
+        } else if (codigo.startsWith('PLA-')) {
+            // Plano de Corte: PLA-0001
+            tipo = 'plano';
+            const [planos] = await db.query(`
+                SELECT 
+                    pc.id,
+                    pc.codigo_plano,
+                    pc.cliente,
+                    pc.aviario,
+                    pc.status,
+                    pc.data_criacao,
+                    COUNT(DISTINCT ipc.id) as total_itens,
+                    SUM(ipc.metragem) as metragem_total
+                FROM planos_corte pc
+                LEFT JOIN itens_plano_corte ipc ON pc.id = ipc.plano_corte_id
+                WHERE pc.codigo_plano = ?
+                GROUP BY pc.id
+            `, [codigo]);
+            
+            if (planos.length > 0) {
+                resultado = planos[0];
+            }
+            
+        } else if (codigo.match(/^\d+-[A-Z]+-\d+$/)) {
+            // Localização: 0001-A-0001
             tipo = 'localizacao';
-            const id = codigo.replace('LOC-', '');
             const [locacoes] = await db.query(`
                 SELECT 
                     id,
@@ -1153,8 +1178,8 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                     capacidade,
                     tipo
                 FROM locacoes
-                WHERE id = ?
-            `, [id]);
+                WHERE codigo_localizacao = ?
+            `, [codigo]);
             
             if (locacoes.length > 0) {
                 resultado = locacoes[0];

@@ -1,26 +1,27 @@
 const db = require('../config/database');
 
-// Gerar código interno único
-async function gerarCodigoInterno(loja) {
-    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
-    const ano = new Date().getFullYear();
-    
-    // Buscar último código do ano
+// Gerar código QR único para bobina (formato: BOB-0001)
+async function gerarCodigoQR() {
+    // Buscar último código
     const [rows] = await db.query(
         `SELECT codigo_interno FROM bobinas 
-         WHERE codigo_interno LIKE ? 
-         ORDER BY id DESC LIMIT 1`,
-        [`${prefixo}-${ano}-%`]
+         WHERE codigo_interno LIKE 'BOB-%' 
+         ORDER BY id DESC LIMIT 1`
     );
     
     let proximoNumero = 1;
     if (rows.length > 0) {
         const ultimoCodigo = rows[0].codigo_interno;
-        const numeroAtual = parseInt(ultimoCodigo.split('-')[2]);
+        const numeroAtual = parseInt(ultimoCodigo.split('-')[1]);
         proximoNumero = numeroAtual + 1;
     }
     
-    return `${prefixo}-${ano}-${proximoNumero.toString().padStart(5, '0')}`;
+    return `BOB-${proximoNumero.toString().padStart(4, '0')}`;
+}
+
+// Manter função legada para compatibilidade (deprecated)
+async function gerarCodigoInterno(loja) {
+    return await gerarCodigoQR();
 }
 
 // Criar nova bobina

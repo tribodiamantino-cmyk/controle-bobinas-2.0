@@ -116,15 +116,24 @@ async function onScanSucesso(decodedText, decodedResult) {
     
     // Validar se o código corresponde ao tipo selecionado
     const prefixos = {
-        'bobina': 'B-',
-        'retalho': 'R-',
+        'bobina': 'BOB-',
+        'retalho': 'RET-',
         'corte': 'COR-',
-        'localizacao': 'LOC-'
+        'plano': 'PLA-',
+        'localizacao': /^\d+-[A-Z]+-\d+$/ // regex para formato 0001-A-0001
     };
     
-    if (!decodedText.startsWith(prefixos[tipoAtual])) {
-        mostrarMensagem(`Código inválido! Escaneie um código ${prefixos[tipoAtual]}`, 'error');
-        return;
+    // Validação especial para localização (aceita regex)
+    if (tipoAtual === 'localizacao') {
+        if (!decodedText.match(prefixos[tipoAtual])) {
+            mostrarMensagem('Código inválido! Escaneie uma localização (ex: 0001-A-0001)', 'error');
+            return;
+        }
+    } else {
+        if (!decodedText.startsWith(prefixos[tipoAtual])) {
+            mostrarMensagem(`Código inválido! Escaneie um código ${prefixos[tipoAtual]}`, 'error');
+            return;
+        }
     }
     
     // Parar scanner
@@ -177,8 +186,9 @@ async function buscarPorCodigoDigitado() {
     // Validar formato básico do código
     const prefixos = {
         'bobina': 'B-',
-        'retalho': 'R-',
+        'retalho': 'RET-',
         'corte': 'COR-',
+        'plano': 'PLA-',
         'localizacao': 'LOC-'
     };
     
@@ -186,14 +196,15 @@ async function buscarPorCodigoDigitado() {
     let tipoDetectado = tipoAtual;
     
     if (!tipoDetectado) {
-        if (codigo.startsWith('B-')) tipoDetectado = 'bobina';
-        else if (codigo.startsWith('R-')) tipoDetectado = 'retalho';
+        if (codigo.startsWith('BOB-')) tipoDetectado = 'bobina';
+        else if (codigo.startsWith('RET-')) tipoDetectado = 'retalho';
         else if (codigo.startsWith('COR-')) tipoDetectado = 'corte';
-        else if (codigo.startsWith('LOC-') || codigo.match(/^\d+-[A-Z]+-\d+$/)) tipoDetectado = 'localizacao';
+        else if (codigo.startsWith('PLA-')) tipoDetectado = 'plano';
+        else if (codigo.match(/^\d+-[A-Z]+-\d+$/)) tipoDetectado = 'localizacao';
     }
     
     if (!tipoDetectado) {
-        mostrarMensagem('Código inválido! Use formato: B-101, R-50, COR-2025-00001 ou LOC-001', 'error');
+        mostrarMensagem('Código inválido! Use formato: BOB-0001, RET-0001, COR-0001-PLA-0123, PLA-0001 ou 0001-A-0001', 'error');
         return;
     }
     
@@ -264,6 +275,8 @@ function gerarPreview() {
         gerarPreviewRetalho(container);
     } else if (dadosAtual.tipo === 'corte') {
         gerarPreviewCorte(container);
+    } else if (dadosAtual.tipo === 'plano') {
+        gerarPreviewPlano(container);
     } else if (dadosAtual.tipo === 'localizacao') {
         gerarPreviewLocalizacao(container);
     }
@@ -351,6 +364,34 @@ function gerarPreviewCorte(container) {
     });
 }
 
+function gerarPreviewPlano(container) {
+    container.innerHTML = `
+        <div class="etiqueta-content">
+            <div id="qr-code-preview"></div>
+            <div class="etiqueta-info">
+                <div class="etiqueta-codigo">${dadosAtual.codigo_plano}</div>
+                <div class="etiqueta-produto">
+                    ${dadosAtual.cliente || ''}<br>
+                    ${dadosAtual.aviario || ''}
+                </div>
+                <div class="etiqueta-detalhe">
+                    ${dadosAtual.total_itens || 0} itens<br>
+                    Total: ${parseFloat(dadosAtual.metragem_total || 0).toFixed(2)}m
+                </div>
+            </div>
+        </div>
+    `;
+    
+    QRCode.toCanvas(dadosAtual.codigo_plano, {
+        width: 150,
+        margin: 1
+    }, (error, canvas) => {
+        if (!error) {
+            document.getElementById('qr-code-preview').appendChild(canvas);
+        }
+    });
+}
+
 function gerarPreviewLocalizacao(container) {
     container.innerHTML = `
         <div class="etiqueta-content">
@@ -392,6 +433,8 @@ function imprimirEtiqueta() {
         conteudoImpressao = gerarHTMLImpressaoRetalho();
     } else if (dadosAtual.tipo === 'corte') {
         conteudoImpressao = gerarHTMLImpressaoCorte();
+    } else if (dadosAtual.tipo === 'plano') {
+        conteudoImpressao = gerarHTMLImpressaoPlano();
     } else if (dadosAtual.tipo === 'localizacao') {
         conteudoImpressao = gerarHTMLImpressaoLocalizacao();
     }
@@ -523,6 +566,50 @@ function gerarHTMLImpressaoCorte() {
             <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
             <script>
                 QRCode.toCanvas(document.getElementById('qrcode'), '${dadosAtual.codigo_corte}', {
+                    width: 120,
+                    margin: 1
+                }, function() {
+                    window.print();
+                    window.close();
+                });
+            </script>
+        </body>
+        </html>
+    `;
+}
+
+function gerarHTMLImpressaoPlano() {
+    return `
+        <html>
+        <head>
+            <title>Etiqueta - ${dadosAtual.codigo_plano}</title>
+            <style>
+                @media print {
+                    @page { margin: 0; size: 57mm auto; }
+                    body { margin: 0; padding: 0; }
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                    padding: 5mm;
+                    width: 57mm;
+                }
+                .qrcode { margin: 3mm auto; }
+                .codigo { font-size: 16px; font-weight: bold; margin-top: 2mm; }
+                .cliente { font-size: 12px; margin-top: 2mm; }
+                .metragem { font-size: 14px; font-weight: bold; margin-top: 2mm; }
+                .detalhe { font-size: 10px; margin-top: 1mm; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div id="qrcode" class="qrcode"></div>
+            <div class="codigo">${dadosAtual.codigo_plano}</div>
+            <div class="cliente">${dadosAtual.cliente || ''}<br>${dadosAtual.aviario || ''}</div>
+            <div class="metragem">${dadosAtual.total_itens || 0} itens - ${parseFloat(dadosAtual.metragem_total || 0).toFixed(2)}m</div>
+            <div class="detalhe">Status: ${dadosAtual.status || 'Planejamento'}</div>
+            <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+            <script>
+                QRCode.toCanvas(document.getElementById('qrcode'), '${dadosAtual.codigo_plano}', {
                     width: 120,
                     margin: 1
                 }, function() {

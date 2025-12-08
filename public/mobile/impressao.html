@@ -37,22 +37,34 @@
                         <div class="tipo-desc">Código: B-{id}</div>
                     </button>
                     
+                    <button class="tipo-card" onclick="selecionarTipo('bobina')">
+                        <div class="tipo-icon">🎯</div>
+                        <div class="tipo-nome">Bobina</div>
+                        <div class="tipo-desc">Código: BOB-0001</div>
+                    </button>
+                    
                     <button class="tipo-card" onclick="selecionarTipo('retalho')">
                         <div class="tipo-icon">♻️</div>
                         <div class="tipo-nome">Retalho</div>
-                        <div class="tipo-desc">Código: R-{id}</div>
+                        <div class="tipo-desc">Código: RET-0001</div>
                     </button>
                     
                     <button class="tipo-card" onclick="selecionarTipo('corte')">
                         <div class="tipo-icon">✂️</div>
                         <div class="tipo-nome">Corte</div>
-                        <div class="tipo-desc">Código: COR-YYYY-XXXXX</div>
+                        <div class="tipo-desc">COR-0001-PLA-0123</div>
+                    </button>
+                    
+                    <button class="tipo-card" onclick="selecionarTipo('plano')">
+                        <div class="tipo-icon">📋</div>
+                        <div class="tipo-nome">Plano de Corte</div>
+                        <div class="tipo-desc">Código: PLA-0001</div>
                     </button>
                     
                     <button class="tipo-card" onclick="selecionarTipo('localizacao')">
                         <div class="tipo-icon">📍</div>
                         <div class="tipo-nome">Localização</div>
-                        <div class="tipo-desc">Código: LOC-{id}</div>
+                        <div class="tipo-desc">0001-A-0001</div>
                     </button>
                 </div>
             </div>
@@ -71,7 +83,7 @@
                     <input 
                         type="text" 
                         id="input-codigo" 
-                        placeholder="Ex: B-101 ou LOC-001 ou COR-2025-00001"
+                        placeholder="Ex: BOB-0001, RET-0050, COR-0001-PLA-0123, PLA-0001 ou 0001-A-0001"
                         style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #0ea5e9; border-radius: 8px; text-transform: uppercase;"
                     />
                     <button 

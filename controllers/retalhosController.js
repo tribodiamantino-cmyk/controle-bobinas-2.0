@@ -1,23 +1,21 @@
 const db = require('../config/database');
 
-// Gerar código único para retalho: RET-2025-00001
+// Gerar código QR único para retalho (formato: RET-0001)
 async function gerarCodigoRetalho() {
-    const ano = new Date().getFullYear();
-    const prefixo = 'RET';
-    
-    const [ultimoCodigo] = await db.query(
+    const [rows] = await db.query(
         `SELECT codigo_retalho FROM retalhos 
-         WHERE codigo_retalho LIKE '${prefixo}-${ano}-%' 
+         WHERE codigo_retalho LIKE 'RET-%' 
          ORDER BY id DESC LIMIT 1`
     );
     
-    let numero = 1;
-    if (ultimoCodigo.length > 0) {
-        const partes = ultimoCodigo[0].codigo_retalho.split('-');
-        numero = parseInt(partes[2]) + 1;
+    let proximoNumero = 1;
+    if (rows.length > 0) {
+        const ultimoCodigo = rows[0].codigo_retalho;
+        const numeroAtual = parseInt(ultimoCodigo.split('-')[1]);
+        proximoNumero = numeroAtual + 1;
     }
     
-    return `${prefixo}-${ano}-${String(numero).padStart(5, '0')}`;
+    return `RET-${proximoNumero.toString().padStart(4, '0')}`;
 }
 
 // Criar retalho manualmente
@@ -41,13 +39,6 @@ exports.criarRetalho = async (req, res) => {
             (codigo_retalho, produto_id, metragem, localizacao_atual, observacoes) 
             VALUES (?, ?, ?, ?, ?)`,
             [codigo_retalho, produto_id, metragem, localizacao_atual || null, observacoes || null]
-        );
-        
-        // Gerar QR code (formato: R-{id})
-        const qr_code = `R-${result.insertId}`;
-        await db.query(
-            'UPDATE retalhos SET qr_code = ? WHERE id = ?',
-            [qr_code, result.insertId]
         );
         
         // Buscar retalho criado com dados do produto
