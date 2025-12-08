@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Central de Impressão - Bobinas App</title>
+    
+    <link rel="manifest" href="/mobile/manifest.json">
+    <link rel="stylesheet" href="/mobile/styles.css">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="app-header">
+        <div class="header-content">
+            <button class="btn-voltar" onclick="window.location.href='/mobile/index.html'">
+                ◀ Voltar
+            </button>
+            <h1>🖨️ Central de Impressão</h1>
+        </div>
+    </header>
+
+    <!-- CONTEÚDO -->
+    <main class="app-main">
+        <!-- Passo 1: Escolher tipo de impressão -->
+        <div id="passo-tipo" class="passo ativo">
+            <div class="card">
+                <h2>Escolha o tipo de etiqueta</h2>
+                <div class="tipo-grid">
+                    <button class="tipo-card" onclick="selecionarTipo('bobina')">
+                        <div class="tipo-icon">📦</div>
+                        <div class="tipo-nome">Bobina</div>
+                        <div class="tipo-desc">Código: B-{id}</div>
+                    </button>
+                    
+                    <button class="tipo-card" onclick="selecionarTipo('retalho')">
+                        <div class="tipo-icon">♻️</div>
+                        <div class="tipo-nome">Retalho</div>
+                        <div class="tipo-desc">Código: R-{id}</div>
+                    </button>
+                    
+                    <button class="tipo-card" onclick="selecionarTipo('corte')">
+                        <div class="tipo-icon">✂️</div>
+                        <div class="tipo-nome">Corte</div>
+                        <div class="tipo-desc">Código: COR-YYYY-XXXXX</div>
+                    </button>
+                    
+                    <button class="tipo-card" onclick="selecionarTipo('localizacao')">
+                        <div class="tipo-icon">📍</div>
+                        <div class="tipo-nome">Localização</div>
+                        <div class="tipo-desc">Código: LOC-{id}</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passo 2: Escanear código -->
+        <div id="passo-scanner" class="passo">
+            <div class="card">
+                <h2>Escaneie o código <span id="tipo-selecionado"></span></h2>
+                <div id="reader"></div>
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="voltarParaTipos()">
+                        ← Voltar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passo 3: Preview e impressão -->
+        <div id="passo-preview" class="passo">
+            <div class="card">
+                <h2>Preview da Etiqueta</h2>
+                
+                <div class="etiqueta-preview" id="etiqueta-preview">
+                    <!-- Preview será inserido aqui -->
+                </div>
+
+                <div class="acoes-preview">
+                    <button class="btn btn-secondary" onclick="voltarParaScanner()">
+                        ← Escanear Outro
+                    </button>
+                    <button class="btn btn-primary" onclick="imprimirEtiqueta()">
+                        🖨️ Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/mobile/impressao.js"></script>
+</body>
+</html>

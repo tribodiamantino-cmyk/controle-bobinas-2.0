@@ -1099,3 +1099,118 @@ body {
 #validacao-resultado .btn {
     margin-top: 1rem;
 }
+
+/* ========== CENTRAL DE IMPRESSÃO ========== */
+
+.btn-voltar {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+}
+
+.btn-voltar:active {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.tipo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.tipo-card {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tipo-card:active {
+    transform: scale(0.95);
+    border-color: var(--primary);
+    background: #f8f9ff;
+}
+
+.tipo-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.tipo-nome {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+}
+
+.tipo-desc {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.etiqueta-preview {
+    background: white;
+    border: 2px solid #333;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+}
+
+.etiqueta-content {
+    text-align: center;
+}
+
+.etiqueta-content canvas {
+    margin: 10px auto;
+    display: block;
+}
+
+.etiqueta-codigo {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.etiqueta-produto {
+    font-size: 12px;
+    margin: 5px 0;
+    color: #666;
+}
+
+.etiqueta-metragem {
+    font-size: 20px;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.etiqueta-localizacao {
+    font-size: 14px;
+    margin: 10px 0;
+}
+
+.etiqueta-detalhe {
+    font-size: 11px;
+    color: #999;
+    margin: 5px 0;
+}
+
+.acoes-preview {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.acoes-preview .btn {
+    flex: 1;
+}
+

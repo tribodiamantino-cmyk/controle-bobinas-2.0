@@ -640,6 +640,12 @@ async function confirmarValidacao(event) {
             
             mostrarToast('✅ Corte validado!', 'success');
             
+            // Se retornou dados do corte, oferecer impressão
+            if (data.data && data.data.corte) {
+                console.log('🖨️ Dados do corte recebidos:', data.data.corte);
+                await oferecerImpressaoCorte(data.data.corte);
+            }
+            
             // Limpar foto
             removerFotoValidacao();
             
@@ -729,6 +735,194 @@ async function confirmarValidacao(event) {
         mostrarToast(error.message || 'Erro ao validar item', 'error');
     } finally {
         mostrarLoading(false);
+    }
+}
+
+// ========== OFERECER IMPRESSÃO APÓS CORTE ==========
+async function oferecerImpressaoCorte(corte) {
+    return new Promise((resolve) => {
+        // Criar modal de impressão
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        `;
+        
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        `;
+        
+        // Preview da etiqueta
+        const previewHTML = `
+            <h3 style="margin: 0 0 20px 0; text-align: center; color: #333;">
+                🖨️ Imprimir Etiqueta?
+            </h3>
+            <div style="border: 2px solid #000; padding: 20px; background: white; text-align: center; margin-bottom: 20px;">
+                <div id="qrcode-preview-corte" style="display: flex; justify-content: center; margin-bottom: 15px;"></div>
+                <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
+                    ${corte.codigo_corte}
+                </div>
+                <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">
+                    ${corte.metragem_cortada}m
+                </div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">
+                    ${corte.produto_codigo}
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                    ${corte.nome_cor || ''} ${corte.gramatura ? corte.gramatura + 'g' : ''}
+                </div>
+                ${corte.codigo_plano ? `
+                    <div style="font-size: 11px; color: #999; margin-top: 10px;">
+                        Plano: ${corte.codigo_plano}
+                    </div>
+                ` : ''}
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-pular-impressao" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px;">
+                    Agora Não
+                </button>
+                <button id="btn-imprimir-agora" style="flex: 1; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px;">
+                    🖨️ Imprimir
+                </button>
+            </div>
+        `;
+        
+        modalContent.innerHTML = previewHTML;
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // Gerar QR Code no preview
+        setTimeout(() => {
+            const qrContainer = document.getElementById('qrcode-preview-corte');
+            if (qrContainer && typeof QRCode !== 'undefined') {
+                new QRCode(qrContainer, {
+                    text: corte.codigo_corte,
+                    width: 120,
+                    height: 120
+                });
+            }
+        }, 100);
+        
+        // Botão Pular
+        document.getElementById('btn-pular-impressao').onclick = () => {
+            document.body.removeChild(modal);
+            resolve();
+        };
+        
+        // Botão Imprimir
+        document.getElementById('btn-imprimir-agora').onclick = () => {
+            imprimirEtiquetaCorte(corte);
+            document.body.removeChild(modal);
+            resolve();
+        };
+    });
+}
+
+function imprimirEtiquetaCorte(corte) {
+    const htmlImpressao = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Etiqueta Corte - ${corte.codigo_corte}</title>
+            <style>
+                @media print {
+                    @page {
+                        size: 57mm auto;
+                        margin: 2mm;
+                    }
+                }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    width: 57mm;
+                    padding: 3mm;
+                    background: white;
+                }
+                .etiqueta {
+                    text-align: center;
+                    border: 2px solid #000;
+                    padding: 3mm;
+                }
+                .qrcode {
+                    margin: 3mm auto;
+                }
+                .codigo {
+                    font-size: 14px;
+                    font-weight: bold;
+                    margin: 2mm 0;
+                }
+                .metragem {
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin: 2mm 0;
+                }
+                .produto {
+                    font-size: 12px;
+                    margin: 1mm 0;
+                }
+                .detalhes {
+                    font-size: 10px;
+                    color: #333;
+                    margin: 1mm 0;
+                }
+                .plano {
+                    font-size: 9px;
+                    color: #666;
+                    margin-top: 2mm;
+                }
+            </style>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+        </head>
+        <body>
+            <div class="etiqueta">
+                <div id="qrcode" class="qrcode"></div>
+                <div class="codigo">${corte.codigo_corte}</div>
+                <div class="metragem">${corte.metragem_cortada}m</div>
+                <div class="produto">${corte.produto_codigo}</div>
+                <div class="detalhes">${corte.nome_cor || ''} ${corte.gramatura ? corte.gramatura + 'g' : ''}</div>
+                ${corte.codigo_plano ? `<div class="plano">Plano: ${corte.codigo_plano}</div>` : ''}
+            </div>
+            <script>
+                new QRCode(document.getElementById("qrcode"), {
+                    text: "${corte.codigo_corte}",
+                    width: 100,
+                    height: 100
+                });
+                setTimeout(() => {
+                    window.print();
+                    setTimeout(() => window.close(), 500);
+                }, 500);
+            </script>
+        </body>
+        </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write(htmlImpressao);
+        printWindow.document.close();
+    } else {
+        mostrarToast('❌ Erro ao abrir janela de impressão', 'error');
     }
 }
 

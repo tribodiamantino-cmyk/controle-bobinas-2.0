@@ -277,6 +277,33 @@ router.post('/validar-item', async (req, res) => {
         
         let metragem_disponivel = 0;
         let metragem_reservada = 0;
+        let produtoId = null;
+        let planoCorteId = null;
+        let itemPlanoCorteId = null;
+        
+        // Buscar dados da alocação
+        const [alocacoes] = await db.query(`
+            SELECT 
+                ac.id as alocacao_id,
+                ac.item_plano_corte_id,
+                ipc.plano_corte_id,
+                ipc.produto_id,
+                ac.tipo_origem,
+                ac.bobina_id,
+                ac.retalho_id
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
+            WHERE ac.id = ?
+        `, [item_id]);
+        
+        if (alocacoes.length === 0) {
+            return res.status(404).json({ success: false, message: 'Alocação não encontrada' });
+        }
+        
+        const alocacao = alocacoes[0];
+        produtoId = alocacao.produto_id;
+        planoCorteId = alocacao.plano_corte_id;
+        itemPlanoCorteId = alocacao.item_plano_corte_id;
         
         if (tipoOrigem === 'retalho') {
             const [retalhos] = await db.query('SELECT id, metragem, metragem_reservada FROM retalhos WHERE id = ?', [origemId]);
@@ -309,19 +336,60 @@ router.post('/validar-item', async (req, res) => {
         }
         
         // Marcar alocacao como confirmada
-        try {
-            await db.query('UPDATE alocacoes_corte SET confirmado = TRUE WHERE id = ?', [item_id]);
-        } catch (e) { /* pode nao existir */ }
+        await db.query(`
+            UPDATE alocacoes_corte 
+            SET status_confirmacao = 'confirmado',
+                data_confirmacao = NOW()
+            WHERE id = ?
+        `, [item_id]);
+        
+        // NOVO: Gerar código sequencial para o corte (COR-2025-00001)
+        const ano = new Date().getFullYear();
+        const prefixo = 'COR';
+        
+        const [ultimoCodigo] = await db.query(`
+            SELECT codigo_corte FROM cortes_realizados 
+            WHERE codigo_corte LIKE '${prefixo}-${ano}-%' 
+            ORDER BY id DESC LIMIT 1
+        `);
+        
+        let sequencial = 1;
+        if (ultimoCodigo.length > 0) {
+            const partes = ultimoCodigo[0].codigo_corte.split('-');
+            sequencial = parseInt(partes[2]) + 1;
+        }
+        
+        const codigoCorte = `${prefixo}-${ano}-${String(sequencial).padStart(5, '0')}`;
+        
+        // NOVO: Criar registro em cortes_realizados
+        const [corteResult] = await db.query(`
+            INSERT INTO cortes_realizados 
+            (codigo_corte, plano_corte_id, item_plano_corte_id, alocacao_corte_id,
+             origem_tipo, bobina_id, retalho_id, metragem_cortada, produto_id,
+             status, data_conclusao)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'concluido', NOW())
+        `, [
+            codigoCorte,
+            planoCorteId,
+            itemPlanoCorteId,
+            item_id,
+            tipoOrigem,
+            tipoOrigem === 'bobina' ? origemId : null,
+            tipoOrigem === 'retalho' ? origemId : null,
+            metragem_cortada,
+            produtoId
+        ]);
+        
+        console.log(`✅ Corte criado: ${codigoCorte} - ${metragem_cortada}m do produto ${produtoId}`);
         
         // Verificar se TODOS os cortes desta BOBINA foram concluídos
         let bobinaConcluida = false;
         try {
-            // Contar total de alocações desta bobina/retalho e quantas estão confirmadas
             const campo = tipoOrigem === 'retalho' ? 'retalho_id' : 'bobina_id';
             const [statsOrigem] = await db.query(`
                 SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN confirmado = TRUE THEN 1 ELSE 0 END) as confirmadas
+                    SUM(CASE WHEN status_confirmacao = 'confirmado' THEN 1 ELSE 0 END) as confirmadas
                 FROM alocacoes_corte
                 WHERE ${campo} = ?
             `, [origemId]);
@@ -337,35 +405,40 @@ router.post('/validar-item', async (req, res) => {
         // Verificar se TODOS os itens do plano foram cortados
         let planoCompleto = false;
         try {
-            // Buscar o plano_corte_id a partir do item
-            const [itemPlano] = await db.query(`
-                SELECT ipc.plano_corte_id 
+            const [stats] = await db.query(`
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status_confirmacao = 'confirmado' THEN 1 ELSE 0 END) as confirmadas
                 FROM alocacoes_corte ac
                 JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
-                WHERE ac.id = ?
-            `, [item_id]);
+                WHERE ipc.plano_corte_id = ?
+            `, [planoCorteId]);
             
-            if (itemPlano && itemPlano.length > 0) {
-                const planoId = itemPlano[0].plano_corte_id;
-                
-                // Contar total de alocações e quantas estão confirmadas
-                const [stats] = await db.query(`
-                    SELECT 
-                        COUNT(*) as total,
-                        SUM(CASE WHEN confirmado = TRUE THEN 1 ELSE 0 END) as confirmadas
-                    FROM alocacoes_corte ac
-                    JOIN itens_plano_corte ipc ON ac.item_plano_corte_id = ipc.id
-                    WHERE ipc.plano_corte_id = ?
-                `, [planoId]);
-                
-                if (stats && stats.length > 0) {
-                    planoCompleto = stats[0].total === stats[0].confirmadas;
-                    console.log(`📊 Plano ${planoId}: ${stats[0].confirmadas}/${stats[0].total} itens confirmados. Completo: ${planoCompleto}`);
-                }
+            if (stats && stats.length > 0) {
+                planoCompleto = stats[0].total === stats[0].confirmadas;
+                console.log(`📊 Plano ${planoCorteId}: ${stats[0].confirmadas}/${stats[0].total} itens confirmados. Completo: ${planoCompleto}`);
             }
         } catch (e) {
             console.error('Erro ao verificar se plano está completo:', e);
         }
+        
+        // Buscar dados do corte para retornar
+        const [corteCompleto] = await db.query(`
+            SELECT 
+                cr.id,
+                cr.codigo_corte,
+                cr.metragem_cortada,
+                p.codigo as produto_codigo,
+                c.nome_cor,
+                g.gramatura,
+                pc.codigo_plano
+            FROM cortes_realizados cr
+            JOIN produtos p ON cr.produto_id = p.id
+            JOIN planos_corte pc ON cr.plano_corte_id = pc.id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            WHERE cr.id = ?
+        `, [corteResult.insertId]);
         
         return res.json({ 
             success: true, 
@@ -374,7 +447,9 @@ router.post('/validar-item', async (req, res) => {
                 metragem_cortada, 
                 metragem_restante: nova_metragem.toFixed(2),
                 bobina_concluida: bobinaConcluida,
-                plano_completo: planoCompleto
+                plano_completo: planoCompleto,
+                // NOVO: Dados do corte para impressão
+                corte: corteCompleto[0]
             } 
         });
     } catch (error) {
@@ -942,6 +1017,157 @@ router.post('/finalizar-plano/:planoId', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     } finally {
         connection.release();
+    }
+});
+
+// ==================== CENTRAL DE IMPRESSÃO ==================== //
+
+// Buscar dados de qualquer código QR para impressão
+router.post('/imprimir/buscar-codigo', async (req, res) => {
+    try {
+        const { codigo } = req.body;
+        
+        if (!codigo) {
+            return res.status(400).json({ success: false, error: 'Código é obrigatório' });
+        }
+        
+        let resultado = null;
+        let tipo = null;
+        
+        // Identificar tipo do código
+        if (codigo.startsWith('B-')) {
+            // Bobina: B-123
+            tipo = 'bobina';
+            const id = codigo.replace('B-', '');
+            const [bobinas] = await db.query(`
+                SELECT 
+                    b.id,
+                    b.codigo_interno,
+                    b.qr_code,
+                    b.metragem_atual,
+                    b.localizacao_atual,
+                    p.codigo as produto_codigo,
+                    p.loja,
+                    p.fabricante,
+                    c.nome_cor,
+                    g.gramatura,
+                    p.tipo_tecido
+                FROM bobinas b
+                JOIN produtos p ON b.produto_id = p.id
+                LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                WHERE b.id = ?
+            `, [id]);
+            
+            if (bobinas.length > 0) {
+                resultado = bobinas[0];
+            }
+            
+        } else if (codigo.startsWith('R-')) {
+            // Retalho: R-123
+            tipo = 'retalho';
+            const id = codigo.replace('R-', '');
+            const [retalhos] = await db.query(`
+                SELECT 
+                    r.id,
+                    r.codigo_retalho,
+                    r.qr_code,
+                    r.metragem,
+                    r.localizacao_atual,
+                    p.codigo as produto_codigo,
+                    p.loja,
+                    c.nome_cor,
+                    g.gramatura,
+                    p.tipo_tecido,
+                    b.codigo_interno as bobina_origem
+                FROM retalhos r
+                JOIN produtos p ON r.produto_id = p.id
+                LEFT JOIN bobinas b ON r.bobina_origem_id = b.id
+                LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                WHERE r.id = ?
+            `, [id]);
+            
+            if (retalhos.length > 0) {
+                resultado = retalhos[0];
+            }
+            
+        } else if (codigo.startsWith('COR-')) {
+            // Corte: COR-2025-00001
+            tipo = 'corte';
+            const [cortes] = await db.query(`
+                SELECT 
+                    cr.id,
+                    cr.codigo_corte,
+                    cr.metragem_cortada,
+                    cr.data_corte,
+                    p.codigo as produto_codigo,
+                    p.loja,
+                    c.nome_cor,
+                    g.gramatura,
+                    p.tipo_tecido,
+                    pc.codigo_plano,
+                    pc.cliente,
+                    pc.aviario,
+                    COALESCE(b.codigo_interno, ret.codigo_retalho) as origem_codigo
+                FROM cortes_realizados cr
+                JOIN produtos p ON cr.produto_id = p.id
+                JOIN planos_corte pc ON cr.plano_corte_id = pc.id
+                LEFT JOIN bobinas b ON cr.bobina_id = b.id
+                LEFT JOIN retalhos ret ON cr.retalho_id = ret.id
+                LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                WHERE cr.codigo_corte = ?
+            `, [codigo]);
+            
+            if (cortes.length > 0) {
+                resultado = cortes[0];
+            }
+            
+        } else if (codigo.startsWith('LOC-')) {
+            // Localização: LOC-123
+            tipo = 'localizacao';
+            const id = codigo.replace('LOC-', '');
+            const [locacoes] = await db.query(`
+                SELECT 
+                    id,
+                    corredor,
+                    coluna,
+                    altura,
+                    codigo_localizacao,
+                    qr_code,
+                    capacidade,
+                    tipo
+                FROM locacoes
+                WHERE id = ?
+            `, [id]);
+            
+            if (locacoes.length > 0) {
+                resultado = locacoes[0];
+            }
+        }
+        
+        if (!resultado) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Código não encontrado' 
+            });
+        }
+        
+        res.json({ 
+            success: true, 
+            data: {
+                tipo,
+                ...resultado
+            }
+        });
+        
+    } catch (error) {
+        console.error('Erro ao buscar código:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 });
 
