@@ -34,8 +34,8 @@ function voltarParaScanner() {
 }
 
 function mostrarPasso(passoId) {
-    document.querySelectorAll('.passo').forEach(p => p.classList.remove('ativo'));
-    document.getElementById(passoId).classList.add('ativo');
+    document.querySelectorAll('.passo').forEach(p => p.classList.remove('active'));
+    document.getElementById(passoId).classList.add('active');
 }
 
 // ========== SCANNER ==========
