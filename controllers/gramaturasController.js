@@ -22,6 +22,32 @@ exports.criarGramatura = async (req, res) => {
             return res.status(400).json({ success: false, error: 'Gramatura é obrigatória' });
         }
         
+        // Verificar se já existe uma gramatura com esse valor (ativa ou inativa)
+        const [existing] = await db.query(
+            'SELECT * FROM configuracoes_gramaturas WHERE gramatura = ?',
+            [gramatura]
+        );
+        
+        if (existing.length > 0) {
+            // Se existe mas está inativa, reativar
+            if (existing[0].ativo === 0 || existing[0].ativo === false) {
+                await db.query(
+                    'UPDATE configuracoes_gramaturas SET ativo = 1 WHERE id = ?',
+                    [existing[0].id]
+                );
+                
+                return res.status(200).json({
+                    success: true,
+                    message: 'Gramatura reativada com sucesso',
+                    id: existing[0].id
+                });
+            } else {
+                // Se já existe e está ativa
+                return res.status(400).json({ success: false, error: 'Gramatura já existe' });
+            }
+        }
+        
+        // Se não existe, criar nova
         const [result] = await db.query(
             'INSERT INTO configuracoes_gramaturas (gramatura) VALUES (?)',
             [gramatura]

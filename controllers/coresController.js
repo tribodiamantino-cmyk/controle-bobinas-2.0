@@ -22,6 +22,32 @@ exports.criarCor = async (req, res) => {
             return res.status(400).json({ success: false, error: 'Nome da cor é obrigatório' });
         }
         
+        // Verificar se já existe uma cor com esse nome (ativa ou inativa)
+        const [existing] = await db.query(
+            'SELECT * FROM configuracoes_cores WHERE nome_cor = ?',
+            [nome_cor]
+        );
+        
+        if (existing.length > 0) {
+            // Se existe mas está inativa, reativar
+            if (existing[0].ativo === 0 || existing[0].ativo === false) {
+                await db.query(
+                    'UPDATE configuracoes_cores SET ativo = 1 WHERE id = ?',
+                    [existing[0].id]
+                );
+                
+                return res.status(200).json({
+                    success: true,
+                    message: 'Cor reativada com sucesso',
+                    id: existing[0].id
+                });
+            } else {
+                // Se já existe e está ativa
+                return res.status(400).json({ success: false, error: 'Cor já existe' });
+            }
+        }
+        
+        // Se não existe, criar nova
         const [result] = await db.query(
             'INSERT INTO configuracoes_cores (nome_cor) VALUES (?)',
             [nome_cor]
