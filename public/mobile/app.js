@@ -704,6 +704,19 @@ async function confirmarValidacao(event) {
                 return; // Não continua o fluxo normal até guardar
             }
             
+            // Verificar se PLANO foi totalmente finalizado
+            if (data.data.plano_completo) {
+                console.log('🎉 Plano completamente finalizado!');
+                
+                // Limpar estado
+                bobinaAtual = null;
+                itemValidando = null;
+                
+                // Solicitar alocação de localizações
+                await solicitarAlocacaoPlano(ordemAtual.id, ordemAtual.numero_ordem || ordemAtual.id);
+                return; // Não continua até alocar localizações
+            }
+            
             // Limpar estado e foto
             const itemIdValidado = itemValidando.alocacao_id || itemValidando.item_id;
             bobinaAtual = null;
@@ -1030,6 +1043,208 @@ async function processarLocalizacao(codigoLocalizacao) {
         mostrarToast(error.message || 'Erro ao guardar bobina', 'error');
     } finally {
         mostrarLoading(false);
+    }
+}
+
+// ========== ALOCAR PLANO EM LOCALIZAÇÕES ==========
+let planoAguardandoAlocacao = null;
+let locacoesEscaneadas = [];
+
+async function solicitarAlocacaoPlano(planoId, codigoPlano) {
+    planoAguardandoAlocacao = { id: planoId, codigo: codigoPlano };
+    locacoesEscaneadas = [];
+    
+    // Mostrar interface
+    const container = document.getElementById('container-alocar-plano');
+    container.innerHTML = `
+        <div class="card" style="text-align: center; padding: 30px;">
+            <h2 style="margin: 0 0 20px 0;">🎉 Plano Finalizado!</h2>
+            <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #4caf50;">
+                <p style="font-size: 18px; margin: 0 0 10px 0; font-weight: bold;">
+                    ${codigoPlano}
+                </p>
+                <p style="margin: 0; color: #2e7d32;">
+                    Todos os cortes foram realizados!
+                </p>
+            </div>
+            
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ffc107;">
+                <p style="margin: 0 0 10px 0; font-weight: bold; color: #856404;">
+                    📍 Escaneie as localizações de armazenamento
+                </p>
+                <p style="margin: 0; font-size: 14px; color: #856404;">
+                    Pode escanear múltiplas localizações se necessário
+                </p>
+            </div>
+            
+            <div id="lista-locacoes-escaneadas" style="margin-bottom: 20px;">
+                <!-- Localizações escaneadas aparecerão aqui -->
+            </div>
+            
+            <div style="display: flex; gap: 10px; flex-direction: column;">
+                <button class="btn btn-primary" onclick="iniciarScannerAlocacao()" style="font-size: 18px; padding: 15px;">
+                    📱 Escanear Localização
+                </button>
+                <button class="btn btn-success" onclick="finalizarAlocacaoPlano()" id="btn-finalizar-alocacao" disabled style="font-size: 16px; padding: 12px;">
+                    ✅ Confirmar (${locacoesEscaneadas.length})
+                </button>
+                <button class="btn btn-secondary" onclick="cancelarAlocacaoPlano()" style="font-size: 14px; padding: 10px;">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    mostrarPasso('passo-alocar-plano');
+}
+
+function iniciarScannerAlocacao() {
+    const scanner = new Html5Qrcode("reader-localizacao");
+    
+    scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        async (decodedText) => {
+            console.log('📱 QR escaneado:', decodedText);
+            
+            // Parar scanner
+            await scanner.stop();
+            
+            // Processar localização
+            await adicionarLocalizacaoAoPlano(decodedText);
+        }
+    ).catch(err => {
+        console.error('Erro ao iniciar scanner:', err);
+        mostrarToast('Erro ao acessar câmera', 'error');
+    });
+    
+    // Mostrar passo do scanner
+    document.getElementById('instrucao-scanner-localizacao').textContent = 
+        '📱 Escaneie QR da localização de armazenamento';
+    mostrarPasso('passo-scanner-localizacao');
+}
+
+async function adicionarLocalizacaoAoPlano(codigoQR) {
+    try {
+        // Verificar se é código de localização válido
+        if (!codigoQR.startsWith('LOC-') && !codigoQR.match(/^\d+-[A-Z]+-\d+$/)) {
+            mostrarToast('❌ QR inválido! Escaneie uma localização', 'error');
+            mostrarPasso('passo-alocar-plano');
+            return;
+        }
+        
+        // Verificar se já foi escaneada
+        const jaEscaneada = locacoesEscaneadas.find(l => l.codigo === codigoQR);
+        if (jaEscaneada) {
+            mostrarToast('⚠️ Localização já escaneada!', 'warning');
+            mostrarPasso('passo-alocar-plano');
+            return;
+        }
+        
+        // Adicionar à lista
+        locacoesEscaneadas.push({ codigo: codigoQR });
+        
+        mostrarToast(`✅ Localização adicionada: ${codigoQR}`, 'success');
+        
+        // Atualizar interface
+        atualizarListaLocacoes();
+        
+        // Voltar para tela de alocação
+        mostrarPasso('passo-alocar-plano');
+        
+    } catch (error) {
+        console.error('Erro ao adicionar localização:', error);
+        mostrarToast('Erro ao processar localização', 'error');
+        mostrarPasso('passo-alocar-plano');
+    }
+}
+
+function atualizarListaLocacoes() {
+    const lista = document.getElementById('lista-locacoes-escaneadas');
+    const btnFinalizar = document.getElementById('btn-finalizar-alocacao');
+    
+    if (locacoesEscaneadas.length === 0) {
+        lista.innerHTML = `
+            <p style="color: #999; font-size: 14px; margin: 0;">
+                Nenhuma localização escaneada
+            </p>
+        `;
+        btnFinalizar.disabled = true;
+        btnFinalizar.textContent = 'Confirmar (0)';
+    } else {
+        lista.innerHTML = `
+            <div style="background: #f5f5f5; border-radius: 8px; padding: 15px;">
+                <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px;">
+                    Localizações escaneadas:
+                </p>
+                ${locacoesEscaneadas.map((loc, i) => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: white; border-radius: 4px; margin-bottom: 5px;">
+                        <span style="font-weight: bold;">📍 ${loc.codigo}</span>
+                        <button onclick="removerLocalizacao(${i})" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 12px;">
+                            ✕
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        btnFinalizar.disabled = false;
+        btnFinalizar.textContent = `✅ Confirmar (${locacoesEscaneadas.length})`;
+    }
+}
+
+function removerLocalizacao(indice) {
+    locacoesEscaneadas.splice(indice, 1);
+    atualizarListaLocacoes();
+    mostrarToast('Localização removida', 'info');
+}
+
+async function finalizarAlocacaoPlano() {
+    if (locacoesEscaneadas.length === 0) {
+        mostrarToast('❌ Escaneie pelo menos uma localização', 'error');
+        return;
+    }
+    
+    try {
+        mostrarLoading(true);
+        
+        const response = await fetch('/api/mobile/plano/alocar-localizacoes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plano_id: planoAguardandoAlocacao.id,
+                localizacoes: locacoesEscaneadas
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarToast(`✅ Plano guardado em ${locacoesEscaneadas.length} localização(ões)!`, 'success');
+            
+            // Limpar estado
+            planoAguardandoAlocacao = null;
+            locacoesEscaneadas = [];
+            ordemAtual = null;
+            
+            // Recarregar ordens e voltar
+            await carregarOrdensProducao();
+            mostrarPasso('passo-lista-ordens');
+        } else {
+            throw new Error(data.error || 'Erro ao alocar localizações');
+        }
+    } catch (error) {
+        console.error('Erro ao finalizar alocação:', error);
+        mostrarToast(error.message || 'Erro ao alocar plano', 'error');
+    } finally {
+        mostrarLoading(false);
+    }
+}
+
+function cancelarAlocacaoPlano() {
+    if (confirm('Cancelar alocação? As localizações escaneadas serão perdidas.')) {
+        planoAguardandoAlocacao = null;
+        locacoesEscaneadas = [];
+        mostrarPasso('passo-lista-ordens');
     }
 }
 
@@ -1568,7 +1783,6 @@ function formatarData(dataString) {
 let planoAtual = null;
 let itemAtual = null;
 let alocacaoAtual = null;
-let locacoesEscaneadas = [];
 let carregamentoAtual = null;
 let cortesValidados = [];
 

@@ -1171,4 +1171,163 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
     }
 });
 
+// ========================================
+// ALOCAR LOCALIZAÇÕES PARA PLANO FINALIZADO
+// ========================================
+router.post('/plano/alocar-localizacoes', async (req, res) => {
+    try {
+        const { plano_id, localizacoes } = req.body;
+        
+        if (!plano_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'plano_id é obrigatório'
+            });
+        }
+        
+        if (!localizacoes || !Array.isArray(localizacoes) || localizacoes.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Pelo menos uma localização deve ser fornecida'
+            });
+        }
+        
+        console.log(`📍 Alocando ${localizacoes.length} localização(ões) para plano ${plano_id}...`);
+        
+        // Verificar se plano existe e está finalizado
+        const [plano] = await db.query(
+            'SELECT id, codigo_plano, status FROM planos_corte WHERE id = ?',
+            [plano_id]
+        );
+        
+        if (!plano || plano.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Plano não encontrado'
+            });
+        }
+        
+        if (plano[0].status !== 'finalizado') {
+            return res.status(400).json({
+                success: false,
+                error: 'Apenas planos finalizados podem ser alocados em localizações'
+            });
+        }
+        
+        // Inserir localizações
+        const locacoesInseridas = [];
+        
+        for (let i = 0; i < localizacoes.length; i++) {
+            const loc = localizacoes[i];
+            
+            // Buscar localização no banco (pode ser por ID ou código)
+            let locacao;
+            
+            if (loc.id) {
+                // Busca por ID
+                const [result] = await db.query(
+                    'SELECT id, codigo_localizacao FROM locacoes WHERE id = ?',
+                    [loc.id]
+                );
+                locacao = result[0];
+            } else if (loc.codigo) {
+                // Busca por código (LOC-123 ou formato N-X-N)
+                const [result] = await db.query(
+                    'SELECT id, codigo_localizacao FROM locacoes WHERE codigo_localizacao = ?',
+                    [loc.codigo]
+                );
+                locacao = result[0];
+            }
+            
+            if (!locacao) {
+                console.warn(`⚠️ Localização não encontrada:`, loc);
+                continue; // Pula essa localização
+            }
+            
+            // Verificar se já não foi inserida (evitar duplicatas)
+            const [existente] = await db.query(
+                'SELECT id FROM plano_locacoes WHERE plano_corte_id = ? AND locacao_id = ?',
+                [plano_id, locacao.id]
+            );
+            
+            if (existente && existente.length > 0) {
+                console.log(`ℹ️ Localização ${locacao.codigo_localizacao} já está vinculada ao plano`);
+                continue;
+            }
+            
+            // Inserir vínculo
+            await db.query(
+                `INSERT INTO plano_locacoes 
+                (plano_corte_id, locacao_id, codigo_locacao, validada_qr, data_scan, ordem_scan)
+                VALUES (?, ?, ?, TRUE, NOW(), ?)`,
+                [plano_id, locacao.id, locacao.codigo_localizacao, i + 1]
+            );
+            
+            locacoesInseridas.push({
+                id: locacao.id,
+                codigo: locacao.codigo_localizacao,
+                ordem: i + 1
+            });
+            
+            console.log(`✅ Localização ${locacao.codigo_localizacao} vinculada ao plano ${plano[0].codigo_plano}`);
+        }
+        
+        res.json({
+            success: true,
+            message: `${locacoesInseridas.length} localização(ões) vinculada(s) ao plano`,
+            data: {
+                plano_id,
+                codigo_plano: plano[0].codigo_plano,
+                localizacoes: locacoesInseridas
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao alocar localizações:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========================================
+// BUSCAR LOCALIZAÇÕES DE UM PLANO
+// ========================================
+router.get('/plano/:id/localizacoes', async (req, res) => {
+    try {
+        const planoId = req.params.id;
+        
+        const [localizacoes] = await db.query(
+            `SELECT 
+                pl.id,
+                pl.codigo_locacao,
+                pl.validada_qr,
+                pl.data_scan,
+                pl.ordem_scan,
+                l.corredor,
+                l.coluna,
+                l.altura,
+                l.tipo_localizacao
+            FROM plano_locacoes pl
+            JOIN locacoes l ON pl.locacao_id = l.id
+            WHERE pl.plano_corte_id = ?
+            ORDER BY pl.ordem_scan ASC`,
+            [planoId]
+        );
+        
+        res.json({
+            success: true,
+            data: localizacoes
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao buscar localizações do plano:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
