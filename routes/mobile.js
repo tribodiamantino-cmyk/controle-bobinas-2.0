@@ -239,6 +239,20 @@ router.get('/ordens-producao', async (req, res) => {
                 plano.qtd_total = itens.length;
                 plano.observacoes = (plano.cliente || '') + (plano.aviario ? ' - ' + plano.aviario : '');
                 plano.fonte = 'planos';
+                
+                // Buscar localizações onde o plano está armazenado
+                try {
+                    const [localizacoes] = await db.query(`
+                        SELECT pl.codigo_locacao, l.corredor, l.coluna, l.altura
+                        FROM plano_locacoes pl
+                        LEFT JOIN locacoes l ON pl.locacao_id = l.id
+                        WHERE pl.plano_corte_id = ?
+                        ORDER BY pl.ordem_scan
+                    `, [plano.id]);
+                    plano.localizacoes = localizacoes;
+                } catch (err) {
+                    plano.localizacoes = [];
+                }
             }
             ordens = planos;
         } catch (err) { console.log('planos_corte nao disponivel:', err.message); }
@@ -1323,6 +1337,373 @@ router.get('/plano/:id/localizacoes', async (req, res) => {
         
     } catch (error) {
         console.error('❌ Erro ao buscar localizações do plano:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========================================
+// LISTAR PLANOS FINALIZADOS PARA CARREGAMENTO
+// ========================================
+router.get('/planos-finalizados', async (req, res) => {
+    try {
+        const [planos] = await db.query(`
+            SELECT 
+                pc.id,
+                pc.codigo_plano,
+                pc.cliente,
+                pc.aviario,
+                pc.observacoes,
+                pc.data_criacao,
+                pc.data_finalizacao,
+                COUNT(DISTINCT cr.id) as total_cortes
+            FROM planos_corte pc
+            LEFT JOIN cortes_realizados cr ON cr.plano_corte_id = pc.id
+            WHERE pc.status = 'finalizado'
+            GROUP BY pc.id
+            ORDER BY pc.data_finalizacao DESC
+            LIMIT 50
+        `);
+        
+        // Para cada plano, buscar localizações e carregamentos
+        for (let plano of planos) {
+            // Buscar localizações
+            const [localizacoes] = await db.query(`
+                SELECT pl.codigo_locacao, l.corredor, l.coluna, l.altura
+                FROM plano_locacoes pl
+                LEFT JOIN locacoes l ON pl.locacao_id = l.id
+                WHERE pl.plano_corte_id = ?
+                ORDER BY pl.ordem_scan
+            `, [plano.id]);
+            plano.localizacoes = localizacoes;
+            
+            // Verificar se já tem carregamento
+            const [carregamento] = await db.query(`
+                SELECT id, codigo_carregamento, status, total_cortes, cortes_carregados
+                FROM carregamentos
+                WHERE plano_corte_id = ?
+                ORDER BY data_inicio DESC
+                LIMIT 1
+            `, [plano.id]);
+            plano.carregamento = carregamento[0] || null;
+        }
+        
+        res.json({
+            success: true,
+            data: planos
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao buscar planos finalizados:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========================================
+// CARREGAMENTO: INICIAR
+// ========================================
+router.post('/carregamento/iniciar', async (req, res) => {
+    try {
+        const { plano_id, operador_nome } = req.body;
+        
+        if (!plano_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'plano_id é obrigatório'
+            });
+        }
+        
+        // Verificar se plano existe e está finalizado
+        const [plano] = await db.query(
+            'SELECT id, codigo_plano, status FROM planos_corte WHERE id = ?',
+            [plano_id]
+        );
+        
+        if (!plano || plano.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Plano não encontrado'
+            });
+        }
+        
+        if (plano[0].status !== 'finalizado') {
+            return res.status(400).json({
+                success: false,
+                error: 'Apenas planos finalizados podem ser carregados'
+            });
+        }
+        
+        // Verificar se já existe carregamento em andamento
+        const [carregamentoExistente] = await db.query(
+            'SELECT id FROM carregamentos WHERE plano_corte_id = ? AND status = ?',
+            [plano_id, 'em_andamento']
+        );
+        
+        if (carregamentoExistente && carregamentoExistente.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Já existe um carregamento em andamento para este plano',
+                carregamento_id: carregamentoExistente[0].id
+            });
+        }
+        
+        // Contar total de cortes do plano
+        const [totalCortes] = await db.query(
+            'SELECT COUNT(*) as total FROM cortes_realizados WHERE plano_corte_id = ?',
+            [plano_id]
+        );
+        
+        const total = totalCortes[0].total;
+        
+        if (total === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Plano não possui cortes realizados'
+            });
+        }
+        
+        // Gerar código sequencial (CAR-2025-00001)
+        const ano = new Date().getFullYear();
+        const [ultimoCodigo] = await db.query(
+            `SELECT codigo_carregamento 
+             FROM carregamentos 
+             WHERE codigo_carregamento LIKE ? 
+             ORDER BY id DESC 
+             LIMIT 1`,
+            [`CAR-${ano}-%`]
+        );
+        
+        let novoNumero = 1;
+        if (ultimoCodigo && ultimoCodigo.length > 0) {
+            const match = ultimoCodigo[0].codigo_carregamento.match(/CAR-\d+-(\d+)/);
+            if (match) {
+                novoNumero = parseInt(match[1]) + 1;
+            }
+        }
+        
+        const codigoCarregamento = `CAR-${ano}-${String(novoNumero).padStart(5, '0')}`;
+        
+        // Criar carregamento
+        const [result] = await db.query(
+            `INSERT INTO carregamentos 
+            (codigo_carregamento, plano_corte_id, status, total_cortes, cortes_carregados, operador_nome)
+            VALUES (?, ?, 'em_andamento', ?, 0, ?)`,
+            [codigoCarregamento, plano_id, total, operador_nome || null]
+        );
+        
+        console.log(`✅ Carregamento ${codigoCarregamento} iniciado para plano ${plano[0].codigo_plano}`);
+        
+        res.json({
+            success: true,
+            message: 'Carregamento iniciado',
+            data: {
+                id: result.insertId,
+                codigo_carregamento: codigoCarregamento,
+                plano_id,
+                codigo_plano: plano[0].codigo_plano,
+                total_cortes: total,
+                cortes_carregados: 0
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao iniciar carregamento:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========================================
+// CARREGAMENTO: VALIDAR CORTE
+// ========================================
+router.post('/carregamento/validar-corte', async (req, res) => {
+    try {
+        const { carregamento_id, codigo_corte } = req.body;
+        
+        if (!carregamento_id || !codigo_corte) {
+            return res.status(400).json({
+                success: false,
+                error: 'carregamento_id e codigo_corte são obrigatórios'
+            });
+        }
+        
+        // Buscar carregamento
+        const [carregamento] = await db.query(
+            'SELECT id, plano_corte_id, status, total_cortes, cortes_carregados FROM carregamentos WHERE id = ?',
+            [carregamento_id]
+        );
+        
+        if (!carregamento || carregamento.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Carregamento não encontrado'
+            });
+        }
+        
+        if (carregamento[0].status !== 'em_andamento') {
+            return res.status(400).json({
+                success: false,
+                error: 'Carregamento não está em andamento'
+            });
+        }
+        
+        // Buscar corte pelo código
+        const [corte] = await db.query(`
+            SELECT 
+                cr.id,
+                cr.codigo_corte,
+                cr.plano_corte_id,
+                cr.metragem_cortada,
+                p.codigo as produto_codigo,
+                c.nome_cor,
+                g.gramatura
+            FROM cortes_realizados cr
+            JOIN produtos p ON cr.produto_id = p.id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            WHERE cr.codigo_corte = ?
+        `, [codigo_corte]);
+        
+        if (!corte || corte.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Corte não encontrado',
+                validacao: 'invalido'
+            });
+        }
+        
+        // Verificar se corte pertence ao plano do carregamento
+        if (corte[0].plano_corte_id !== carregamento[0].plano_corte_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'Este corte não pertence ao plano deste carregamento',
+                validacao: 'plano_errado',
+                corte: corte[0]
+            });
+        }
+        
+        // Verificar se já foi escaneado neste carregamento
+        const [jaEscaneado] = await db.query(
+            'SELECT id FROM carregamentos_itens WHERE carregamento_id = ? AND corte_id = ?',
+            [carregamento_id, corte[0].id]
+        );
+        
+        if (jaEscaneado && jaEscaneado.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Este corte já foi escaneado neste carregamento',
+                validacao: 'duplicado',
+                corte: corte[0]
+            });
+        }
+        
+        // Adicionar corte ao carregamento
+        const ordemScan = carregamento[0].cortes_carregados + 1;
+        
+        await db.query(
+            `INSERT INTO carregamentos_itens (carregamento_id, corte_id, ordem_scan)
+             VALUES (?, ?, ?)`,
+            [carregamento_id, corte[0].id, ordemScan]
+        );
+        
+        // Atualizar contador
+        await db.query(
+            'UPDATE carregamentos SET cortes_carregados = cortes_carregados + 1 WHERE id = ?',
+            [carregamento_id]
+        );
+        
+        const novosCarregados = carregamento[0].cortes_carregados + 1;
+        const completo = novosCarregados >= carregamento[0].total_cortes;
+        
+        console.log(`✅ Corte ${codigo_corte} validado no carregamento (${novosCarregados}/${carregamento[0].total_cortes})`);
+        
+        res.json({
+            success: true,
+            message: 'Corte validado',
+            validacao: 'valido',
+            data: {
+                corte: corte[0],
+                ordem_scan: ordemScan,
+                progresso: {
+                    carregados: novosCarregados,
+                    total: carregamento[0].total_cortes,
+                    percentual: Math.round((novosCarregados / carregamento[0].total_cortes) * 100)
+                },
+                completo
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao validar corte:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========================================
+// CARREGAMENTO: FINALIZAR
+// ========================================
+router.post('/carregamento/finalizar', async (req, res) => {
+    try {
+        const { carregamento_id } = req.body;
+        
+        if (!carregamento_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'carregamento_id é obrigatório'
+            });
+        }
+        
+        // Buscar carregamento
+        const [carregamento] = await db.query(
+            'SELECT id, codigo_carregamento, total_cortes, cortes_carregados FROM carregamentos WHERE id = ?',
+            [carregamento_id]
+        );
+        
+        if (!carregamento || carregamento.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Carregamento não encontrado'
+            });
+        }
+        
+        // Verificar se todos os cortes foram carregados
+        if (carregamento[0].cortes_carregados < carregamento[0].total_cortes) {
+            return res.status(400).json({
+                success: false,
+                error: `Apenas ${carregamento[0].cortes_carregados} de ${carregamento[0].total_cortes} cortes foram carregados`,
+                pode_finalizar_parcial: true
+            });
+        }
+        
+        // Finalizar carregamento
+        await db.query(
+            'UPDATE carregamentos SET status = ?, data_conclusao = NOW() WHERE id = ?',
+            ['concluido', carregamento_id]
+        );
+        
+        console.log(`✅ Carregamento ${carregamento[0].codigo_carregamento} finalizado`);
+        
+        res.json({
+            success: true,
+            message: 'Carregamento finalizado com sucesso',
+            data: {
+                codigo_carregamento: carregamento[0].codigo_carregamento,
+                total_cortes: carregamento[0].total_cortes
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao finalizar carregamento:', error);
         res.status(500).json({
             success: false,
             error: error.message

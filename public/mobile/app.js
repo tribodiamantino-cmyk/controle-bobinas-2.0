@@ -184,6 +184,21 @@ function renderizarDetalhesOrdem() {
         
         ${ordemAtual.observacoes ? `<div class="ordem-cliente">${ordemAtual.observacoes}</div>` : ''}
         
+        ${ordemAtual.localizacoes && ordemAtual.localizacoes.length > 0 ? `
+            <div style="background: #e0f2fe; border-left: 4px solid #0ea5e9; padding: 12px; margin-bottom: 1rem; border-radius: 4px;">
+                <div style="font-weight: bold; color: #0c4a6e; margin-bottom: 5px; font-size: 14px;">
+                    📍 Armazenado em:
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    ${ordemAtual.localizacoes.map(loc => `
+                        <span style="background: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #0369a1; border: 1px solid #bae6fd;">
+                            ${loc.codigo_locacao}
+                        </span>
+                    `).join('')}
+                </div>
+            </div>
+        ` : ''}
+        
         ${todosItensConcluidos ? `
             <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
@@ -2276,7 +2291,7 @@ async function carregarPlanosFinalizados() {
     try {
         mostrarLoading(true);
         
-        const response = await fetch('/api/mobile/carregamento/planos-finalizados');
+        const response = await fetch('/api/mobile/planos-finalizados');
         const data = await response.json();
         
         if (!data.success) throw new Error(data.error);
@@ -2284,84 +2299,155 @@ async function carregarPlanosFinalizados() {
         const container = document.getElementById('lista-planos-finalizados');
         
         if (data.data.length === 0) {
-            container.innerHTML = '<p class="text-muted">Nenhum plano finalizado disponível para carregamento.</p>';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <p>Nenhum plano finalizado</p>
+                    <small style="color: var(--text-light);">Finalize planos de corte para que apareçam aqui</small>
+                </div>
+            `;
             return;
         }
         
-        container.innerHTML = data.data.map(plano => `
-            <div class="ordem-card" onclick="iniciarCarregamento(${plano.id})">
-                <div class="ordem-header">
-                    <span class="ordem-numero">Plano #${plano.id}</span>
-                    <span class="badge badge-success">Finalizado</span>
+        container.innerHTML = data.data.map(plano => {
+            const locacoesTexto = plano.localizacoes && plano.localizacoes.length > 0
+                ? plano.localizacoes.map(l => l.codigo_locacao).join(', ')
+                : 'Sem localização';
+            
+            const temCarregamento = plano.carregamento !== null;
+            const carregamentoConcluido = temCarregamento && plano.carregamento.status === 'concluido';
+            
+            return `
+                <div class="ordem-card ${carregamentoConcluido ? 'ordem-sem-itens' : ''}" 
+                     onclick="${!carregamentoConcluido ? `iniciarNovoCarregamento(${plano.id}, '${plano.codigo_plano}', ${plano.total_cortes})` : ''}">
+                    <div class="ordem-header">
+                        <span class="ordem-numero">${plano.codigo_plano}</span>
+                        <span class="ordem-status ${carregamentoConcluido ? 'status-concluida' : 'status-finalizado'}">
+                            ${carregamentoConcluido ? '✅ Carregado' : 'Finalizado'}
+                        </span>
+                    </div>
+                    <div class="ordem-info">
+                        <span>📦 ${plano.total_cortes} cortes realizados</span>
+                        <span>📍 ${locacoesTexto}</span>
+                    </div>
+                    ${plano.cliente || plano.aviario ? `
+                        <div class="ordem-obs">
+                            ${plano.cliente || ''} ${plano.aviario ? '- ' + plano.aviario : ''}
+                        </div>
+                    ` : ''}
+                    ${temCarregamento ? `
+                        <div style="background: ${carregamentoConcluido ? '#d1fae5' : '#fef3c7'}; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 13px;">
+                            ${carregamentoConcluido 
+                                ? `✅ ${plano.carregamento.codigo_carregamento} - ${plano.carregamento.cortes_carregados} cortes`
+                                : `⏳ ${plano.carregamento.codigo_carregamento} em andamento (${plano.carregamento.cortes_carregados}/${plano.carregamento.total_cortes})`
+                            }
+                        </div>
+                    ` : ''}
                 </div>
-                <div class="ordem-info">
-                    <div><strong>Cliente:</strong> ${plano.cliente}</div>
-                    <div><strong>Itens:</strong> ${plano.total_itens}</div>
-                    <div><strong>Cortes:</strong> ${plano.total_cortes}</div>
-                    <div><strong>Locações:</strong> ${plano.locacoes}</div>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
     } catch (error) {
+        console.error('Erro ao carregar planos:', error);
         mostrarToast('Erro ao carregar planos: ' + error.message, 'error');
     } finally {
         mostrarLoading(false);
     }
 }
 
-// ========== VALIDAÇÃO CARREGAMENTO ==========
-async function iniciarCarregamento(planoId) {
+// ========== CARREGAMENTO - INICIAR ==========
+let carregamentoEmAndamento = null;
+let scannerCarregamento = null;
+
+async function iniciarNovoCarregamento(planoId, codigoPlano, totalCortes) {
     try {
         mostrarLoading(true);
         
         const response = await fetch('/api/mobile/carregamento/iniciar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plano_id: planoId })
+            body: JSON.stringify({ 
+                plano_id: planoId,
+                operador_nome: 'Operador Mobile' // Pode pedir nome depois
+            })
         });
         
         const data = await response.json();
-        if (!data.success) throw new Error(data.error);
         
-        carregamentoAtual = data.data;
+        if (!data.success) {
+            // Se já existe carregamento em andamento, continuar com ele
+            if (data.carregamento_id) {
+                mostrarToast('Continuando carregamento em andamento...', 'info');
+                // Aqui poderia buscar dados do carregamento existente
+                // Por ora, apenas mostra mensagem
+                return;
+            }
+            throw new Error(data.error);
+        }
+        
+        carregamentoEmAndamento = data.data;
         cortesValidados = [];
         
+        // Exibir tela de validação
         await mostrarTela('tela-validacao-carregamento');
         
         // Renderizar info do carregamento
         document.getElementById('carregamento-info').innerHTML = `
-            <h3>Carregamento ${carregamentoAtual.codigo_carregamento}</h3>
-            <div class="info-row">
-                <span class="label">Plano:</span>
-                <span class="value">#${carregamentoAtual.plano_id}</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Total de Cortes:</span>
-                <span class="value">${carregamentoAtual.cortes.length}</span>
+            <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 10px 0; color: #0c4a6e;">
+                    ${carregamentoEmAndamento.codigo_carregamento}
+                </h3>
+                <div style="font-size: 14px; color: #075985;">
+                    <div>📋 Plano: <strong>${carregamentoEmAndamento.codigo_plano}</strong></div>
+                    <div>📦 Total de cortes: <strong>${carregamentoEmAndamento.total_cortes}</strong></div>
+                </div>
             </div>
         `;
         
         atualizarProgressoCarregamento();
-        iniciarScanner('carregamento');
+        iniciarScannerCarregamento();
         
     } catch (error) {
-        mostrarToast('Erro ao iniciar carregamento: ' + error.message, 'error');
+        console.error('Erro ao iniciar carregamento:', error);
+        mostrarToast('Erro: ' + error.message, 'error');
     } finally {
         mostrarLoading(false);
     }
 }
 
-async function processarScanCarregamento(qrData) {
+function iniciarScannerCarregamento() {
+    const readerElement = document.getElementById('reader-carregamento');
+    
+    if (!readerElement) {
+        console.error('Elemento reader-carregamento não encontrado');
+        return;
+    }
+    
+    scannerCarregamento = new Html5Qrcode("reader-carregamento");
+    
+    scannerCarregamento.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        async (decodedText) => {
+            console.log('📱 QR escaneado no carregamento:', decodedText);
+            await processarScanCarregamento(decodedText);
+        }
+    ).catch(err => {
+        console.error('Erro ao iniciar scanner de carregamento:', err);
+        mostrarToast('Erro ao acessar câmera', 'error');
+    });
+}
+
+async function processarScanCarregamento(codigoCorte) {
     try {
-        const codigoCorte = qrData.replace('CORTE-', '');
+        const feedbackDiv = document.getElementById('feedback-scan');
         
-        // Validar scan no backend
-        const response = await fetch('/api/mobile/carregamento/validar-scan', {
+        // Validar corte no backend
+        const response = await fetch('/api/mobile/carregamento/validar-corte', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                carregamento_id: carregamentoAtual.id,
+                carregamento_id: carregamentoEmAndamento.id,
                 codigo_corte: codigoCorte
             })
         });
@@ -2369,92 +2455,182 @@ async function processarScanCarregamento(qrData) {
         const data = await response.json();
         
         // Feedback visual
-        const feedbackDiv = document.getElementById('feedback-scan');
-        feedbackDiv.classList.remove('hidden', 'success', 'error');
+        feedbackDiv.classList.remove('hidden');
         
-        if (data.success) {
-            feedbackDiv.classList.add('success');
-            feedbackDiv.textContent = `✅ ${codigoCorte} validado!`;
+        if (data.success && data.validacao === 'valido') {
+            // VERDE - Corte válido
+            feedbackDiv.style.background = '#10b981';
+            feedbackDiv.style.color = 'white';
+            feedbackDiv.innerHTML = `
+                <div style="font-size: 24px; margin-bottom: 8px;">✅</div>
+                <div style="font-size: 16px; font-weight: bold;">${data.data.corte.codigo_corte}</div>
+                <div style="font-size: 14px;">${data.data.corte.metragem_cortada}m - ${data.data.corte.produto_codigo}</div>
+                <div style="font-size: 12px; margin-top: 5px; opacity: 0.9;">
+                    Corte ${data.data.ordem_scan} | ${data.data.progresso.percentual}% completo
+                </div>
+            `;
             
-            // Adicionar à lista
+            // Adicionar à lista local
             cortesValidados.push(data.data.corte);
             renderizarCortesValidados();
             atualizarProgressoCarregamento();
             
+            // Atualizar contador do carregamento
+            carregamentoEmAndamento.cortes_carregados = data.data.progresso.carregados;
+            
+            // Verificar se completo
+            if (data.data.completo) {
+                setTimeout(() => {
+                    if (confirm('✅ Todos os cortes foram validados! Finalizar carregamento?')) {
+                        finalizarCarregamentoAtual();
+                    }
+                }, 1000);
+            }
+            
+        } else if (data.validacao === 'duplicado') {
+            // AMARELO - Já escaneado
+            feedbackDiv.style.background = '#f59e0b';
+            feedbackDiv.style.color = 'white';
+            feedbackDiv.innerHTML = `
+                <div style="font-size: 24px; margin-bottom: 8px;">⚠️</div>
+                <div style="font-size: 14px;">${data.error}</div>
+            `;
+            
+        } else if (data.validacao === 'plano_errado') {
+            // LARANJA - Plano errado
+            feedbackDiv.style.background = '#f97316';
+            feedbackDiv.style.color = 'white';
+            feedbackDiv.innerHTML = `
+                <div style="font-size: 24px; margin-bottom: 8px;">❌</div>
+                <div style="font-size: 14px;">Corte de outro plano!</div>
+                <div style="font-size: 12px; margin-top: 5px;">${codigoCorte}</div>
+            `;
+            
         } else {
-            feedbackDiv.classList.add('error');
-            feedbackDiv.textContent = `❌ ${data.error}`;
+            // VERMELHO - Inválido
+            feedbackDiv.style.background = '#ef4444';
+            feedbackDiv.style.color = 'white';
+            feedbackDiv.innerHTML = `
+                <div style="font-size: 24px; margin-bottom: 8px;">❌</div>
+                <div style="font-size: 14px;">${data.error || 'Corte não encontrado'}</div>
+            `;
         }
         
+        // Remover feedback após 2 segundos
         setTimeout(() => {
             feedbackDiv.classList.add('hidden');
         }, 2000);
         
     } catch (error) {
-        mostrarToast('Erro ao validar corte: ' + error.message, 'error');
+        console.error('Erro ao processar scan:', error);
+        mostrarToast('Erro ao validar corte', 'error');
     }
 }
 
 function renderizarCortesValidados() {
     const container = document.getElementById('lista-validados');
     
-    container.innerHTML = cortesValidados.map(corte => `
-        <div class="corte-validado-item">
-            <div class="icon">✅</div>
-            <div class="info">
-                <div class="codigo">${corte.codigo_corte}</div>
-                <div class="metragem">${corte.metragem_cortada}m</div>
+    if (cortesValidados.length === 0) {
+        container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Nenhum corte validado</p>';
+        return;
+    }
+    
+    container.innerHTML = cortesValidados.map((corte, index) => `
+        <div style="display: flex; align-items: center; padding: 10px; background: white; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e5e7eb;">
+            <div style="font-size: 20px; margin-right: 12px;">✅</div>
+            <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 14px;">${corte.codigo_corte}</div>
+                <div style="font-size: 12px; color: #666;">
+                    ${corte.metragem_cortada}m - ${corte.produto_codigo}
+                </div>
+            </div>
+            <div style="color: #999; font-size: 12px;">
+                #${index + 1}
             </div>
         </div>
     `).join('');
 }
 
 function atualizarProgressoCarregamento() {
-    const total = carregamentoAtual.cortes.length;
+    const total = carregamentoEmAndamento.total_cortes;
     const validados = cortesValidados.length;
-    const percentual = (validados / total) * 100;
+    const percentual = total > 0 ? (validados / total) * 100 : 0;
     
     document.getElementById('progresso-texto').textContent = `${validados} / ${total}`;
     document.getElementById('progresso-fill').style.width = `${percentual}%`;
     
     // Habilitar botão finalizar se todos validados
-    if (validados === total) {
-        document.getElementById('btn-finalizar-carregamento').disabled = false;
+    const btnFinalizar = document.getElementById('btn-finalizar-carregamento');
+    if (btnFinalizar) {
+        btnFinalizar.disabled = validados < total;
     }
 }
 
-async function finalizarCarregamento() {
+async function finalizarCarregamentoAtual() {
     try {
         mostrarLoading(true);
-        await pararScanner();
+        
+        // Parar scanner
+        if (scannerCarregamento) {
+            try {
+                await scannerCarregamento.stop();
+                scannerCarregamento = null;
+            } catch (err) {
+                console.log('Scanner já estava parado');
+            }
+        }
         
         const response = await fetch('/api/mobile/carregamento/finalizar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                carregamento_id: carregamentoAtual.id
+                carregamento_id: carregamentoEmAndamento.id
             })
         });
         
         const data = await response.json();
         
         if (data.success) {
-            mostrarToast('Carregamento finalizado com sucesso!', 'success');
-            voltarMenu();
+            mostrarToast(`✅ ${data.data.codigo_carregamento} finalizado!`, 'success');
+            
+            // Limpar estado
+            carregamentoEmAndamento = null;
+            cortesValidados = [];
+            
+            // Voltar para lista de planos
+            await abrirTelaCarregamento();
         } else {
             throw new Error(data.error);
         }
     } catch (error) {
-        mostrarToast('Erro ao finalizar: ' + error.message, 'error');
+        console.error('Erro ao finalizar carregamento:', error);
+        mostrarToast('Erro: ' + error.message, 'error');
     } finally {
         mostrarLoading(false);
     }
 }
 
-function cancelarCarregamento() {
-    carregamentoAtual = null;
+async function cancelarCarregamento() {
+    if (carregamentoEmAndamento && cortesValidados.length > 0) {
+        if (!confirm('Cancelar carregamento? Os cortes já validados serão perdidos.')) {
+            return;
+        }
+    }
+    
+    // Parar scanner
+    if (scannerCarregamento) {
+        try {
+            await scannerCarregamento.stop();
+            scannerCarregamento = null;
+        } catch (err) {
+            console.log('Scanner já estava parado');
+        }
+    }
+    
+    carregamentoEmAndamento = null;
     cortesValidados = [];
-    abrirTelaCarregamento();
+    
+    await abrirTelaCarregamento();
 }
 
 // ========== ATUALIZAR HANDLER DE SCANNER ==========
