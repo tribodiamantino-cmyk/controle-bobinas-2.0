@@ -293,6 +293,33 @@ exports.excluirBobina = async (req, res) => {
     try {
         const { id } = req.params;
         
+        // Verificar se existem retalhos vinculados
+        const [retalhos] = await db.query(
+            'SELECT COUNT(*) as total FROM retalhos WHERE bobina_origem_id = ?',
+            [id]
+        );
+        
+        if (retalhos[0].total > 0) {
+            return res.status(400).json({
+                success: false,
+                error: `Não é possível excluir esta bobina pois existem ${retalhos[0].total} retalho(s) vinculado(s) a ela.`
+            });
+        }
+        
+        // Verificar se existem alocações em planos de corte
+        const [alocacoes] = await db.query(
+            'SELECT COUNT(*) as total FROM alocacoes_corte WHERE bobina_id = ?',
+            [id]
+        );
+        
+        if (alocacoes[0].total > 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Não é possível excluir esta bobina pois ela está alocada em planos de corte. Remova as alocações primeiro.'
+            });
+        }
+        
+        // Se passou pelas validações, pode excluir
         await db.query('DELETE FROM bobinas WHERE id = ?', [id]);
         
         res.json({ 

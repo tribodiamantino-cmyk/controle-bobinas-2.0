@@ -410,10 +410,10 @@ async function registrarBobina(e) {
         const data = await response.json();
         
         if (response.ok) {
-            // Mostrar alerta de sucesso
-            mostrarAlerta(`✅ Bobina ${data.data.codigo_interno} registrada com sucesso! NF: ${data.data.nota_fiscal}`, 'success');
+            // Mostrar modal de sucesso com os dados da bobina
+            mostrarModalSucesso(data.data);
             
-            // Fechar o modal
+            // Fechar o modal de cadastro
             fecharModalNovaBobina();
             
             // Recarregar estoque para mostrar a nova bobina
@@ -1439,7 +1439,7 @@ async function imprimirEtiquetaRetalhoUnica(codigoRetalho) {
 
 // Excluir bobina
 async function excluirBobina(id) {
-    if (!confirm('Tem certeza que deseja excluir esta bobina?')) return;
+    if (!confirm('⚠️ Tem certeza que deseja excluir esta bobina?\n\nEsta ação é irreversível!')) return;
     
     try {
         const response = await fetch(`/api/bobinas/${id}`, {
@@ -1449,15 +1449,16 @@ async function excluirBobina(id) {
         const data = await response.json();
         
         if (response.ok) {
-            mostrarAlerta('Bobina excluída com sucesso!', 'success');
-            carregarEstoque();
+            mostrarAlerta('✅ Bobina excluída com sucesso!', 'success');
+            await carregarEstoque();
         } else {
-            mostrarAlerta(data.error || 'Erro ao excluir bobina', 'danger');
+            // Mostrar erro detalhado do backend
+            mostrarAlerta(`❌ ${data.error || 'Erro ao excluir bobina'}`, 'danger');
         }
         
     } catch (error) {
         console.error('Erro ao excluir bobina:', error);
-        mostrarAlerta('Erro ao excluir bobina', 'danger');
+        mostrarAlerta('❌ Erro ao excluir bobina: ' + error.message, 'danger');
     }
 }
 
