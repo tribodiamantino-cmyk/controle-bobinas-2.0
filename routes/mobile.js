@@ -1132,6 +1132,7 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                     b.nota_fiscal,
                     b.data_entrada,
                     b.status,
+                    b.placa,
                     p.codigo as produto_codigo,
                     p.fabricante,
                     p.tipo_tecido,

@@ -1282,6 +1282,7 @@ function renderizarItemBobina(bobina) {
             <div class="bobina-info">
                 <div class="bobina-codigo">
                     <strong>🏷️ ${bobina.codigo_interno}</strong> | 📄 NF: ${bobina.nota_fiscal}
+                    ${bobina.placa ? `| 🏷️ PLACA: <strong>${bobina.placa}</strong>` : ''}
                 </div>
                 <div class="bobina-metragem">
                     ${metragensHTML} | 
