@@ -47,19 +47,26 @@ async function runMigrations() {
 
             console.log(`▶️  Executando ${file}...`);
             
-            const migration = require(path.join(migrationsDir, file));
-            
-            // Executar migration
-            await migration.up({ query: db.query.bind(db) });
-            
-            // Registrar como executada
-            await db.query(
-                'INSERT INTO migrations (name) VALUES (?)',
-                [file]
-            );
-            
-            executedCount++;
-            console.log(`✅ ${file} - concluída`);
+            try {
+                const migration = require(path.join(migrationsDir, file));
+                
+                // Executar migration
+                await migration.up({ query: db.query.bind(db) });
+                
+                // Registrar como executada
+                await db.query(
+                    'INSERT INTO migrations (name) VALUES (?)',
+                    [file]
+                );
+                
+                executedCount++;
+                console.log(`✅ ${file} - concluída`);
+            } catch (migrationError) {
+                console.error(`❌ ERRO em ${file}:`, migrationError.message);
+                console.error(`   SQL Error Code: ${migrationError.code}`);
+                console.error(`   SQL State: ${migrationError.sqlState}`);
+                // Continua para próxima migration
+            }
         }
 
         if (executedCount > 0) {
