@@ -36,6 +36,8 @@ exports.criarBobina = async (req, res) => {
             observacoes 
         } = req.body;
         
+        console.log('📝 Criando bobina:', { nota_fiscal, loja, produto_id, metragem_inicial, placa });
+        
         // Validações
         if (!nota_fiscal || !loja || !produto_id || !metragem_inicial) {
             return res.status(400).json({ 
@@ -53,12 +55,14 @@ exports.criarBobina = async (req, res) => {
         
         // Validar se a PLACA já existe (se fornecida)
         if (placa) {
+            console.log('🔍 Verificando PLACA duplicada:', placa);
             const [existente] = await db.query(
                 'SELECT id, codigo_interno FROM bobinas WHERE placa = ?',
                 [placa]
             );
             
             if (existente.length > 0) {
+                console.log('❌ PLACA duplicada encontrada:', existente[0].codigo_interno);
                 return res.status(400).json({
                     success: false,
                     error: `PLACA já cadastrada na bobina ${existente[0].codigo_interno}`
@@ -67,15 +71,19 @@ exports.criarBobina = async (req, res) => {
         }
         
         // Gerar código interno único
+        console.log('🔢 Gerando código interno...');
         const codigo_interno = await gerarCodigoInterno(loja);
+        console.log('✓ Código gerado:', codigo_interno);
         
         // Inserir bobina
+        console.log('💾 Inserindo bobina no banco...');
         const [result] = await db.query(
             `INSERT INTO bobinas 
             (codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_atual, placa, observacoes, status) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Disponível')`,
             [codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_inicial, placa || null, observacoes || null]
         );
+        console.log('✓ Bobina inserida, ID:', result.insertId);
         
         // Buscar bobina criada com dados do produto
         const [bobina] = await db.query(
