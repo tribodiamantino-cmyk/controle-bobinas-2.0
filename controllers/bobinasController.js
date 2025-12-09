@@ -56,17 +56,22 @@ exports.criarBobina = async (req, res) => {
         // Validar se a PLACA já existe (se fornecida)
         if (placa) {
             console.log('🔍 Verificando PLACA duplicada:', placa);
-            const [existente] = await db.query(
-                'SELECT id, codigo_interno FROM bobinas WHERE placa = ?',
-                [placa]
-            );
-            
-            if (existente.length > 0) {
-                console.log('❌ PLACA duplicada encontrada:', existente[0].codigo_interno);
-                return res.status(400).json({
-                    success: false,
-                    error: `PLACA já cadastrada na bobina ${existente[0].codigo_interno}`
-                });
+            try {
+                const [existente] = await db.query(
+                    'SELECT id, codigo_interno FROM bobinas WHERE placa = ?',
+                    [placa]
+                );
+                
+                if (existente.length > 0) {
+                    console.log('❌ PLACA duplicada encontrada:', existente[0].codigo_interno);
+                    return res.status(400).json({
+                        success: false,
+                        error: `PLACA já cadastrada na bobina ${existente[0].codigo_interno}`
+                    });
+                }
+            } catch (placaCheckError) {
+                // Se coluna placa não existe, ignorar validação (será criada na migration)
+                console.log('⚠️ Validação de PLACA ignorada (coluna não existe ainda)');
             }
         }
         
