@@ -84,7 +84,7 @@ Versão de testes com implementação completa do campo **PLACA** (código de ga
 **Resultado Esperado:**
 - ✅ Modal de sucesso aparece
 - ✅ PLACA destacada em amarelo no modal
-- ✅ Bobina cadastrada com código `BOB-2025-XXXXX`
+- ✅ Bobina cadastrada com código `BOB-0001` (ou próximo número sequencial)
 
 ---
 
@@ -94,7 +94,7 @@ Versão de testes com implementação completa do campo **PLACA** (código de ga
 3. Clicar em Cadastrar
 
 **Resultado Esperado:**
-- ❌ Erro exibido: "PLACA já cadastrada na bobina BOB-2025-XXXXX"
+- ❌ Erro exibido: "PLACA já cadastrada na bobina BOB-0001"
 - ❌ Cadastro bloqueado
 
 ---
@@ -112,7 +112,7 @@ Versão de testes com implementação completa do campo **PLACA** (código de ga
 - ✅ Etiqueta impressa contendo:
   ```
   [QR CODE]
-  BOB-2025-XXXXX
+  BOB-0001
   Produto: [nome]
   XXm
   --- PLACA ---
