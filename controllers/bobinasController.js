@@ -292,6 +292,37 @@ exports.buscarProduto = async (req, res) => {
 exports.excluirBobina = async (req, res) => {
     try {
         const { id } = req.params;
+        const { forcado } = req.query;
+        
+        // Se for exclusão forçada, excluir dependências primeiro
+        if (forcado === 'true') {
+            console.log(`⚠️ Exclusão forçada da bobina ID ${id} - removendo dependências...`);
+            
+            // 1. Excluir retalhos vinculados
+            const [retalhosExcluidos] = await db.query(
+                'DELETE FROM retalhos WHERE bobina_origem_id = ?',
+                [id]
+            );
+            console.log(`✓ ${retalhosExcluidos.affectedRows} retalho(s) excluído(s)`);
+            
+            // 2. Excluir alocações em planos de corte
+            const [alocacoesExcluidas] = await db.query(
+                'DELETE FROM alocacoes_corte WHERE bobina_id = ?',
+                [id]
+            );
+            console.log(`✓ ${alocacoesExcluidas.affectedRows} alocação(ões) excluída(s)`);
+            
+            // 3. Excluir a bobina
+            await db.query('DELETE FROM bobinas WHERE id = ?', [id]);
+            console.log(`✓ Bobina ID ${id} excluída com sucesso`);
+            
+            return res.json({ 
+                success: true, 
+                message: `Bobina e ${retalhosExcluidos.affectedRows} dependência(s) excluídas com sucesso!` 
+            });
+        }
+        
+        // Exclusão normal - verificar dependências
         
         // Verificar se existem retalhos vinculados
         const [retalhos] = await db.query(

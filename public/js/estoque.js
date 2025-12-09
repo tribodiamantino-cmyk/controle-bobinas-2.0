@@ -1438,11 +1438,14 @@ async function imprimirEtiquetaRetalhoUnica(codigoRetalho) {
 // Ativar/desativar modo de seleção
 
 // Excluir bobina
-async function excluirBobina(id) {
-    if (!confirm('⚠️ Tem certeza que deseja excluir esta bobina?\n\nEsta ação é irreversível!')) return;
+async function excluirBobina(id, forcado = false) {
+    if (!forcado) {
+        if (!confirm('⚠️ Tem certeza que deseja excluir esta bobina?\n\nEsta ação é irreversível!')) return;
+    }
     
     try {
-        const response = await fetch(`/api/bobinas/${id}`, {
+        const url = forcado ? `/api/bobinas/${id}?forcado=true` : `/api/bobinas/${id}`;
+        const response = await fetch(url, {
             method: 'DELETE'
         });
         
@@ -1452,8 +1455,29 @@ async function excluirBobina(id) {
             mostrarAlerta('✅ Bobina excluída com sucesso!', 'success');
             await carregarEstoque();
         } else {
-            // Mostrar erro detalhado do backend
-            mostrarAlerta(`❌ ${data.error || 'Erro ao excluir bobina'}`, 'danger');
+            // Mostrar erro detalhado do backend com opção de forçar
+            const erroMsg = data.error || 'Erro ao excluir bobina';
+            
+            // Se tem dependências, oferecer exclusão forçada
+            if (erroMsg.includes('retalho') || erroMsg.includes('alocada')) {
+                const forcarExclusao = confirm(
+                    `❌ ERRO AO EXCLUIR:\n\n${erroMsg}\n\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                    `⚠️ EXCLUSÃO FORÇADA (AVANÇADO):\n\n` +
+                    `Você pode FORÇAR a exclusão, o que irá:\n` +
+                    `• Excluir TODOS os retalhos vinculados\n` +
+                    `• Remover TODAS as alocações em planos\n` +
+                    `• Excluir a bobina definitivamente\n\n` +
+                    `🚨 ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n` +
+                    `Deseja FORÇAR a exclusão?`
+                );
+                
+                if (forcarExclusao) {
+                    await excluirBobina(id, true);
+                }
+            } else {
+                mostrarAlerta(`❌ ${erroMsg}`, 'danger');
+            }
         }
         
     } catch (error) {
