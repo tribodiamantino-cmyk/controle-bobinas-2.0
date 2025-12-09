@@ -77,41 +77,90 @@ exports.criarBobina = async (req, res) => {
         
         // Inserir bobina
         console.log('💾 Inserindo bobina no banco...');
-        const [result] = await db.query(
-            `INSERT INTO bobinas 
-            (codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_atual, placa, observacoes, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Disponível')`,
-            [codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_inicial, placa || null, observacoes || null]
-        );
-        console.log('✓ Bobina inserida, ID:', result.insertId);
         
-        // Buscar bobina criada com dados do produto
-        const [bobina] = await db.query(
-            `SELECT 
-                b.*,
-                p.codigo,
-                p.fabricante,
-                p.tipo_tecido,
-                p.largura_sem_costura,
-                p.tipo_bainha,
-                p.largura_final,
-                p.largura_maior,
-                p.largura_y,
-                c.nome_cor,
-                g.gramatura
-            FROM bobinas b
-            JOIN produtos p ON b.produto_id = p.id
-            JOIN configuracoes_cores c ON p.cor_id = c.id
-            JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-            WHERE b.id = ?`,
-            [result.insertId]
-        );
-        
-        res.json({ 
-            success: true, 
-            data: bobina[0],
-            message: 'Bobina registrada com sucesso!' 
-        });
+        // Tentar inserir COM placa (se migration 027 já rodou)
+        try {
+            const [result] = await db.query(
+                `INSERT INTO bobinas 
+                (codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_atual, placa, observacoes, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Disponível')`,
+                [codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_inicial, placa || null, observacoes || null]
+            );
+            console.log('✓ Bobina inserida COM placa, ID:', result.insertId);
+            
+            // Buscar bobina criada com dados do produto
+            const [bobina] = await db.query(
+                `SELECT 
+                    b.*,
+                    p.codigo,
+                    p.fabricante,
+                    p.tipo_tecido,
+                    p.largura_sem_costura,
+                    p.tipo_bainha,
+                    p.largura_final,
+                    p.largura_maior,
+                    p.largura_y,
+                    c.nome_cor,
+                    g.gramatura
+                FROM bobinas b
+                JOIN produtos p ON b.produto_id = p.id
+                JOIN configuracoes_cores c ON p.cor_id = c.id
+                JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                WHERE b.id = ?`,
+                [result.insertId]
+            );
+            
+            res.json({ 
+                success: true, 
+                data: bobina[0],
+                message: 'Bobina registrada com sucesso!' 
+            });
+            
+        } catch (insertError) {
+            // Se der erro de coluna não existente, tentar SEM placa (fallback)
+            if (insertError.message.includes('placa') || insertError.code === 'ER_BAD_FIELD_ERROR') {
+                console.log('⚠️ Coluna placa não existe ainda, inserindo SEM placa...');
+                
+                const [result] = await db.query(
+                    `INSERT INTO bobinas 
+                    (codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_atual, observacoes, status) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'Disponível')`,
+                    [codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_inicial, observacoes || null]
+                );
+                console.log('✓ Bobina inserida SEM placa (fallback), ID:', result.insertId);
+                
+                // Buscar bobina criada
+                const [bobina] = await db.query(
+                    `SELECT 
+                        b.*,
+                        p.codigo,
+                        p.fabricante,
+                        p.tipo_tecido,
+                        p.largura_sem_costura,
+                        p.tipo_bainha,
+                        p.largura_final,
+                        p.largura_maior,
+                        p.largura_y,
+                        c.nome_cor,
+                        g.gramatura
+                    FROM bobinas b
+                    JOIN produtos p ON b.produto_id = p.id
+                    JOIN configuracoes_cores c ON p.cor_id = c.id
+                    JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                    WHERE b.id = ?`,
+                    [result.insertId]
+                );
+                
+                res.json({ 
+                    success: true, 
+                    data: bobina[0],
+                    message: 'Bobina registrada com sucesso! (Aguardando migration para campo PLACA)' 
+                });
+            } else {
+                // Se for outro erro, lançar
+                throw insertError;
+            }
+        }
         
     } catch (error) {
         console.error('Erro ao criar bobina:', error);
