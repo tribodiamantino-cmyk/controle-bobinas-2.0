@@ -475,12 +475,17 @@ function mostrarConfirmacaoCorte() {
         
         <form id="form-validacao" onsubmit="confirmarValidacao(event)">
             <div class="form-group">
-                <label for="metragem-validacao">Metragem Cortada (metros)</label>
+                <label for="metragem-validacao">Metragem a Cortar (metros) - Exata</label>
                 <input type="number" id="metragem-validacao" step="0.01" min="0.01" 
                        value="${metragemSolicitada}" 
-                       max="${Math.max(metragemAtual, metragemSolicitada)}" required>
-                <small style="color: var(--text-light);">
-                    Solicitado: ${metragemSolicitada}m | Disponível: ${metragemAtual}m
+                       readonly
+                       style="background-color: #f0f0f0; cursor: not-allowed;"
+                       required>
+                <small style="color: var(--primary); font-weight: bold;">
+                    ⚠️ Metragem fixa: ${metragemSolicitada}m (conforme plano de corte)
+                </small>
+                <small style="color: var(--text-light); display: block; margin-top: 5px;">
+                    Disponível na bobina: ${metragemAtual}m
                 </small>
             </div>
 

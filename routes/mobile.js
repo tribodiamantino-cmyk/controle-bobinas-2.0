@@ -279,6 +279,8 @@ router.get('/ordens-producao', async (req, res) => {
 });
 
 router.post('/validar-item', async (req, res) => {
+    const connection = await db.getConnection();
+    
     try {
         const { item_id, origem_id, tipo_origem, metragem_cortada } = req.body;
         // Compatibilidade com versão antiga
@@ -289,6 +291,10 @@ router.post('/validar-item', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Item, origem e metragem obrigatorios' });
         }
         
+        // Iniciar transação
+        await connection.beginTransaction();
+        console.log('🔄 Transação iniciada para corte item_id:', item_id);
+        
         let metragem_disponivel = 0;
         let metragem_reservada = 0;
         let produtoId = null;
@@ -296,7 +302,7 @@ router.post('/validar-item', async (req, res) => {
         let itemPlanoCorteId = null;
         
         // Buscar dados da alocação
-        const [alocacoes] = await db.query(`
+        const [alocacoes] = await connection.query(`
             SELECT 
                 ac.id as alocacao_id,
                 ac.item_plano_corte_id,
@@ -311,6 +317,7 @@ router.post('/validar-item', async (req, res) => {
         `, [item_id]);
         
         if (alocacoes.length === 0) {
+            await connection.rollback();
             return res.status(404).json({ success: false, message: 'Alocação não encontrada' });
         }
         
@@ -320,15 +327,17 @@ router.post('/validar-item', async (req, res) => {
         itemPlanoCorteId = alocacao.item_plano_corte_id;
         
         if (tipoOrigem === 'retalho') {
-            const [retalhos] = await db.query('SELECT id, metragem, metragem_reservada FROM retalhos WHERE id = ?', [origemId]);
+            const [retalhos] = await connection.query('SELECT id, metragem, metragem_reservada FROM retalhos WHERE id = ?', [origemId]);
             if (retalhos.length === 0) {
+                await connection.rollback();
                 return res.status(404).json({ success: false, message: 'Retalho nao encontrado' });
             }
             metragem_disponivel = Number(retalhos[0].metragem);
             metragem_reservada = Number(retalhos[0].metragem_reservada || 0);
         } else {
-            const [bobinas] = await db.query('SELECT id, metragem_atual, metragem_reservada FROM bobinas WHERE id = ?', [origemId]);
+            const [bobinas] = await connection.query('SELECT id, metragem_atual, metragem_reservada FROM bobinas WHERE id = ?', [origemId]);
             if (bobinas.length === 0) {
+                await connection.rollback();
                 return res.status(404).json({ success: false, message: 'Bobina nao encontrada' });
             }
             metragem_disponivel = Number(bobinas[0].metragem_atual);
@@ -336,6 +345,7 @@ router.post('/validar-item', async (req, res) => {
         }
         
         if (metragem_cortada > metragem_disponivel) {
+            await connection.rollback();
             return res.status(400).json({ success: false, message: 'Metragem insuficiente. Disponivel: ' + metragem_disponivel.toFixed(2) + 'm' });
         }
         
@@ -344,27 +354,27 @@ router.post('/validar-item', async (req, res) => {
         
         // Atualizar metragem da origem
         if (tipoOrigem === 'retalho') {
-            await db.query('UPDATE retalhos SET metragem = ?, metragem_reservada = ? WHERE id = ?', [nova_metragem, nova_reserva, origemId]);
+            await connection.query('UPDATE retalhos SET metragem = ?, metragem_reservada = ? WHERE id = ?', [nova_metragem, nova_reserva, origemId]);
         } else {
-            await db.query('UPDATE bobinas SET metragem_atual = ?, metragem_reservada = ? WHERE id = ?', [nova_metragem, nova_reserva, origemId]);
+            await connection.query('UPDATE bobinas SET metragem_atual = ?, metragem_reservada = ? WHERE id = ?', [nova_metragem, nova_reserva, origemId]);
         }
         
         // Marcar alocacao como confirmada
-        await db.query(`
+        await connection.query(`
             UPDATE alocacoes_corte 
             SET confirmado = 1
             WHERE id = ?
         `, [item_id]);
         
         // NOVO: Buscar código do plano para incluir no código do corte
-        const [planoInfo] = await db.query(`
+        const [planoInfo] = await connection.query(`
             SELECT codigo_plano FROM planos_corte WHERE id = ?
         `, [planoCorteId]);
         
         const codigoPlano = planoInfo[0].codigo_plano;
         
         // NOVO: Gerar código sequencial para o corte (COR-0001-PLA-0123)
-        const [ultimoCodigo] = await db.query(`
+        const [ultimoCodigo] = await connection.query(`
             SELECT codigo_corte FROM cortes_realizados 
             WHERE codigo_corte LIKE 'COR-%' 
             ORDER BY id DESC LIMIT 1
@@ -380,7 +390,7 @@ router.post('/validar-item', async (req, res) => {
         const codigoCorte = `COR-${String(sequencial).padStart(4, '0')}-${codigoPlano}`;
         
         // NOVO: Criar registro em cortes_realizados
-        const [corteResult] = await db.query(`
+        const [corteResult] = await connection.query(`
             INSERT INTO cortes_realizados 
             (codigo_corte, plano_corte_id, item_plano_corte_id, alocacao_corte_id,
              origem_tipo, bobina_id, retalho_id, metragem_cortada, produto_id,
@@ -404,7 +414,7 @@ router.post('/validar-item', async (req, res) => {
         let bobinaConcluida = false;
         try {
             const campo = tipoOrigem === 'retalho' ? 'retalho_id' : 'bobina_id';
-            const [statsOrigem] = await db.query(`
+            const [statsOrigem] = await connection.query(`
                 SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN confirmado = 1 THEN 1 ELSE 0 END) as confirmadas
@@ -423,7 +433,7 @@ router.post('/validar-item', async (req, res) => {
         // Verificar se TODOS os itens do plano foram cortados
         let planoCompleto = false;
         try {
-            const [stats] = await db.query(`
+            const [stats] = await connection.query(`
                 SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN confirmado = 1 THEN 1 ELSE 0 END) as confirmadas
@@ -441,7 +451,7 @@ router.post('/validar-item', async (req, res) => {
         }
         
         // Buscar dados do corte para retornar
-        const [corteCompleto] = await db.query(`
+        const [corteCompleto] = await connection.query(`
             SELECT 
                 cr.id,
                 cr.codigo_corte,
@@ -458,6 +468,13 @@ router.post('/validar-item', async (req, res) => {
             WHERE cr.id = ?
         `, [corteResult.insertId]);
         
+        // COMMIT: Tudo deu certo, confirmar transação
+        await connection.commit();
+        console.log('✅ Transação confirmada - Corte salvo com sucesso');
+        
+        // Liberar conexão
+        connection.release();
+        
         return res.json({ 
             success: true, 
             message: 'Corte validado!', 
@@ -471,8 +488,24 @@ router.post('/validar-item', async (req, res) => {
             } 
         });
     } catch (error) {
-        console.error('Erro validar:', error);
-        return res.status(500).json({ success: false, message: 'Erro ao validar item', error: error.message });
+        // ROLLBACK: Erro detectado, desfazer todas as alterações
+        if (connection) {
+            try {
+                await connection.rollback();
+                console.error('⚠️ ROLLBACK executado - Nenhuma alteração foi salva');
+            } catch (rollbackError) {
+                console.error('❌ Erro ao executar rollback:', rollbackError);
+            } finally {
+                connection.release();
+            }
+        }
+        
+        console.error('❌ Erro ao validar corte:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Erro ao validar item - nenhuma alteração foi salva', 
+            error: error.message 
+        });
     }
 });
 
