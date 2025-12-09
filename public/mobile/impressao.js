@@ -215,8 +215,6 @@ async function buscarPorCodigoDigitado() {
     
     // Buscar dados do código
     try {
-        mostrarMensagem('Buscando...', 'info');
-        
         const response = await fetch(`${API_BASE}/mobile/imprimir/buscar-codigo`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -283,6 +281,9 @@ function gerarPreview() {
 }
 
 function gerarPreviewBobina(container) {
+    // Priorizar metragem_inicial (metragem original da bobina)
+    const metragem = parseFloat(dadosAtual.metragem_inicial || dadosAtual.metragem_atual || 0).toFixed(2);
+    
     container.innerHTML = `
         <div class="etiqueta-content">
             <div id="qr-code-preview"></div>
@@ -292,14 +293,14 @@ function gerarPreviewBobina(container) {
                     ${dadosAtual.produto_codigo || ''}<br>
                     ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g/m²
                 </div>
-                <div class="etiqueta-metragem">${parseFloat(dadosAtual.metragem_atual || 0).toFixed(2)}m</div>
+                <div class="etiqueta-metragem">${metragem}m</div>
                 <div class="etiqueta-detalhe">${dadosAtual.loja || ''} - ${dadosAtual.fabricante || ''}</div>
             </div>
         </div>
     `;
     
-    // Gerar QR Code
-    QRCode.toCanvas(dadosAtual.qr_code || `B-${dadosAtual.id}`, {
+    // Gerar QR Code usando codigo_interno (BOB-0001)
+    QRCode.toCanvas(dadosAtual.codigo_interno, {
         width: 150,
         margin: 1
     }, (error, canvas) => {
