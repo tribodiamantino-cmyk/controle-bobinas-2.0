@@ -1132,6 +1132,7 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                     b.nota_fiscal,
                     b.data_entrada,
                     b.status,
+                    b.placa,
                     p.codigo as produto_codigo,
                     p.fabricante,
                     p.tipo_tecido,
@@ -1139,6 +1140,7 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                     p.largura_final,
                     p.largura_maior,
                     p.largura_y,
+                    p.tipo_bainha,
                     c.nome_cor,
                     g.gramatura
                 FROM bobinas b

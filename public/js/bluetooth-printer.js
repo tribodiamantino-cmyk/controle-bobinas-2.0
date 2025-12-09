@@ -284,11 +284,21 @@ class BluetoothPrinterManager {
             // Código
             await this.printText(dados.codigo, 'center', true, '2x');
 
-            // Produto
+            // Produto (cor + gramatura apenas "G")
             await this.printText(dados.produto, 'center', false, 'normal');
 
             // Metragem
             await this.printText(`${dados.metragem}m`, 'center', true, '2x');
+
+            // Largura (se existir)
+            if (dados.largura) {
+                await this.printText(`Largura: ${dados.largura}m`, 'center', false, 'normal');
+            }
+
+            // Tipo de Bainha (se existir)
+            if (dados.bainha) {
+                await this.printText(`Bainha: ${dados.bainha}`, 'center', false, 'normal');
+            }
 
             // PLACA (se existir)
             if (dados.placa) {
@@ -296,8 +306,10 @@ class BluetoothPrinterManager {
                 await this.printText(dados.placa, 'center', true, 'normal');
             }
 
-            // Detalhes
-            await this.printText(dados.detalhes, 'center', false, 'normal');
+            // Detalhes (loja - fabricante)
+            if (dados.detalhes) {
+                await this.printText(dados.detalhes, 'center', false, 'normal');
+            }
 
             // Espaço e corte
             await this.sendCommand(this.ESC_POS.LINE_FEED + this.ESC_POS.LINE_FEED);

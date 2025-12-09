@@ -402,6 +402,9 @@ function gerarPreview() {
 function gerarPreviewBobina(container) {
     // Priorizar metragem_inicial (metragem original da bobina)
     const metragem = parseFloat(dadosAtual.metragem_inicial || dadosAtual.metragem_atual || 0).toFixed(2);
+    const largura = dadosAtual.largura_final || dadosAtual.largura_sem_costura || null;
+    const bainha = dadosAtual.tipo_bainha || null;
+    const placa = dadosAtual.placa || null;
     
     container.innerHTML = `
         <div class="etiqueta-content">
@@ -410,9 +413,12 @@ function gerarPreviewBobina(container) {
                 <div class="etiqueta-codigo">${dadosAtual.codigo_interno}</div>
                 <div class="etiqueta-produto">
                     ${dadosAtual.produto_codigo || ''}<br>
-                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g
+                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}G
                 </div>
                 <div class="etiqueta-metragem">${metragem}m</div>
+                ${largura ? `<div class="etiqueta-detalhe">Largura: ${largura}m</div>` : ''}
+                ${bainha ? `<div class="etiqueta-detalhe">Bainha: ${bainha}</div>` : ''}
+                ${placa ? `<div class="etiqueta-detalhe" style="background: #fef3c7; padding: 4px; margin: 4px 0; border-radius: 4px;"><strong>🏷️ PLACA:</strong> ${placa}</div>` : ''}
                 <div class="etiqueta-detalhe">${dadosAtual.loja || ''} - ${dadosAtual.fabricante || ''}</div>
             </div>
         </div>
@@ -437,7 +443,7 @@ function gerarPreviewRetalho(container) {
                 <div class="etiqueta-codigo">${dadosAtual.codigo_retalho}</div>
                 <div class="etiqueta-produto">
                     ${dadosAtual.produto_codigo || ''}<br>
-                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g
+                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}G
                 </div>
                 <div class="etiqueta-metragem">${parseFloat(dadosAtual.metragem || 0).toFixed(2)}m</div>
                 ${dadosAtual.bobina_origem ? `<div class="etiqueta-detalhe">Origem: ${dadosAtual.bobina_origem}</div>` : ''}
@@ -463,7 +469,7 @@ function gerarPreviewCorte(container) {
                 <div class="etiqueta-codigo">${dadosAtual.codigo_corte}</div>
                 <div class="etiqueta-produto">
                     ${dadosAtual.produto_codigo || ''}<br>
-                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g
+                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}G
                 </div>
                 <div class="etiqueta-metragem">${parseFloat(dadosAtual.metragem_cortada || 0).toFixed(2)}m</div>
                 <div class="etiqueta-detalhe">
@@ -578,15 +584,17 @@ async function imprimirEtiqueta() {
             if (dadosAtual.tipo === 'bobina') {
                 await bluetoothPrinter.imprimirBobina({
                     codigo: dadosAtual.codigo_interno,
-                    produto: `${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g`,
+                    produto: `${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}G`,
                     metragem: parseFloat(dadosAtual.metragem_inicial || dadosAtual.metragem_atual || 0).toFixed(2),
+                    largura: dadosAtual.largura_final || dadosAtual.largura_sem_costura || null,
+                    bainha: dadosAtual.tipo_bainha || null,
                     placa: dadosAtual.placa || null,
                     detalhes: `${dadosAtual.loja || ''} - ${dadosAtual.fabricante || ''}`
                 });
             } else if (dadosAtual.tipo === 'retalho') {
                 await bluetoothPrinter.imprimirRetalho({
                     codigo: dadosAtual.codigo_retalho,
-                    produto: `${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g`,
+                    produto: `${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}G`,
                     metragem: parseFloat(dadosAtual.metragem || 0).toFixed(2),
                     detalhes: `Origem: ${dadosAtual.codigo_bobina_origem || ''}`
                 });
@@ -691,8 +699,11 @@ function gerarHTMLImpressaoBobina() {
         <body>
             <div id="qrcode" class="qrcode"></div>
             <div class="codigo">${dadosAtual.codigo_interno}</div>
-            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g</div>
+            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}G</div>
             <div class="metragem">${metragem}m</div>
+            ${dadosAtual.largura_final || dadosAtual.largura_sem_costura ? `<div class="detalhe">Largura: ${dadosAtual.largura_final || dadosAtual.largura_sem_costura}m</div>` : ''}
+            ${dadosAtual.tipo_bainha ? `<div class="detalhe">Bainha: ${dadosAtual.tipo_bainha}</div>` : ''}
+            ${dadosAtual.placa ? `<div class="detalhe" style="background: #fef3c7; padding: 2px; margin: 2px 0;"><strong>🏷️ PLACA:</strong> ${dadosAtual.placa}</div>` : ''}
             <div class="detalhe">${dadosAtual.loja || ''} - ${dadosAtual.fabricante || ''}</div>
             
             <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -771,7 +782,7 @@ function gerarHTMLImpressaoRetalho() {
         <body>
             <div id="qrcode" class="qrcode"></div>
             <div class="codigo">${dadosAtual.codigo_retalho}</div>
-            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g</div>
+            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}G</div>
             <div class="metragem">${parseFloat(dadosAtual.metragem || 0).toFixed(2)}m</div>
             ${dadosAtual.bobina_origem ? `<div class="detalhe">Origem: ${dadosAtual.bobina_origem}</div>` : ''}
             
@@ -846,7 +857,7 @@ function gerarHTMLImpressaoCorte() {
         <body>
             <div id="qrcode" class="qrcode"></div>
             <div class="codigo">${dadosAtual.codigo_corte}</div>
-            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g</div>
+            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}G</div>
             <div class="metragem">${parseFloat(dadosAtual.metragem_cortada || 0).toFixed(2)}m</div>
             <div class="detalhe">
                 Plano: ${dadosAtual.codigo_plano || ''}<br>
