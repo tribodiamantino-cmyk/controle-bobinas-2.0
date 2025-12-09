@@ -1093,12 +1093,17 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                 SELECT 
                     b.id,
                     b.codigo_interno,
-                    b.qr_code,
+                    b.metragem_inicial,
                     b.metragem_atual,
+                    b.metragem_reservada,
                     b.localizacao_atual,
                     b.loja,
+                    b.nota_fiscal,
+                    b.data_entrada,
+                    b.status,
                     p.codigo as produto_codigo,
                     p.fabricante,
+                    p.largura,
                     c.nome_cor,
                     g.gramatura,
                     p.tipo_tecido
@@ -1202,15 +1207,14 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
             const [locacoes] = await db.query(`
                 SELECT 
                     id,
-                    corredor,
-                    coluna,
-                    altura,
-                    codigo_localizacao,
-                    qr_code,
+                    codigo as codigo_localizacao,
+                    descricao,
                     capacidade,
-                    tipo
+                    ativa,
+                    created_at,
+                    updated_at
                 FROM locacoes
-                WHERE codigo_localizacao = ?
+                WHERE codigo = ?
             `, [codigo]);
             
             if (locacoes.length > 0) {
@@ -1297,14 +1301,14 @@ router.post('/plano/alocar-localizacoes', async (req, res) => {
             if (loc.id) {
                 // Busca por ID
                 const [result] = await db.query(
-                    'SELECT id, codigo_localizacao FROM locacoes WHERE id = ?',
+                    'SELECT id, codigo FROM locacoes WHERE id = ?',
                     [loc.id]
                 );
                 locacao = result[0];
             } else if (loc.codigo) {
                 // Busca por código (LOC-123 ou formato N-X-N)
                 const [result] = await db.query(
-                    'SELECT id, codigo_localizacao FROM locacoes WHERE codigo_localizacao = ?',
+                    'SELECT id, codigo FROM locacoes WHERE codigo = ?',
                     [loc.codigo]
                 );
                 locacao = result[0];
@@ -1322,7 +1326,7 @@ router.post('/plano/alocar-localizacoes', async (req, res) => {
             );
             
             if (existente && existente.length > 0) {
-                console.log(`ℹ️ Localização ${locacao.codigo_localizacao} já está vinculada ao plano`);
+                console.log(`ℹ️ Localização ${locacao.codigo} já está vinculada ao plano`);
                 continue;
             }
             
@@ -1331,16 +1335,16 @@ router.post('/plano/alocar-localizacoes', async (req, res) => {
                 `INSERT INTO plano_locacoes 
                 (plano_corte_id, locacao_id, codigo_locacao, validada_qr, data_scan, ordem_scan)
                 VALUES (?, ?, ?, TRUE, NOW(), ?)`,
-                [plano_id, locacao.id, locacao.codigo_localizacao, i + 1]
+                [plano_id, locacao.id, locacao.codigo, i + 1]
             );
             
             locacoesInseridas.push({
                 id: locacao.id,
-                codigo: locacao.codigo_localizacao,
+                codigo: locacao.codigo,
                 ordem: i + 1
             });
             
-            console.log(`✅ Localização ${locacao.codigo_localizacao} vinculada ao plano ${plano[0].codigo_plano}`);
+            console.log(`✅ Localização ${locacao.codigo} vinculada ao plano ${plano[0].codigo_plano}`);
         }
         
         res.json({
