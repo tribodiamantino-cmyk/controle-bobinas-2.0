@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#6366f1">
+    <title>Configurar Impressora - Bobinas App</title>
+    
+    <!-- API Config (DEVE ser carregado PRIMEIRO) -->
+    <script src="/mobile/api-config.js"></script>
+    
+    <link rel="stylesheet" href="/mobile/styles.css">
+    <style>
+        .printer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .printer-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .printer-item:hover {
+            background: #e9ecef;
+        }
+        
+        .printer-item.selected {
+            background: #d1fae5;
+            border: 2px solid #10b981;
+        }
+        
+        .printer-icon {
+            font-size: 32px;
+            margin-right: 15px;
+        }
+        
+        .printer-info {
+            flex: 1;
+        }
+        
+        .printer-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        
+        .printer-address {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-disconnected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .btn-large {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+        
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+        
+        /* Debug Console Visual - TOPO DA TELA */
+        #debug-console {
+            position: fixed;
+            top: 60px; /* Abaixo do header */
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 15px;
+            border-bottom: 3px solid #3b82f6;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        #debug-console.visible {
+            display: block;
+        }
+        
+        .debug-line {
+            padding: 3px 0;
+            border-bottom: 1px solid #334155;
+            word-wrap: break-word;
+            user-select: text; /* Permite selecionar texto para copiar */
+        }
+        
+        .debug-error { color: #fca5a5; font-weight: bold; }
+        .debug-warn { color: #fcd34d; }
+        .debug-info { color: #93c5fd; }
+        .debug-success { color: #86efac; }
+        
+        #toggle-debug {
+            position: fixed;
+            top: 70px; /* TOPO - ao lado do header */
+            right: 15px;
+            padding: 10px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 10001; /* Acima do console */
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #toggle-debug:active {
+            transform: scale(0.95);
+            background: #2563eb;
+        }
+        
+        /* Ajustar conteúdo quando debug está visível */
+        .app-main.debug-active {
+            margin-top: 320px; /* Empurra conteúdo para baixo */
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="app-header">
+        <div class="header-content">
+            <button class="btn-voltar" onclick="window.location.href='/mobile/index.html'">
+                ◀ Voltar
+            </button>
+            <h1>🖨️ Configurar Impressora</h1>
+        </div>
+    </header>
+
+    <!-- BOTÃO TOGGLE DEBUG (FORA DO MAIN PARA GARANTIR POSIÇÃO FIXA) -->
+    <button id="toggle-debug" onclick="toggleDebugConsole()">🐛 Debug</button>
+    
+    <!-- DEBUG CONSOLE VISUAL (FORA DO MAIN) -->
+    <div id="debug-console">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid #3b82f6;">
+            <strong style="color: #60a5fa; font-size: 14px;">📋 Console de Debug</strong>
+            <button onclick="copiarLogs()" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer;">
+                📋 Copiar Logs
+            </button>
+        </div>
+        <div id="debug-lines"></div>
+    </div>
+
+    <!-- CONTEÚDO -->
+    <main class="app-main">
+        
+        <div class="printer-card">
+            <h2>Status da Conexão</h2>
+            <div id="status-container">
+                <span class="status-badge status-disconnected" id="status-badge">
+                    ⚫ Desconectado
+                </span>
+            </div>
+            <div id="alert-container" style="margin-top: 20px;"></div>
+        </div>
+
+        <div class="printer-card">
+            <h2>Impressoras Pareadas</h2>
+            <button class="btn btn-primary btn-large" onclick="buscarImpressoras()">
+                🔍 Buscar Impressoras Bluetooth
+            </button>
+            
+            <div id="printers-list" style="margin-top: 20px;">
+                <p style="text-align: center; color: #666;">
+                    Clique em "Buscar Impressoras" para listar dispositivos
+                </p>
+            </div>
+            
+            <!-- Botão de Confirmação (aparece só quando seleciona impressora) -->
+            <button class="btn btn-success btn-large" 
+                    id="btn-confirmar-impressora" 
+                    onclick="confirmarImpressora()" 
+                    style="display: none; margin-top: 15px;">
+                ✅ Confirmar Seleção da Impressora
+            </button>
+        </div>
+
+        <div class="printer-card">
+            <h2>Testar Impressão</h2>
+            <button class="btn btn-success btn-large" onclick="testarImpressao()" id="btn-test">
+                ✅ Imprimir Página de Teste
+            </button>
+        </div>
+
+        <div class="printer-card">
+            <h2>ℹ️ Instruções</h2>
+            <ol style="line-height: 1.8;">
+                <li>Ligue a impressora M58-LL</li>
+                <li>Vá em Configurações do Android → Bluetooth</li>
+                <li>Pareie a impressora (senha: <code>0000</code> ou <code>1234</code>)</li>
+                <li>Volte para este app e clique em "Buscar Impressoras"</li>
+                <li>Toque na impressora "M58-LL" na lista</li>
+                <li>Clique em <strong>"Confirmar Seleção"</strong> para conectar</li>
+                <li>Após conectar, clique em "Imprimir Página de Teste"</li>
+            </ol>
+        </div>
+    </main>
+
+    <script src="/js/bluetooth-printer.js"></script>
+    <script>
+        // ==================== DEBUG CONSOLE VISUAL ====================
+        const debugLines = [];
+        const MAX_DEBUG_LINES = 100;
+        
+        function addDebugLine(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            const line = `[${timestamp}] ${message}`;
+            
+            debugLines.push({ line, type });
+            if (debugLines.length > MAX_DEBUG_LINES) {
+                debugLines.shift();
+            }
+            
+            updateDebugConsole();
+        }
+        
+        function updateDebugConsole() {
+            const container = document.getElementById('debug-lines');
+            if (!container) return;
+            
+            container.innerHTML = debugLines.map(({ line, type }) => 
+                `<div class="debug-line debug-${type}">${line}</div>`
+            ).join('');
+            
+            // Auto-scroll para última linha
+            const debugConsole = document.getElementById('debug-console');
+            if (debugConsole && debugConsole.classList.contains('visible')) {
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+            }
+        }
+        
+        function copiarLogs() {
+            const texto = debugLines.map(({ line }) => line).join('\n');
+            
+            // Tentar copiar usando API moderna
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto)
+                    .then(() => {
+                        alert('✅ Logs copiados para a área de transferência!\n\nAgora você pode colar em uma mensagem e me enviar.');
+                    })
+                    .catch(err => {
+                        console.error('Erro ao copiar:', err);
+                        // Fallback: mostrar em alert
+                        mostrarLogsEmAlert(texto);
+                    });
+            } else {
+                // Fallback para navegadores antigos
+                mostrarLogsEmAlert(texto);
+            }
+        }
+        
+        function mostrarLogsEmAlert(texto) {
+            // Limite para não travar o alert
+            const textoLimitado = texto.split('\n').slice(-30).join('\n');
+            alert('📋 LOGS (últimas 30 linhas):\n\n' + textoLimitado + '\n\n⚠️ Tire um screenshot desta tela de debug e me envie!');
+        }
+        
+        function toggleDebugConsole() {
+            const debugConsole = document.getElementById('debug-console');
+            const mainContent = document.querySelector('.app-main');
+            const btn = document.getElementById('toggle-debug');
+            
+            debugConsole.classList.toggle('visible');
+            mainContent.classList.toggle('debug-active');
+            
+            // Mudar texto do botão
+            if (debugConsole.classList.contains('visible')) {
+                btn.textContent = '✖ Fechar Debug';
+                // Auto-scroll para o final dos logs
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+            } else {
+                btn.textContent = '🐛 Debug';
+            }
+        }
+        
+        // Interceptar console.log/error/warn
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addDebugLine(args.join(' '), 'info');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addDebugLine('❌ ' + args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addDebugLine('⚠️ ' + args.join(' '), 'warn');
+        };
+        
+        // ==================== FIM DEBUG CONSOLE ====================
+        
+        let impressoraSelecionada = null;
+        
+        // Aguardar Capacitor e plugin estarem prontos
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔧 [DEBUG] DOMContentLoaded iniciado');
+            console.log('🔧 [DEBUG] window.Capacitor existe?', !!window.Capacitor);
+            console.log('🔧 [DEBUG] window.bluetoothSerial existe?', !!window.bluetoothSerial);
+            console.log('🔧 [DEBUG] window.bluetoothPrinter existe?', !!window.bluetoothPrinter);
+            
+            // Aguardar plugin Cordova estar disponível
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                console.log('📱 App Nativo detectado - Aguardando plugin Bluetooth...');
+                
+                // Aguardar até que bluetoothSerial esteja disponível
+                let tentativas = 0;
+                while (!window.bluetoothSerial && tentativas < 50) {
+                    console.log(`⏳ Tentativa ${tentativas + 1}/50 - Aguardando bluetoothSerial...`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    tentativas++;
+                }
+                
+                if (!window.bluetoothSerial) {
+                    console.error('❌ ERRO: Plugin bluetoothSerial NÃO carregou após 5 segundos');
+                    console.log('🔍 Plugins Cordova disponíveis:', Object.keys(window.cordova?.plugins || {}));
+                    mostrarAlerta('❌ Plugin Bluetooth não está disponível. Verifique se o app foi instalado corretamente.', 'error');
+                    return;
+                }
+                
+                console.log('✅ Plugin bluetoothSerial disponível!');
+                console.log('🔍 Métodos disponíveis:', Object.keys(window.bluetoothSerial));
+            }
+            
+            // Inicializar printer
+            console.log('🔧 Inicializando bluetoothPrinter...');
+            try {
+                await bluetoothPrinter.init();
+                console.log('✅ bluetoothPrinter inicializado com sucesso');
+            } catch (error) {
+                console.error('❌ Erro ao inicializar bluetoothPrinter:', error);
+                mostrarAlerta('Erro ao inicializar: ' + error.message, 'error');
+            }
+            
+            // Carregar impressora salva
+            const saved = localStorage.getItem('printer_address');
+            if (saved) {
+                impressoraSelecionada = saved;
+                mostrarAlerta('Impressora salva: ' + localStorage.getItem('printer_name'), 'info');
+                verificarConexao();
+            }
+        });
+        
+        // Buscar impressoras
+        window.buscarImpressoras = async function() {
+            console.log('🔍 [DEBUG] buscarImpressoras() chamado');
+            
+            try {
+                mostrarAlerta('Buscando dispositivos Bluetooth...', 'info');
+                
+                // Verificar se plugin está disponível
+                console.log('🔧 Verificando window.bluetoothSerial...', !!window.bluetoothSerial);
+                if (!window.bluetoothSerial) {
+                    console.error('❌ window.bluetoothSerial é undefined/null');
+                    console.log('🔍 window disponível:', Object.keys(window).filter(k => k.includes('blue') || k.includes('cordova')));
+                    throw new Error('Plugin Bluetooth não disponível. Verifique se está usando o app Android.');
+                }
+                
+                console.log('✅ Plugin bluetoothSerial OK');
+                
+                // Verificar se Bluetooth está habilitado
+                console.log('🔧 Verificando se Bluetooth está habilitado...');
+                const enabled = await bluetoothPrinter.isBluetoothEnabled();
+                console.log('🔧 Bluetooth habilitado?', enabled);
+                
+                if (!enabled) {
+                    console.warn('⚠️ Bluetooth está DESLIGADO');
+                    mostrarAlerta('Bluetooth está desligado. Ative nas configurações e tente novamente.', 'warning');
+                    return;
+                }
+                
+                // Listar dispositivos
+                console.log('🔧 Chamando bluetoothPrinter.listDevices()...');
+                const devices = await bluetoothPrinter.listDevices();
+                
+                console.log('✅ Dispositivos retornados:', devices);
+                console.log('📊 Total de dispositivos:', devices?.length);
+                
+                if (!devices || devices.length === 0) {
+                    console.warn('⚠️ Nenhum dispositivo pareado encontrado');
+                    mostrarAlerta('Nenhum dispositivo Bluetooth pareado. Pareie a M58-LL primeiro nas Configurações → Bluetooth', 'warning');
+                    return;
+                }
+                
+                renderizarLista(devices);
+                mostrarAlerta(`✅ ${devices.length} dispositivo(s) encontrado(s)`, 'success');
+                
+            } catch (error) {
+                console.error('❌ ERRO em buscarImpressoras:', error);
+                console.error('📋 Stack trace:', error.stack);
+                console.error('📋 Mensagem:', error.message);
+                console.error('📋 Tipo:', typeof error);
+                mostrarAlerta('Erro: ' + (error.message || 'Falha ao buscar impressoras'), 'error');
+            }
+        };
+        
+        // Renderizar lista de impressoras
+        function renderizarLista(devices) {
+            const container = document.getElementById('printers-list');
+            
+            if (devices.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">Nenhuma impressora encontrada</p>';
+                return;
+            }
+            
+            container.innerHTML = devices.map(device => `
+                <div class="printer-item ${device.address === impressoraSelecionada ? 'selected' : ''}" 
+                     onclick="selecionarImpressora('${device.address}', '${device.name}')">
+                    <div class="printer-icon">🖨️</div>
+                    <div class="printer-info">
+                        <div class="printer-name">${device.name || 'Desconhecido'}</div>
+                        <div class="printer-address">${device.address}</div>
+                    </div>
+                    ${device.address === impressoraSelecionada ? '<span class="status-badge status-connected">✓ Selecionada</span>' : ''}
+                </div>
+            `).join('');
+        }
+        
+        // Selecionar impressora
+        window.selecionarImpressora = async function(address, name) {
+            console.log(`📌 Impressora selecionada: ${name} (${address})`);
+            
+            impressoraSelecionada = address;
+            localStorage.setItem('printer_address', address);
+            localStorage.setItem('printer_name', name);
+            
+            mostrarAlerta(`Impressora "${name}" selecionada! Clique em "Confirmar Seleção" para conectar.`, 'info');
+            
+            // Atualizar visual
+            document.querySelectorAll('.printer-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            // Mostrar botão de confirmação
+            const btnConfirmar = document.getElementById('btn-confirmar-impressora');
+            btnConfirmar.style.display = 'block';
+            btnConfirmar.textContent = `✅ Confirmar "${name}"`;
+        };
+        
+        // Confirmar impressora e conectar
+        window.confirmarImpressora = async function() {
+            console.log('✅ Confirmando impressora selecionada...');
+            
+            const btnConfirmar = document.getElementById('btn-confirmar-impressora');
+            btnConfirmar.disabled = true;
+            btnConfirmar.textContent = '⏳ Conectando...';
+            
+            try {
+                const conectado = await conectarImpressora();
+                
+                if (conectado) {
+                    mostrarAlerta('✅ Impressora conectada com sucesso!', 'success');
+                    btnConfirmar.textContent = '✅ Conectado!';
+                    
+                    // Após 2 segundos, esconder botão
+                    setTimeout(() => {
+                        btnConfirmar.style.display = 'none';
+                    }, 2000);
+                } else {
+                    throw new Error('Falha ao conectar');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao conectar:', error);
+                mostrarAlerta('❌ Erro ao conectar: ' + error.message, 'error');
+                btnConfirmar.disabled = false;
+                btnConfirmar.textContent = '🔄 Tentar Novamente';
+            }
+        };
+        
+        // Conectar à impressora
+        async function conectarImpressora() {
+            if (!impressoraSelecionada) {
+                mostrarAlerta('Selecione uma impressora primeiro', 'warning');
+                return false;
+            }
+            
+            try {
+                mostrarAlerta('Conectando...', 'info');
+                await bluetoothPrinter.connect(impressoraSelecionada);
+                
+                atualizarStatus(true);
+                mostrarAlerta('Conectado com sucesso!', 'success');
+                return true;
+            } catch (error) {
+                console.error('Erro ao conectar:', error);
+                atualizarStatus(false);
+                mostrarAlerta('Erro ao conectar: ' + error.message, 'error');
+                return false;
+            }
+        }
+        
+        // Verificar conexão
+        async function verificarConexao() {
+            if (bluetoothPrinter.isConnected) { // É uma PROPRIEDADE, não função
+                atualizarStatus(true);
+            } else if (impressoraSelecionada) {
+                await conectarImpressora();
+            }
+        }
+        
+        // Atualizar status visual
+        function atualizarStatus(connected) {
+            const badge = document.getElementById('status-badge');
+            if (connected) {
+                badge.className = 'status-badge status-connected';
+                badge.textContent = '🟢 Conectado';
+            } else {
+                badge.className = 'status-badge status-disconnected';
+                badge.textContent = '⚫ Desconectado';
+            }
+        }
+        
+        // Testar impressão
+        window.testarImpressao = async function() {
+            console.log('🖨️ [DEBUG] testarImpressao() chamado');
+            
+            const btn = document.getElementById('btn-test');
+            btn.disabled = true;
+            btn.textContent = '⏳ Imprimindo...';
+            
+            try {
+                console.log('🔧 Verificando conexão...');
+                
+                // Conectar se não estiver conectado
+                if (!bluetoothPrinter.isConnected) { // É uma PROPRIEDADE, não função
+                    console.log('⚠️ Não conectado - Tentando conectar...');
+                    const connected = await conectarImpressora();
+                    console.log('🔧 Resultado da conexão:', connected);
+                    
+                    if (!connected) {
+                        throw new Error('Não foi possível conectar à impressora');
+                    }
+                }
+                
+                console.log('✅ Conectado! Enviando comando de impressão...');
+                
+                // Imprimir teste
+                await bluetoothPrinter.imprimirTeste();
+                
+                console.log('✅ Impressão enviada com sucesso!');
+                
+                mostrarAlerta('✅ Teste de impressão enviado! Verifique a impressora.', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao testar impressão:', error);
+                mostrarAlerta('Erro ao imprimir: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✅ Imprimir Página de Teste';
+            }
+        };
+        
+        // Mostrar alerta
+        function mostrarAlerta(mensagem, tipo = 'info') {
+            const container = document.getElementById('alert-container');
+            container.innerHTML = `
+                <div class="alert alert-${tipo}">
+                    ${mensagem}
+                </div>
+            `;
+            
+            // Remover após 5 segundos
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Exportar funções globais
+        window.bluetoothPrinter = bluetoothPrinter;
+    </script>
+</body>
+</html>

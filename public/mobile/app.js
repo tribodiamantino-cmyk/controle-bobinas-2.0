@@ -26,6 +26,62 @@ if (MODO_TESTE) {
     });
 }
 
+// ========== CHECK API STATUS ==========
+async function checkApiStatus() {
+    try {
+        const response = await fetch('/api/health', { timeout: 5000 });
+        const statusEl = document.getElementById('api-status');
+        if (response.ok) {
+            statusEl.textContent = '🟢';
+            statusEl.title = 'API Conectada';
+            return true;
+        } else {
+            statusEl.textContent = '🟡';
+            statusEl.title = 'API com problemas';
+            return false;
+        }
+    } catch (error) {
+        const statusEl = document.getElementById('api-status');
+        statusEl.textContent = '🔴';
+        statusEl.title = 'API Offline';
+        console.warn('API não acessível:', error);
+        return false;
+    }
+}
+
+// Verificar API status ao carregar e a cada 30s
+document.addEventListener('DOMContentLoaded', () => {
+    checkApiStatus();
+    setInterval(checkApiStatus, 30000);
+});
+
+// ========== CONTROLE DO BOTÃO VOLTAR DO ANDROID ==========
+document.addEventListener('DOMContentLoaded', () => {
+    // Verificar se está em app nativo (Capacitor)
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        console.log('✅ App nativo detectado - Configurando handler do botão voltar');
+        
+        // Aguardar Capacitor estar pronto
+        window.Capacitor.Plugins.App.addListener('backButton', () => {
+            const telaAtual = document.querySelector('.tela.active');
+            const telaId = telaAtual ? telaAtual.id : null;
+            
+            console.log('🔙 Botão voltar pressionado. Tela atual:', telaId);
+            
+            // Lógica de navegação reversa
+            if (telaId === 'tela-menu') {
+                // Se está no menu principal, SAIR do app
+                window.Capacitor.Plugins.App.exitApp();
+            } else {
+                // Qualquer outra tela, voltar para o menu
+                voltarMenu();
+            }
+        });
+        
+        console.log('✅ Handler do botão voltar configurado!');
+    }
+});
+
 // ========== NAVEGAÇÃO ENTRE TELAS ==========
 async function mostrarTela(telaId) {
     // Esconder todas as telas
@@ -398,13 +454,17 @@ async function processarValidacao(origemId) {
     mostrarLoading(true);
     
     try {
-        // Determinar endpoint baseado no tipo E no modo teste
+        // Determinar endpoint baseado no tipo E no modo teste - usar apiUrl()
         let endpoint;
         if (itemValidando.tipo === 'retalho') {
-            endpoint = MODO_TESTE ? `/api/mobile/teste/retalho/${origemId}` : `/api/mobile/retalho/${origemId}`;
+            const path = MODO_TESTE ? `api/mobile/teste/retalho/${origemId}` : `api/mobile/retalho/${origemId}`;
+            endpoint = apiUrl(path);
         } else {
-            endpoint = MODO_TESTE ? `/api/mobile/teste/bobina/${origemId}` : `/api/mobile/bobina/${origemId}`;
+            const path = MODO_TESTE ? `api/mobile/teste/bobina/${origemId}` : `api/mobile/bobina/${origemId}`;
+            endpoint = apiUrl(path);
         }
+        
+        console.log('🔧 Buscando origem:', endpoint);
             
         const response = await fetch(endpoint);
         const data = await response.json();

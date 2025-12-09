@@ -1,0 +1,21 @@
+{
+  "appId": "com.cortinave.controlebobinas",
+  "appName": "Controle Bobinas",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "buildOptions": {
+      "keystorePath": "",
+      "keystoreAlias": ""
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#6366f1",
+      "showSpinner": false
+    }
+  }
+}

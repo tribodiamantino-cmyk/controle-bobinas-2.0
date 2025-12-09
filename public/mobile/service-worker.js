@@ -1,33 +1,43 @@
-// Service Worker para PWA
-const CACHE_NAME = 'bobinas-app-v1';
+// Service Worker para PWA - v2.2.0-beta
+const CACHE_NAME = 'bobinas-app-v2.2.0-beta';
 const urlsToCache = [
     '/mobile/',
     '/mobile/index.html',
     '/mobile/styles.css',
     '/mobile/app.js',
-    '/mobile/manifest.json'
+    '/mobile/manifest.json',
+    '/mobile/impressao.html',
+    '/mobile/configurar-impressora.html',
+    '/js/bluetooth-printer.js'
 ];
 
 // Instalação
 self.addEventListener('install', event => {
+    console.log('[SW] Instalando v2.2.0-beta...');
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(urlsToCache))
+            .then(cache => {
+                console.log('[SW] Cache criado');
+                return cache.addAll(urlsToCache);
+            })
+            .then(() => self.skipWaiting()) // Ativa imediatamente
     );
 });
 
-// Ativação
+// Ativação - Limpa caches antigos
 self.addEventListener('activate', event => {
+    console.log('[SW] Ativando v2.2.0-beta...');
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
                     if (cacheName !== CACHE_NAME) {
+                        console.log('[SW] Removendo cache antigo:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
             );
-        })
+        }).then(() => self.clients.claim()) // Assume controle imediatamente
     );
 });
 

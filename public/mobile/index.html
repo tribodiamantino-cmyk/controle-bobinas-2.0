@@ -20,6 +20,12 @@
     <!-- CSS -->
     <link rel="stylesheet" href="/mobile/styles.css">
     
+    <!-- API Config (DEVE ser carregado ANTES de qualquer script) -->
+    <script src="/mobile/api-config.js"></script>
+    
+    <!-- Console de Debug (disponível em todas as páginas) -->
+    <script src="/mobile/debug-console.js"></script>
+    
     <!-- QR Code Scanner Library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -29,6 +35,9 @@
         <div class="header-content">
             <h1>📦 Bobinas App</h1>
             <div class="header-subtitle">Operações de Corte</div>
+        </div>
+        <div class="app-version" style="font-size: 10px; opacity: 0.7; text-align: center; padding: 2px 0;">
+            v2.2.0-beta (Build 2) | API: <span id="api-status">🔴</span>
         </div>
     </header>
 
@@ -59,6 +68,12 @@
                     <div class="card-icon">🖨️</div>
                     <div class="card-title">Imprimir Etiquetas</div>
                     <div class="card-desc">Gerar e imprimir etiquetas com QR code</div>
+                </button>
+
+                <button class="menu-card" onclick="window.location.href='/mobile/configurar-impressora.html'">
+                    <div class="card-icon">⚙️</div>
+                    <div class="card-title">Configurar Impressora</div>
+                    <div class="card-desc">Conectar impressora Bluetooth</div>
                 </button>
             </div>
         </div>

@@ -8,6 +8,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Central de Impressão - Bobinas App</title>
     
+    <!-- API Config (DEVE ser carregado PRIMEIRO) -->
+    <script src="/mobile/api-config.js"></script>
+    
+    <!-- Console de Debug (disponível em todas as páginas) -->
+    <script src="/mobile/debug-console.js"></script>
+    
+    <!-- Bluetooth Printer (para app nativo) -->
+    <script src="/js/bluetooth-printer.js"></script>
+    
     <link rel="manifest" href="/mobile/manifest.json">
     <link rel="stylesheet" href="/mobile/styles.css">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>

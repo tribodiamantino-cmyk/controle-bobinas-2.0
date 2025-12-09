@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Controle de Bobinas 2.0</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">🎯 Controle de Bobinas 2.0</a>
+        <ul class="navbar-menu">
+            <li><a href="/" class="active">Dashboard</a></li>
+            <li><a href="/produtos.html">Produtos</a></li>
+            <li><a href="/estoque.html">Estoque</a></li>
+            <li><a href="/ordens.html">Ordens de Corte</a></li>
+            <li><a href="/templates.html">Obras Padrão</a></li>
+            <li><a href="/configuracoes.html">Configurações</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">🎯 Bem-vindo ao Controle de Bobinas 2.0</h1>
+            </div>
+
+            <div class="alert alert-info mb-3">
+                <strong>🚀 Sistema v2.2.0 - QR Codes Simplificados & Códigos Padronizados!</strong><br>
+                Todos os códigos foram simplificados (BOB-0001, PLA-0001, COR-0001) e otimizados para produção!
+            </div>
+
+            <!-- STATUS DO SERVIDOR -->
+            <div class="mb-3" style="text-align: center;">
+                <div class="status badge badge-success" id="status" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                    Carregando...
+                </div>
+            </div>
+
+            <!-- FUNCIONALIDADES DISPONÍVEIS -->
+            <h2 class="mb-2">✅ Funcionalidades Disponíveis</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                
+                <div style="background: #e8f5e9; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #4CAF50;">
+                    <h3 style="color: #2e7d32; margin-bottom: 0.5rem;">⚙️ Configurações</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Gerencie cores e gramaturas do sistema</p>
+                    <a href="/configuracoes.html" class="btn btn-success btn-sm">Acessar</a>
+                </div>
+
+                <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #2196F3;">
+                    <h3 style="color: #1565c0; margin-bottom: 0.5rem;">📦 Produtos</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Cadastre e gerencie produtos</p>
+                    <a href="/produtos.html" class="btn btn-primary btn-sm">Acessar</a>
+                </div>
+
+                <div style="background: #fff3e0; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #ff9800;">
+                    <h3 style="color: #e65100; margin-bottom: 0.5rem;">📦 Estoque</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Entrada de bobinas e gestão de estoque</p>
+                    <a href="/estoque.html" class="btn btn-warning btn-sm">Acessar</a>
+                </div>
+
+                <div style="background: #f3e5f5; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #9c27b0;">
+                    <h3 style="color: #6a1b9a; margin-bottom: 0.5rem;">✂️ Ordens de Corte</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Sistema completo de planejamento e produção de cortes</p>
+                    <a href="/ordens.html" class="btn btn-primary btn-sm">Acessar</a>
+                </div>
+
+                <div style="background: #fce4ec; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #e91e63;">
+                    <h3 style="color: #880e4f; margin-bottom: 0.5rem;">📱 Mobile PWA</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Interface mobile para chão de fábrica (QR Code scanner)</p>
+                    <a href="/mobile/" class="btn btn-danger btn-sm">Acessar</a>
+                </div>
+
+                <div style="background: #e0f2f1; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #009688;">
+                    <h3 style="color: #004d40; margin-bottom: 0.5rem;">📋 Obras Padrão</h3>
+                    <p style="color: #555; margin-bottom: 1rem;">Templates de corte para obras recorrentes</p>
+                    <a href="/templates.html" class="btn btn-success btn-sm">Acessar</a>
+                </div>
+
+            </div>
+
+            <!-- ROADMAP -->
+            <h2 class="mb-2">🗺️ Status do Desenvolvimento</h2>
+            <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 10px;">
+                <ul style="list-style: none; padding: 0;">
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 1:</strong> Infraestrutura Base (Node.js + MySQL + Railway) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 2:</strong> Configurações (Cores + Gramaturas) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 3:</strong> Produtos (CRUD + Códigos Padronizados CTV/BN) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 4:</strong> Bobinas (Entrada + QR Codes BOB-XXXX) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 5:</strong> Estoque (Gestão + Localizações + Retalhos) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 6:</strong> Planos de Corte (Alocação Automática PLA-XXXX) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 7:</strong> Sistema de Cortes (QR Individual COR-XXXX + Fotos) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 8:</strong> Mobile PWA (Scanner QR + Validação Offline) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 9:</strong> Locações e Armazenamento - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 10:</strong> Carregamento (Validação de Expedição) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 11:</strong> QR Codes Simplificados (BOB/RET/PLA/COR) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 12:</strong> Otimização de Banco (Índices + Denormalização) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 13:</strong> Validação de Reservas (Sistema Anti-Orphan) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid #ddd;">
+                        ✅ <strong>Fase 14:</strong> Obras Padrão (Templates de Corte) - <span class="badge badge-success">100%</span>
+                    </li>
+                    <li style="padding: 0.75rem 0;">
+                        🔄 <strong>Fase 15:</strong> Testes de Produção (Dados Realistas) - <span class="badge badge-warning">Iniciando</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ÚLTIMAS ATUALIZAÇÕES -->
+            <h2 class="mb-2 mt-3">🆕 Últimas Atualizações (v2.2.0)</h2>
+            <div style="background: #e8f5e9; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #4CAF50;">
+                <ul style="color: #2e7d32; padding-left: 1.5rem;">
+                    <li><strong>QR Codes Simplificados:</strong> BOB-0001, RET-0001, PLA-0001, COR-0001-PLA-0123</li>
+                    <li><strong>Códigos de Produtos:</strong> CTV-XXXX (Cortinave), BN-XXXX (BN) alinhados com ERP</li>
+                    <li><strong>Performance:</strong> 4 migrations de otimização (5-10x mais rápido)</li>
+                    <li><strong>Validação de Reservas:</strong> Sistema multi-camadas anti-orphan</li>
+                    <li><strong>Limpeza de Dados:</strong> Script + API para reset completo do sistema</li>
+                    <li><strong>Sistema Completo:</strong> Do cadastro ao carregamento, totalmente funcional!</li>
+                </ul>
+            </div>
+
+            <div class="mt-3" style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+                <h2 style="color: white;">🎉 Sistema Completo e Funcional!</h2>
+                <p style="color: #f0f0f0; margin-top: 0.5rem;">Da entrada de bobinas ao carregamento - Sistema 100% operacional</p>
+                <p style="color: #f0f0f0; margin-top: 0.5rem; font-size: 0.9rem;">Pronto para testes de produção com dados realistas</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Verificar status do servidor
+        fetch('/api/health')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').textContent = '✅ ' + data.message;
+                document.getElementById('status').className = 'badge badge-success';
+            })
+            .catch(error => {
+                document.getElementById('status').textContent = '❌ Erro ao conectar';
+                document.getElementById('status').className = 'badge badge-danger';
+            });
+    </script>
+    <script src="/js/version-stamp.js"></script>
+</body>
+</html>
