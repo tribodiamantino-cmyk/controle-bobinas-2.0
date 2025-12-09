@@ -1073,6 +1073,35 @@ router.post('/finalizar-plano/:planoId', async (req, res) => {
 
 // ==================== CENTRAL DE IMPRESSÃO ==================== //
 
+// DEBUG: Listar todas as bobinas (temporário)
+router.get('/imprimir/debug-bobinas', async (req, res) => {
+    try {
+        const [bobinas] = await db.query(`
+            SELECT 
+                b.id,
+                b.codigo_interno,
+                b.metragem_inicial,
+                b.metragem_atual,
+                b.metragem_reservada,
+                b.status,
+                p.codigo as produto_codigo
+            FROM bobinas b
+            LEFT JOIN produtos p ON b.produto_id = p.id
+            ORDER BY b.id DESC
+            LIMIT 10
+        `);
+        
+        res.json({
+            success: true,
+            total: bobinas.length,
+            bobinas: bobinas
+        });
+    } catch (error) {
+        console.error('Erro ao listar bobinas:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Buscar dados de qualquer código QR para impressão
 router.post('/imprimir/buscar-codigo', async (req, res) => {
     try {
@@ -1081,6 +1110,8 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
         if (!codigo) {
             return res.status(400).json({ success: false, error: 'Código é obrigatório' });
         }
+        
+        console.log('🔍 Buscando código para impressão:', codigo);
         
         let resultado = null;
         let tipo = null;
@@ -1119,6 +1150,15 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
             
             if (bobinas.length > 0) {
                 resultado = bobinas[0];
+                console.log('📦 Bobina encontrada:', {
+                    codigo: resultado.codigo_interno,
+                    metragem_inicial: resultado.metragem_inicial,
+                    metragem_atual: resultado.metragem_atual,
+                    metragem_reservada: resultado.metragem_reservada,
+                    produto: resultado.produto_codigo,
+                    cor: resultado.nome_cor,
+                    gramatura: resultado.gramatura
+                });
             }
             
         } else if (codigo.startsWith('RET-')) {
