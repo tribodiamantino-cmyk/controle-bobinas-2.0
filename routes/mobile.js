@@ -1103,10 +1103,13 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                     b.status,
                     p.codigo as produto_codigo,
                     p.fabricante,
-                    p.largura,
+                    p.tipo_tecido,
+                    p.largura_sem_costura,
+                    p.largura_final,
+                    p.largura_maior,
+                    p.largura_y,
                     c.nome_cor,
-                    g.gramatura,
-                    p.tipo_tecido
+                    g.gramatura
                 FROM bobinas b
                 JOIN produtos p ON b.produto_id = p.id
                 LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
