@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Bobinas de Teste</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .seed-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+        }
+        .seed-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .btn-seed {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .btn-seed:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-seed:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .log-line {
+            margin: 5px 0;
+        }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-info { color: #17a2b8; }
+        .log-warning { color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="seed-container">
+        <div class="seed-card">
+            <h1>🌱 Criar Bobinas de Teste Realistas</h1>
+            <p>Este script irá criar:</p>
+            <ul>
+                <li>✅ 2 cores (Preto, Azul)</li>
+                <li>✅ 2 gramaturas (280g/m², 320g/m²)</li>
+                <li>✅ 4 produtos (2 Cortinave, 2 BN)</li>
+                <li>✅ 8 bobinas com metragens variadas (500m, 450m, 600m, etc)</li>
+            </ul>
+            
+            <button class="btn-seed" onclick="executarSeed()" id="btn-seed">
+                🚀 Criar Dados de Teste
+            </button>
+            
+            <div id="log" class="log" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let logDiv;
+        
+        function log(message, type = 'info') {
+            if (!logDiv) {
+                logDiv = document.getElementById('log');
+                logDiv.style.display = 'block';
+            }
+            
+            const line = document.createElement('div');
+            line.className = `log-line log-${type}`;
+            line.textContent = message;
+            logDiv.appendChild(line);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        async function executarSeed() {
+            const btn = document.getElementById('btn-seed');
+            btn.disabled = true;
+            btn.textContent = '⏳ Criando...';
+            
+            logDiv = document.getElementById('log');
+            logDiv.innerHTML = '';
+            logDiv.style.display = 'block';
+            
+            try {
+                log('🌱 Iniciando seed realista...', 'info');
+                
+                // 1. CORES
+                log('\n🎨 Criando cores...', 'info');
+                const cores = [
+                    { nome_cor: 'Preto', codigo_hex: '#000000' },
+                    { nome_cor: 'Azul', codigo_hex: '#0000FF' }
+                ];
+                
+                const coresIds = [];
+                for (const cor of cores) {
+                    const res = await fetch(`${API_BASE}/cores`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(cor)
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        coresIds.push(data.id);
+                        log(`  ✓ Cor "${cor.nome_cor}" criada (ID: ${data.id})`, 'success');
+                    } else {
+                        // Já existe, buscar ID
+                        const listRes = await fetch(`${API_BASE}/cores`);
+                        const listData = await listRes.json();
+                        const corExistente = listData.data.find(c => c.nome_cor === cor.nome_cor);
+                        if (corExistente) {
+                            coresIds.push(corExistente.id);
+                            log(`  ✓ Cor "${cor.nome_cor}" já existe (ID: ${corExistente.id})`, 'info');
+                        }
+                    }
+                }
+                
+                // 2. GRAMATURAS
+                log('\n📏 Criando gramaturas...', 'info');
+                const gramaturas = [280, 320];
+                const gramaturasIds = [];
+                
+                for (const gram of gramaturas) {
+                    const res = await fetch(`${API_BASE}/gramaturas`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ gramatura: gram })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        gramaturasIds.push(data.id);
+                        log(`  ✓ Gramatura ${gram}g/m² criada (ID: ${data.id})`, 'success');
+                    } else {
+                        const listRes = await fetch(`${API_BASE}/gramaturas`);
+                        const listData = await listRes.json();
+                        const gramExistente = listData.data.find(g => g.gramatura === gram);
+                        if (gramExistente) {
+                            gramaturasIds.push(gramExistente.id);
+                            log(`  ✓ Gramatura ${gram}g/m² já existe (ID: ${gramExistente.id})`, 'info');
+                        }
+                    }
+                }
+                
+                // 3. PRODUTOS
+                log('\n📦 Criando produtos...', 'info');
+                const produtos = [
+                    {
+                        loja: 'Cortinave',
+                        codigo: 'CTV-0001',
+                        fabricante: 'Propex',
+                        cor_id: coresIds[0],
+                        gramatura_id: gramaturasIds[0],
+                        tipo_tecido: 'Normal',
+                        largura_sem_costura: 300,
+                        tipo_bainha: 'Cano/Cano',
+                        largura_final: 280,
+                        metragem_confiavel: true
+                    },
+                    {
+                        loja: 'Cortinave',
+                        codigo: 'CTV-0002',
+                        fabricante: 'Textiloeste',
+                        cor_id: coresIds[1],
+                        gramatura_id: gramaturasIds[1],
+                        tipo_tecido: 'Bando Y',
+                        largura_maior: 350,
+                        largura_y: 200,
+                        metragem_confiavel: true
+                    },
+                    {
+                        loja: 'BN',
+                        codigo: 'BN-0001',
+                        fabricante: 'Propex',
+                        cor_id: coresIds[0],
+                        gramatura_id: gramaturasIds[0],
+                        tipo_tecido: 'Normal',
+                        largura_sem_costura: 280,
+                        tipo_bainha: 'Arame/Arame',
+                        largura_final: 260,
+                        metragem_confiavel: true
+                    },
+                    {
+                        loja: 'BN',
+                        codigo: 'BN-0002',
+                        fabricante: 'Textiloeste',
+                        cor_id: coresIds[1],
+                        gramatura_id: gramaturasIds[1],
+                        tipo_tecido: 'Normal',
+                        largura_sem_costura: 300,
+                        tipo_bainha: 'Cano/Arame',
+                        largura_final: 285,
+                        metragem_confiavel: true
+                    }
+                ];
+                
+                const produtosIds = [];
+                for (const prod of produtos) {
+                    const res = await fetch(`${API_BASE}/produtos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(prod)
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        produtosIds.push(data.id);
+                        log(`  ✓ Produto ${prod.codigo} criado (ID: ${data.id})`, 'success');
+                    } else if (data.error && data.error.includes('Duplicate')) {
+                        log(`  ⚠ Produto ${prod.codigo} já existe`, 'warning');
+                        // Buscar ID do produto existente
+                        const listRes = await fetch(`${API_BASE}/produtos`);
+                        const listData = await listRes.json();
+                        const prodExistente = listData.data.find(p => p.codigo === prod.codigo);
+                        if (prodExistente) {
+                            produtosIds.push(prodExistente.id);
+                        }
+                    } else {
+                        log(`  ❌ Erro ao criar produto ${prod.codigo}: ${data.error}`, 'error');
+                    }
+                }
+                
+                // 4. BOBINAS
+                log('\n🎯 Criando bobinas...', 'info');
+                const bobinas = [
+                    { produto_idx: 0, metragem: 500.00, nota: 'NF-2025-001' },
+                    { produto_idx: 0, metragem: 450.50, nota: 'NF-2025-002' },
+                    { produto_idx: 1, metragem: 600.00, nota: 'NF-2025-003' },
+                    { produto_idx: 1, metragem: 380.25, nota: 'NF-2025-004' },
+                    { produto_idx: 2, metragem: 420.00, nota: 'NF-2025-101' },
+                    { produto_idx: 2, metragem: 550.75, nota: 'NF-2025-102' },
+                    { produto_idx: 3, metragem: 480.00, nota: 'NF-2025-103' },
+                    { produto_idx: 3, metragem: 390.50, nota: 'NF-2025-104' }
+                ];
+                
+                const bobinasData = [];
+                for (const bob of bobinas) {
+                    const produto = produtos[bob.produto_idx];
+                    const produtoId = produtosIds[bob.produto_idx];
+                    
+                    if (!produtoId) {
+                        log(`  ⚠ Pulando bobina (produto ${produto.codigo} não foi criado)`, 'warning');
+                        continue;
+                    }
+                    
+                    const res = await fetch(`${API_BASE}/bobinas`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            nota_fiscal: bob.nota,
+                            loja: produto.loja,
+                            produto_id: produtoId,
+                            metragem_inicial: bob.metragem,
+                            observacoes: 'Criado via seed realista'
+                        })
+                    });
+                    
+                    const data = await res.json();
+                    if (data.success) {
+                        bobinasData.push({
+                            codigo: data.data.codigo_interno,
+                            produto: produto.codigo,
+                            metragem: bob.metragem,
+                            nota: bob.nota
+                        });
+                        log(`  ✓ Bobina ${data.data.codigo_interno} - ${produto.codigo} - ${bob.metragem}m`, 'success');
+                    } else {
+                        log(`  ❌ Erro ao criar bobina: ${data.error}`, 'error');
+                    }
+                }
+                
+                // RESUMO
+                log('\n' + '='.repeat(60), 'info');
+                log('✅ SEED REALISTA CONCLUÍDO!', 'success');
+                log('='.repeat(60), 'info');
+                log(`📊 Cores: ${cores.length}`, 'info');
+                log(`📏 Gramaturas: ${gramaturas.length}`, 'info');
+                log(`📦 Produtos: ${produtos.length}`, 'info');
+                log(`🎯 Bobinas: ${bobinasData.length}`, 'info');
+                log('\n📋 BOBINAS CRIADAS:', 'info');
+                log('─'.repeat(60), 'info');
+                bobinasData.forEach(b => {
+                    log(`   ${b.codigo} | ${b.produto} | ${b.metragem}m | ${b.nota}`, 'success');
+                });
+                log('─'.repeat(60), 'info');
+                log('\n🖨️  Use qualquer código BOB-XXXX para testar impressão!', 'info');
+                
+                btn.textContent = '✅ Concluído!';
+                btn.style.background = '#28a745';
+                
+            } catch (error) {
+                log(`\n❌ ERRO: ${error.message}`, 'error');
+                btn.textContent = '❌ Erro - Tente Novamente';
+                btn.style.background = '#dc3545';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
