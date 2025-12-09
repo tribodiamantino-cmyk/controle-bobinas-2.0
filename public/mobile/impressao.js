@@ -424,8 +424,6 @@ function gerarPreviewLocalizacao(container) {
 function imprimirEtiqueta() {
     if (!dadosAtual) return;
     
-    const printWindow = window.open('', '', 'width=400,height=600');
-    
     let conteudoImpressao = '';
     
     if (dadosAtual.tipo === 'bobina') {
@@ -440,27 +438,51 @@ function imprimirEtiqueta() {
         conteudoImpressao = gerarHTMLImpressaoLocalizacao();
     }
     
+    // Abrir nova janela para impressão
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
     printWindow.document.write(conteudoImpressao);
     printWindow.document.close();
 }
 
 function gerarHTMLImpressaoBobina() {
+    // Usar metragem_inicial (metragem original da bobina)
+    const metragem = parseFloat(dadosAtual.metragem_inicial || dadosAtual.metragem_atual || 0).toFixed(2);
+    const codigoQR = dadosAtual.codigo_interno; // BOB-0001
+    
     return `
+        <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Etiqueta - ${dadosAtual.codigo_interno}</title>
             <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
                 @media print {
-                    @page { margin: 0; size: 57mm auto; }
-                    body { margin: 0; padding: 0; }
+                    @page { 
+                        margin: 0; 
+                        size: 57mm auto; 
+                    }
+                    body { 
+                        margin: 0; 
+                        padding: 0; 
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
                 }
                 body {
                     font-family: Arial, sans-serif;
                     text-align: center;
                     padding: 5mm;
                     width: 57mm;
+                    background: white;
                 }
-                .qrcode { margin: 3mm auto; }
+                .qrcode { 
+                    margin: 3mm auto; 
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
                 .codigo { font-size: 14px; font-weight: bold; margin-top: 2mm; }
                 .produto { font-size: 11px; margin-top: 1mm; }
                 .metragem { font-size: 16px; font-weight: bold; margin-top: 2mm; }
@@ -471,16 +493,32 @@ function gerarHTMLImpressaoBobina() {
             <div id="qrcode" class="qrcode"></div>
             <div class="codigo">${dadosAtual.codigo_interno}</div>
             <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g/m²</div>
-            <div class="metragem">${parseFloat(dadosAtual.metragem_atual || 0).toFixed(2)}m</div>
+            <div class="metragem">${metragem}m</div>
             <div class="detalhe">${dadosAtual.loja || ''} - ${dadosAtual.fabricante || ''}</div>
+            
             <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
             <script>
-                QRCode.toCanvas(document.getElementById('qrcode'), '${dadosAtual.qr_code || `B-${dadosAtual.id}`}', {
+                // Gerar QR Code e aguardar completar antes de imprimir
+                QRCode.toCanvas('${codigoQR}', {
                     width: 120,
-                    margin: 1
-                }, function() {
-                    window.print();
-                    window.close();
+                    margin: 1,
+                    errorCorrectionLevel: 'M'
+                }, function(error, canvas) {
+                    if (error) {
+                        console.error('Erro ao gerar QR Code:', error);
+                        alert('Erro ao gerar QR Code');
+                        return;
+                    }
+                    
+                    // Adicionar canvas ao DOM
+                    document.getElementById('qrcode').appendChild(canvas);
+                    
+                    // Aguardar renderização completa antes de imprimir
+                    setTimeout(function() {
+                        window.print();
+                        // Não fechar automaticamente no mobile para permitir re-impressão
+                        // window.close();
+                    }, 500);
                 });
             </script>
         </body>
@@ -489,22 +527,42 @@ function gerarHTMLImpressaoBobina() {
 }
 
 function gerarHTMLImpressaoRetalho() {
+    const codigoQR = dadosAtual.codigo_retalho; // RET-0001
+    
     return `
+        <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Etiqueta - ${dadosAtual.codigo_retalho}</title>
             <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
                 @media print {
-                    @page { margin: 0; size: 57mm auto; }
-                    body { margin: 0; padding: 0; }
+                    @page { 
+                        margin: 0; 
+                        size: 57mm auto; 
+                    }
+                    body { 
+                        margin: 0; 
+                        padding: 0; 
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
                 }
                 body {
                     font-family: Arial, sans-serif;
                     text-align: center;
                     padding: 5mm;
                     width: 57mm;
+                    background: white;
                 }
-                .qrcode { margin: 3mm auto; }
+                .qrcode { 
+                    margin: 3mm auto; 
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
                 .codigo { font-size: 14px; font-weight: bold; margin-top: 2mm; }
                 .produto { font-size: 11px; margin-top: 1mm; }
                 .metragem { font-size: 16px; font-weight: bold; margin-top: 2mm; }
@@ -517,14 +575,25 @@ function gerarHTMLImpressaoRetalho() {
             <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g/m²</div>
             <div class="metragem">${parseFloat(dadosAtual.metragem || 0).toFixed(2)}m</div>
             ${dadosAtual.bobina_origem ? `<div class="detalhe">Origem: ${dadosAtual.bobina_origem}</div>` : ''}
+            
             <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
             <script>
-                QRCode.toCanvas(document.getElementById('qrcode'), '${dadosAtual.qr_code || `R-${dadosAtual.id}`}', {
+                QRCode.toCanvas('${codigoQR}', {
                     width: 120,
-                    margin: 1
-                }, function() {
-                    window.print();
-                    window.close();
+                    margin: 1,
+                    errorCorrectionLevel: 'M'
+                }, function(error, canvas) {
+                    if (error) {
+                        console.error('Erro ao gerar QR Code:', error);
+                        alert('Erro ao gerar QR Code');
+                        return;
+                    }
+                    
+                    document.getElementById('qrcode').appendChild(canvas);
+                    
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
                 });
             </script>
         </body>
@@ -533,22 +602,42 @@ function gerarHTMLImpressaoRetalho() {
 }
 
 function gerarHTMLImpressaoCorte() {
+    const codigoQR = dadosAtual.codigo_corte; // COR-2025-00001
+    
     return `
+        <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Etiqueta - ${dadosAtual.codigo_corte}</title>
             <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
                 @media print {
-                    @page { margin: 0; size: 57mm auto; }
-                    body { margin: 0; padding: 0; }
+                    @page { 
+                        margin: 0; 
+                        size: 57mm auto; 
+                    }
+                    body { 
+                        margin: 0; 
+                        padding: 0; 
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
                 }
                 body {
                     font-family: Arial, sans-serif;
                     text-align: center;
                     padding: 5mm;
                     width: 57mm;
+                    background: white;
                 }
-                .qrcode { margin: 3mm auto; }
+                .qrcode { 
+                    margin: 3mm auto; 
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
                 .codigo { font-size: 14px; font-weight: bold; margin-top: 2mm; }
                 .produto { font-size: 11px; margin-top: 1mm; }
                 .metragem { font-size: 16px; font-weight: bold; margin-top: 2mm; }
@@ -564,14 +653,25 @@ function gerarHTMLImpressaoCorte() {
                 Plano: ${dadosAtual.codigo_plano || ''}<br>
                 ${dadosAtual.cliente || ''} - ${dadosAtual.aviario || ''}
             </div>
+            
             <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
             <script>
-                QRCode.toCanvas(document.getElementById('qrcode'), '${dadosAtual.codigo_corte}', {
+                QRCode.toCanvas('${codigoQR}', {
                     width: 120,
-                    margin: 1
-                }, function() {
-                    window.print();
-                    window.close();
+                    margin: 1,
+                    errorCorrectionLevel: 'M'
+                }, function(error, canvas) {
+                    if (error) {
+                        console.error('Erro ao gerar QR Code:', error);
+                        alert('Erro ao gerar QR Code');
+                        return;
+                    }
+                    
+                    document.getElementById('qrcode').appendChild(canvas);
+                    
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
                 });
             </script>
         </body>
