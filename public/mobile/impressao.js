@@ -1,7 +1,47 @@
-const API_BASE = '/api';
+// API_BASE agora usa configuração global (api-config.js)
+const API_BASE = window.API_CONFIG ? window.API_CONFIG.FULL_API : '/api';
 let tipoAtual = null;
 let dadosAtual = null;
 let html5QrCode = null;
+let bluetoothPrinter = null; // Instância do printer Bluetooth
+let isNativeApp = false; // Flag para detectar se está rodando em Capacitor
+
+// ========== INICIALIZAÇÃO ==========
+
+// Detectar se está rodando em app nativo (Capacitor)
+async function inicializarApp() {
+    try {
+        // Verificar se Capacitor está disponível
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            isNativeApp = true;
+            console.log('✅ App Nativo detectado');
+            
+            // Aguardar bluetoothPrinter estar disponível (carregado de bluetooth-printer.js)
+            let tentativas = 0;
+            while (!window.bluetoothPrinter && tentativas < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                tentativas++;
+            }
+            
+            if (window.bluetoothPrinter) {
+                bluetoothPrinter = window.bluetoothPrinter;
+                await bluetoothPrinter.init();
+                console.log('✅ Bluetooth Printer inicializado');
+            } else {
+                console.warn('⚠️ bluetoothPrinter não encontrado');
+            }
+        } else {
+            console.log('ℹ️ Rodando em PWA - Impressão via navegador');
+            isNativeApp = false;
+        }
+    } catch (error) {
+        console.error('Erro ao inicializar app:', error);
+        isNativeApp = false;
+    }
+}
+
+// Executar inicialização
+inicializarApp();
 
 // ========== MENSAGENS (TOAST) ==========
 
@@ -58,7 +98,16 @@ function selecionarTipo(tipo) {
     
     document.getElementById('tipo-selecionado').textContent = nomes[tipo];
     
-    // Ir para passo de scanner
+    // LOCALIZAÇÃO: Pular scanner, ir direto para input de código
+    if (tipo === 'localizacao') {
+        mostrarPasso('passo-scanner');
+        // Não inicia scanner, apenas mostra instrução para digitar código
+        document.getElementById('scanner-instrucao').innerHTML = 
+            '📍 Digite o código da localização<br>(Exemplo: 1234-A-5678)';
+        return;
+    }
+    
+    // Outros tipos: Ir para passo de scanner
     mostrarPasso('passo-scanner');
     iniciarScanner();
 }
@@ -213,6 +262,35 @@ async function buscarPorCodigoDigitado() {
     // Parar scanner se estiver ativo
     pararScanner();
     
+    // ========== LOCALIZAÇÃO: Criação livre, SEM buscar no banco ==========
+    if (tipoDetectado === 'localizacao') {
+        // Criar dados mock para localização (não precisa buscar no banco)
+        dadosAtual = {
+            tipo: 'localizacao',
+            codigo_locacao: codigo,
+            qr_code: codigo,
+            corredor: codigo.split('-')[0] || '',
+            coluna: codigo.split('-')[1] || '',
+            altura: codigo.split('-')[2] || ''
+        };
+        
+        tipoAtual = tipoDetectado;
+        
+        console.log('✅ Localização criada:', dadosAtual);
+        
+        // Gerar preview
+        gerarPreview();
+        
+        // Ir para passo de preview
+        mostrarPasso('passo-preview');
+        
+        // Limpar input
+        input.value = '';
+        
+        return; // Não buscar no banco
+    }
+    
+    // ========== OUTROS TIPOS: Buscar no banco ==========
     // Buscar dados do código
     try {
         const response = await fetch(`${API_BASE}/mobile/imprimir/buscar-codigo`, {
@@ -255,9 +333,50 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Auto-uppercase
+        // Auto-uppercase E hífen automático
         input.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase();
+            let value = e.target.value.toUpperCase().replace(/-/g, ''); // Remove hífens existentes
+            
+            // BOB-0001, RET-0001 (formato: XXX-0000)
+            if (value.length > 3 && /^[A-Z]{3}[0-9]/.test(value)) {
+                value = value.slice(0, 3) + '-' + value.slice(3);
+            }
+            // COR-2025-00001 (formato: XXX-YYYY-00000)
+            else if (value.length > 3 && value.startsWith('COR')) {
+                if (value.length <= 7) {
+                    // COR-2025
+                    value = value.slice(0, 3) + '-' + value.slice(3);
+                } else {
+                    // COR-2025-00001
+                    value = value.slice(0, 3) + '-' + value.slice(3, 7) + '-' + value.slice(7);
+                }
+            }
+            // LOCALIZAÇÃO: 0000-X-0000 (números-letra-números)
+            // Exemplo: 1234-A-5678 ou 12-B-34
+            else if (value.length > 0 && /^[0-9]/.test(value)) {
+                // Separar números e letras
+                const matches = value.match(/^([0-9]{1,4})([A-Z]?)([0-9]{0,4})$/);
+                
+                if (matches) {
+                    const [, num1, letra, num2] = matches;
+                    
+                    if (letra && num2) {
+                        // Formato completo: 0000-X-0000
+                        value = num1 + '-' + letra + '-' + num2;
+                    } else if (letra) {
+                        // Tem letra mas não tem segundo número: 0000-X
+                        value = num1 + '-' + letra;
+                    } else {
+                        // Só primeiro número (sem hífen ainda)
+                        value = num1;
+                    }
+                } else {
+                    // Se não corresponde ao padrão, limita a 4 dígitos iniciais
+                    value = value.slice(0, 4);
+                }
+            }
+            
+            e.target.value = value;
         });
     }
 });
@@ -291,7 +410,7 @@ function gerarPreviewBobina(container) {
                 <div class="etiqueta-codigo">${dadosAtual.codigo_interno}</div>
                 <div class="etiqueta-produto">
                     ${dadosAtual.produto_codigo || ''}<br>
-                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g/m²
+                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g
                 </div>
                 <div class="etiqueta-metragem">${metragem}m</div>
                 <div class="etiqueta-detalhe">${dadosAtual.loja || ''} - ${dadosAtual.fabricante || ''}</div>
@@ -318,7 +437,7 @@ function gerarPreviewRetalho(container) {
                 <div class="etiqueta-codigo">${dadosAtual.codigo_retalho}</div>
                 <div class="etiqueta-produto">
                     ${dadosAtual.produto_codigo || ''}<br>
-                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g/m²
+                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g
                 </div>
                 <div class="etiqueta-metragem">${parseFloat(dadosAtual.metragem || 0).toFixed(2)}m</div>
                 ${dadosAtual.bobina_origem ? `<div class="etiqueta-detalhe">Origem: ${dadosAtual.bobina_origem}</div>` : ''}
@@ -344,7 +463,7 @@ function gerarPreviewCorte(container) {
                 <div class="etiqueta-codigo">${dadosAtual.codigo_corte}</div>
                 <div class="etiqueta-produto">
                     ${dadosAtual.produto_codigo || ''}<br>
-                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g/m²
+                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g
                 </div>
                 <div class="etiqueta-metragem">${parseFloat(dadosAtual.metragem_cortada || 0).toFixed(2)}m</div>
                 <div class="etiqueta-detalhe">
@@ -398,18 +517,18 @@ function gerarPreviewLocalizacao(container) {
         <div class="etiqueta-content">
             <div id="qr-code-preview"></div>
             <div class="etiqueta-info">
-                <div class="etiqueta-codigo">${dadosAtual.codigo_localizacao}</div>
+                <div class="etiqueta-codigo">${dadosAtual.codigo_locacao || dadosAtual.codigo_localizacao}</div>
                 <div class="etiqueta-localizacao">
-                    Corredor: ${dadosAtual.corredor}<br>
-                    Coluna: ${dadosAtual.coluna}<br>
-                    Altura: ${dadosAtual.altura}
+                    Corredor: ${dadosAtual.corredor || 'N/A'}<br>
+                    Coluna: ${dadosAtual.coluna || 'N/A'}<br>
+                    Altura: ${dadosAtual.altura || 'N/A'}
                 </div>
-                ${dadosAtual.tipo ? `<div class="etiqueta-detalhe">Tipo: ${dadosAtual.tipo}</div>` : ''}
             </div>
         </div>
     `;
     
-    QRCode.toCanvas(dadosAtual.qr_code || `LOC-${dadosAtual.id}`, {
+    // Usar o código digitado para o QR Code
+    QRCode.toCanvas(dadosAtual.codigo_locacao || dadosAtual.qr_code || `LOC-${dadosAtual.id}`, {
         width: 150,
         margin: 1
     }, (error, canvas) => {
@@ -421,9 +540,89 @@ function gerarPreviewLocalizacao(container) {
 
 // ========== IMPRESSÃO ==========
 
-function imprimirEtiqueta() {
+async function imprimirEtiqueta() {
     if (!dadosAtual) return;
     
+    // ========== MODO APP NATIVO - BLUETOOTH ==========
+    if (isNativeApp && bluetoothPrinter) {
+        try {
+            // REMOVIDO: mostrarMensagem('Preparando impressão...', 'info');
+            
+            console.log('🔧 Verificando impressora salva...');
+            
+            // Verificar se há impressora conectada (nome correto: printer_address)
+            const printerAddress = localStorage.getItem('printer_address');
+            const printerName = localStorage.getItem('printer_name');
+            
+            console.log('🔧 Impressora salva:', printerName, printerAddress);
+            
+            if (!printerAddress) {
+                console.warn('⚠️ Nenhuma impressora configurada');
+                mostrarMensagem('Configure uma impressora primeiro!', 'error');
+                setTimeout(() => {
+                    window.location.href = '/mobile/configurar-impressora.html';
+                }, 2000);
+                return;
+            }
+            
+            console.log('✅ Impressora configurada:', printerName);
+            
+            // Conectar se não estiver conectado (SEM mostrar mensagem de conexão)
+            if (!bluetoothPrinter.isConnected) {
+                console.log('🔧 Conectando à impressora...');
+                await bluetoothPrinter.connect(printerAddress);
+                console.log('✅ Conectado!');
+            }
+            
+            // Imprimir via Bluetooth conforme o tipo
+            if (dadosAtual.tipo === 'bobina') {
+                await bluetoothPrinter.imprimirBobina({
+                    codigo: dadosAtual.codigo_interno,
+                    produto: `${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g`,
+                    metragem: parseFloat(dadosAtual.metragem_inicial || dadosAtual.metragem_atual || 0).toFixed(2),
+                    placa: dadosAtual.placa || null,
+                    detalhes: `${dadosAtual.loja || ''} - ${dadosAtual.fabricante || ''}`
+                });
+            } else if (dadosAtual.tipo === 'retalho') {
+                await bluetoothPrinter.imprimirRetalho({
+                    codigo: dadosAtual.codigo_retalho,
+                    produto: `${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g`,
+                    metragem: parseFloat(dadosAtual.metragem || 0).toFixed(2),
+                    detalhes: `Origem: ${dadosAtual.codigo_bobina_origem || ''}`
+                });
+            } else if (dadosAtual.tipo === 'corte') {
+                await bluetoothPrinter.imprimirCorte({
+                    codigo: dadosAtual.codigo_corte,
+                    plano: dadosAtual.numero_plano || '',
+                    item: dadosAtual.item_descricao || '',
+                    metragem: parseFloat(dadosAtual.metragem || 0).toFixed(2),
+                    operador: dadosAtual.operador || '',
+                    data: dadosAtual.data_corte || ''
+                });
+            } else if (dadosAtual.tipo === 'localizacao') {
+                await bluetoothPrinter.imprimirLocalizacao({
+                    codigo: dadosAtual.codigo_locacao,
+                    corredor: dadosAtual.corredor || 'N/A',
+                    coluna: dadosAtual.coluna || 'N/A',
+                    altura: dadosAtual.altura || 'N/A'
+                });
+            }
+            
+            mostrarMensagem('✅ Impressão enviada!', 'success');
+            
+            // Voltar após 2 segundos
+            setTimeout(() => {
+                voltarParaScanner();
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Erro ao imprimir via Bluetooth:', error);
+            mostrarMensagem('Erro: ' + error.message, 'error');
+        }
+        return;
+    }
+    
+    // ========== MODO PWA - IMPRESSÃO NAVEGADOR ==========
     let conteudoImpressao = '';
     
     if (dadosAtual.tipo === 'bobina') {
@@ -492,7 +691,7 @@ function gerarHTMLImpressaoBobina() {
         <body>
             <div id="qrcode" class="qrcode"></div>
             <div class="codigo">${dadosAtual.codigo_interno}</div>
-            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g/m²</div>
+            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g</div>
             <div class="metragem">${metragem}m</div>
             <div class="detalhe">${dadosAtual.loja || ''} - ${dadosAtual.fabricante || ''}</div>
             
@@ -572,7 +771,7 @@ function gerarHTMLImpressaoRetalho() {
         <body>
             <div id="qrcode" class="qrcode"></div>
             <div class="codigo">${dadosAtual.codigo_retalho}</div>
-            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g/m²</div>
+            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g</div>
             <div class="metragem">${parseFloat(dadosAtual.metragem || 0).toFixed(2)}m</div>
             ${dadosAtual.bobina_origem ? `<div class="detalhe">Origem: ${dadosAtual.bobina_origem}</div>` : ''}
             
@@ -647,7 +846,7 @@ function gerarHTMLImpressaoCorte() {
         <body>
             <div id="qrcode" class="qrcode"></div>
             <div class="codigo">${dadosAtual.codigo_corte}</div>
-            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g/m²</div>
+            <div class="produto">${dadosAtual.produto_codigo || ''} - ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}g</div>
             <div class="metragem">${parseFloat(dadosAtual.metragem_cortada || 0).toFixed(2)}m</div>
             <div class="detalhe">
                 Plano: ${dadosAtual.codigo_plano || ''}<br>

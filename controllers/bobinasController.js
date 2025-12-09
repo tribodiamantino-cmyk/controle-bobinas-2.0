@@ -32,6 +32,7 @@ exports.criarBobina = async (req, res) => {
             loja, 
             produto_id, 
             metragem_inicial, 
+            placa,
             observacoes 
         } = req.body;
         
@@ -50,15 +51,30 @@ exports.criarBobina = async (req, res) => {
             });
         }
         
+        // Validar se a PLACA já existe (se fornecida)
+        if (placa) {
+            const [existente] = await db.query(
+                'SELECT id, codigo_interno FROM bobinas WHERE placa = ?',
+                [placa]
+            );
+            
+            if (existente.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: `PLACA já cadastrada na bobina ${existente[0].codigo_interno}`
+                });
+            }
+        }
+        
         // Gerar código interno único
         const codigo_interno = await gerarCodigoInterno(loja);
         
         // Inserir bobina
         const [result] = await db.query(
             `INSERT INTO bobinas 
-            (codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_atual, observacoes, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'Disponível')`,
-            [codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_inicial, observacoes || null]
+            (codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_atual, placa, observacoes, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Disponível')`,
+            [codigo_interno, nota_fiscal, loja, produto_id, metragem_inicial, metragem_inicial, placa || null, observacoes || null]
         );
         
         // Buscar bobina criada com dados do produto

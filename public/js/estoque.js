@@ -113,6 +113,14 @@ function abrirModalNovaBobina() {
                                 </div>
 
                                 <div class="form-group">
+                                    <label class="form-label" for="placa">🏷️ PLACA (Código do Fabricante)</label>
+                                    <input type="text" class="form-control" id="placa" placeholder="Código único vinculado à garantia (opcional)" maxlength="100">
+                                    <small class="form-text text-muted">⚠️ Não pode ser alterado depois de cadastrar</small>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group" style="width: 100%;">
                                     <label class="form-label" for="observacoes">Observações</label>
                                     <input type="text" class="form-control" id="observacoes" placeholder="Informações adicionais (opcional)">
                                 </div>
@@ -388,6 +396,7 @@ async function registrarBobina(e) {
         loja: document.getElementById('loja').value,
         produto_id: produtoSelecionado.id,
         metragem_inicial: parseFloat(document.getElementById('metragem_inicial').value),
+        placa: document.getElementById('placa').value.trim() || null,
         observacoes: document.getElementById('observacoes').value || null
     };
     
@@ -433,6 +442,7 @@ function mostrarModalSucesso(bobina) {
             <h3 style="margin-top: 0;">🏷️ ${bobina.codigo_interno}</h3>
             <div><strong>📄 NF:</strong> ${bobina.nota_fiscal}</div>
             <div><strong>🏪 Loja:</strong> ${bobina.loja}</div>
+            ${bobina.placa ? `<div><strong>🏷️ PLACA:</strong> <span style="font-family: monospace; background: #fff3cd; padding: 2px 6px; border-radius: 3px;">${bobina.placa}</span></div>` : ''}
             <div><strong>🏭 Fabricante:</strong> ${bobina.fabricante}</div>
             <div><strong>📦 Produto:</strong> ${bobina.codigo} (${bobina.nome_cor} • ${bobina.gramatura})</div>
             <div><strong>📏 Metragem:</strong> ${bobina.metragem_inicial}m</div>

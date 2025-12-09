@@ -168,6 +168,12 @@ function gerarHTMLEtiquetaBobina(bobina) {
                     <span class="info-label">LARGURA:</span>
                     <span class="info-value">${largura}</span>
                 </div>
+                ${bobina.placa ? `
+                <div class="info-row" style="border-top: 2px solid #000; padding-top: 1mm; margin-top: 1mm;">
+                    <span class="info-label">🏷️ PLACA:</span>
+                    <span class="info-value" style="font-family: 'Courier New', monospace; font-size: 8pt;">${bobina.placa}</span>
+                </div>
+                ` : ''}
                 
                 <div class="footer">Cortinave & BN</div>
             </div>
