@@ -10,9 +10,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Event listeners para filtros
     document.getElementById('busca').addEventListener('input', aplicarFiltros);
+    document.getElementById('filtroProduto').addEventListener('change', aplicarFiltros);
     document.getElementById('filtroLoja').addEventListener('change', aplicarFiltros);
     document.getElementById('filtroMetragem').addEventListener('change', aplicarFiltros);
     document.getElementById('filtroStatus').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroOrigem').addEventListener('change', aplicarFiltros);
+    document.getElementById('ordenacao').addEventListener('change', aplicarFiltros);
+    
+    // Verificar se veio de conversão de cortes (highlight)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('novos') === 'true') {
+        showNotification('📦 Novos retalhos criados! Imprima as etiquetas.', 'info');
+    }
 });
 
 // ========== CARREGAR DADOS ==========
@@ -24,6 +33,7 @@ async function carregarProdutos() {
         if (data.success) {
             produtosCache = data.data || [];
             popularSelectProdutos();
+            popularFiltroProdutos();
         }
     } catch (error) {
         console.error('Erro ao carregar produtos:', error);
@@ -38,6 +48,18 @@ function popularSelectProdutos() {
         const option = document.createElement('option');
         option.value = p.id;
         option.textContent = `${p.codigo} - ${p.nome_cor} ${p.gramatura}g/m²`;
+        select.appendChild(option);
+    });
+}
+
+function popularFiltroProdutos() {
+    const select = document.getElementById('filtroProduto');
+    select.innerHTML = '<option value="">Todos</option>';
+    
+    produtosCache.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = `${p.codigo} - ${p.nome_cor}`;
         select.appendChild(option);
     });
 }
@@ -61,12 +83,15 @@ async function carregarRetalhos() {
 // ========== FILTROS ==========
 function aplicarFiltros() {
     const busca = document.getElementById('busca').value.toLowerCase();
+    const produto = document.getElementById('filtroProduto').value;
     const loja = document.getElementById('filtroLoja').value;
     const metragem = document.getElementById('filtroMetragem').value;
     const status = document.getElementById('filtroStatus').value;
+    const origem = document.getElementById('filtroOrigem').value;
+    const ordenacao = document.getElementById('ordenacao').value;
     
-    const filtrados = retalhosCache.filter(r => {
-        // Busca geral
+    let filtrados = retalhosCache.filter(r => {
+        // Busca geral (inclui placa)
         if (busca) {
             const termo = busca.toLowerCase();
             const match = 
@@ -74,10 +99,14 @@ function aplicarFiltros() {
                 (r.qr_code && r.qr_code.toLowerCase().includes(termo)) ||
                 (r.codigo && r.codigo.toLowerCase().includes(termo)) ||
                 (r.nome_cor && r.nome_cor.toLowerCase().includes(termo)) ||
-                (r.localizacao_atual && r.localizacao_atual.toLowerCase().includes(termo));
+                (r.localizacao_atual && r.localizacao_atual.toLowerCase().includes(termo)) ||
+                (r.placa && r.placa.toLowerCase().includes(termo));
             
             if (!match) return false;
         }
+        
+        // Filtro de produto
+        if (produto && r.produto_id != produto) return false;
         
         // Filtro de loja
         if (loja && r.loja !== loja) return false;
@@ -85,6 +114,7 @@ function aplicarFiltros() {
         // Filtro de metragem
         if (metragem) {
             const metros = parseFloat(r.metragem || 0);
+            if (metragem === '0-10' && metros > 10) return false;
             if (metragem === '10-30' && (metros < 10 || metros > 30)) return false;
             if (metragem === '30-50' && (metros < 30 || metros > 50)) return false;
             if (metragem === '50+' && metros < 50) return false;
@@ -93,17 +123,49 @@ function aplicarFiltros() {
         // Filtro de status
         if (status && r.status !== status) return false;
         
+        // Filtro de origem
+        if (origem) {
+            if (origem === 'bobina' && !r.bobina_id) return false;
+            if (origem === 'corte' && !r.corte_origem_id) return false;
+            if (origem === 'manual' && (r.bobina_id || r.corte_origem_id)) return false;
+        }
+        
         return true;
     });
+    
+    // Ordenação
+    filtrados = ordenarRetalhos(filtrados, ordenacao);
     
     renderizarTabela(filtrados);
 }
 
+function ordenarRetalhos(retalhos, tipo) {
+    return [...retalhos].sort((a, b) => {
+        switch (tipo) {
+            case 'recentes':
+                return new Date(b.data_entrada || 0) - new Date(a.data_entrada || 0);
+            case 'antigos':
+                return new Date(a.data_entrada || 0) - new Date(b.data_entrada || 0);
+            case 'maior-metragem':
+                return parseFloat(b.metragem || 0) - parseFloat(a.metragem || 0);
+            case 'menor-metragem':
+                return parseFloat(a.metragem || 0) - parseFloat(b.metragem || 0);
+            case 'codigo':
+                return (a.codigo_retalho || '').localeCompare(b.codigo_retalho || '');
+            default:
+                return 0;
+        }
+    });
+}
+
 function limparFiltros() {
     document.getElementById('busca').value = '';
+    document.getElementById('filtroProduto').value = '';
     document.getElementById('filtroLoja').value = '';
     document.getElementById('filtroMetragem').value = '';
     document.getElementById('filtroStatus').value = '';
+    document.getElementById('filtroOrigem').value = '';
+    document.getElementById('ordenacao').value = 'recentes';
     aplicarFiltros();
 }
 
@@ -122,11 +184,20 @@ function renderizarTabela(retalhos) {
         return;
     }
     
-    tbody.innerHTML = retalhos.map(r => `
-        <tr>
-            <td><strong>${r.codigo_retalho || '-'}</strong></td>
+    // Verificar se é recente (últimas 24h)
+    const agora = new Date();
+    const umDiaAtras = new Date(agora - 24 * 60 * 60 * 1000);
+    
+    tbody.innerHTML = retalhos.map(r => {
+        const dataEntrada = new Date(r.data_entrada);
+        const isRecente = dataEntrada > umDiaAtras;
+        const rowStyle = isRecente ? 'background: #fff3cd;' : '';
+        
+        return `
+        <tr style="${rowStyle}">
             <td>
-                ${r.qr_code ? `<code style="font-size: 0.9em;">${r.qr_code}</code>` : '-'}
+                <strong>${r.codigo_retalho || '-'}</strong>
+                ${isRecente ? '<span style="color: #856404; font-size: 0.8em;"><br>🆕 Novo</span>' : ''}
             </td>
             <td>
                 <div style="font-weight: 600;">${r.codigo || '-'}</div>
@@ -135,27 +206,28 @@ function renderizarTabela(retalhos) {
                 </div>
             </td>
             <td>
-                <span style="color: #28a745; font-weight: 600;">
+                <span style="color: #28a745; font-weight: 600; font-size: 1.1em;">
                     ${parseFloat(r.metragem || 0).toFixed(2)}m
                 </span>
             </td>
             <td>
                 ${r.metragem_reservada > 0 
-                    ? `<span style="color: #dc3545;">${parseFloat(r.metragem_reservada).toFixed(2)}m</span>`
-                    : '-'
+                    ? `<span style="color: #dc3545; font-weight: 600;">${parseFloat(r.metragem_reservada).toFixed(2)}m</span>`
+                    : '<span style="color: #999;">-</span>'
+                }
+            </td>
+            <td>
+                ${r.placa 
+                    ? `<span style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${r.placa}</span>`
+                    : '<span style="color: #999;">-</span>'
                 }
             </td>
             <td>${r.localizacao_atual || '-'}</td>
-            <td>
-                ${r.bobina_codigo 
-                    ? `<span title="Gerado da bobina ${r.bobina_codigo}">📦 ${r.bobina_codigo}</span>`
-                    : '<span style="color: #999;">Manual</span>'
-                }
-            </td>
+            <td>${formatarOrigem(r)}</td>
             <td>${formatarStatus(r.status)}</td>
             <td>${formatarData(r.data_entrada)}</td>
             <td>
-                <div style="display: flex; gap: 5px;">
+                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
                     <button class="btn btn-sm btn-info" onclick="abrirModalImprimirEtiqueta(${r.id})" title="Imprimir etiqueta">
                         🖨️
                     </button>
@@ -168,16 +240,33 @@ function renderizarTabela(retalhos) {
                 </div>
             </td>
         </tr>
-    `).join('');
+    `}).join('');
+}
+
+function formatarOrigem(r) {
+    if (r.corte_origem_id) {
+        return `<span style="background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 12px; font-size: 0.85em;">
+            ✂️ Corte
+        </span>`;
+    }
+    if (r.bobina_id || r.bobina_codigo) {
+        return `<span style="background: #cce5ff; color: #004085; padding: 2px 8px; border-radius: 12px; font-size: 0.85em;" 
+                title="Bobina: ${r.bobina_codigo || r.bobina_id}">
+            📦 Bobina
+        </span>`;
+    }
+    return `<span style="background: #e9ecef; color: #495057; padding: 2px 8px; border-radius: 12px; font-size: 0.85em;">
+        ✍️ Manual
+    </span>`;
 }
 
 function formatarStatus(status) {
     const badges = {
-        'disponivel': '<span class="badge badge-success">Disponível</span>',
-        'reservado': '<span class="badge badge-warning">Reservado</span>',
-        'usado': '<span class="badge badge-secondary">Usado</span>'
+        'Disponível': '<span class="badge badge-success">Disponível</span>',
+        'Reservado': '<span class="badge badge-warning">Reservado</span>',
+        'Usado': '<span class="badge badge-secondary">Usado</span>'
     };
-    return badges[status] || status;
+    return badges[status] || `<span class="badge">${status || '-'}</span>`;
 }
 
 function formatarData(data) {

@@ -1438,8 +1438,8 @@ function mostrarAlertaEtiquetasRetalhos(retalhos) {
         `Deseja ir para a tela de retalhos agora?`;
     
     if (confirm(mensagem)) {
-        // Redirecionar para tela de retalhos
-        window.location.href = '/retalhos.html';
+        // Redirecionar para tela de retalhos com parâmetro de novos
+        window.location.href = '/retalhos.html?novos=true';
     }
 }
 

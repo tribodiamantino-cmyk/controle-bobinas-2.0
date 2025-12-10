@@ -26,10 +26,16 @@
         <div class="filter-bar">
             <div class="filter-group">
                 <label>🔍 Buscar:</label>
-                <input type="text" id="busca" placeholder="Código, produto, localização...">
+                <input type="text" id="busca" placeholder="Código, produto, localização, placa...">
             </div>
             <div class="filter-group">
-                <label>📦 Loja:</label>
+                <label>📦 Produto:</label>
+                <select id="filtroProduto">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>🏪 Loja:</label>
                 <select id="filtroLoja">
                     <option value="">Todas</option>
                     <option value="Cortinave">Cortinave</option>
@@ -40,6 +46,7 @@
                 <label>📏 Metragem:</label>
                 <select id="filtroMetragem">
                     <option value="">Todas</option>
+                    <option value="0-10">Até 10m</option>
                     <option value="10-30">10m - 30m</option>
                     <option value="30-50">30m - 50m</option>
                     <option value="50+">Acima de 50m</option>
@@ -49,12 +56,34 @@
                 <label>📍 Status:</label>
                 <select id="filtroStatus">
                     <option value="">Todos</option>
-                    <option value="disponivel">Disponível</option>
-                    <option value="reservado">Reservado</option>
-                    <option value="usado">Usado</option>
+                    <option value="Disponível">Disponível</option>
+                    <option value="Reservado">Reservado</option>
+                    <option value="Usado">Usado</option>
                 </select>
             </div>
-            <button class="btn btn-secondary" onclick="limparFiltros()">🔄 Limpar</button>
+            <div class="filter-group">
+                <label>📂 Origem:</label>
+                <select id="filtroOrigem">
+                    <option value="">Todas</option>
+                    <option value="bobina">De Bobina</option>
+                    <option value="corte">De Corte</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="filter-bar" style="margin-top: 10px;">
+            <div class="filter-group">
+                <label>📅 Ordenar por:</label>
+                <select id="ordenacao">
+                    <option value="recentes">Mais Recentes</option>
+                    <option value="antigos">Mais Antigos</option>
+                    <option value="maior-metragem">Maior Metragem</option>
+                    <option value="menor-metragem">Menor Metragem</option>
+                    <option value="codigo">Código</option>
+                </select>
+            </div>
+            <button class="btn btn-secondary" onclick="limparFiltros()">🔄 Limpar Filtros</button>
             <button class="btn btn-primary" onclick="abrirModalNovoRetalho()">➕ Novo Retalho</button>
         </div>
 
@@ -84,10 +113,10 @@
                 <thead>
                     <tr>
                         <th>Código</th>
-                        <th>QR Code</th>
                         <th>Produto</th>
                         <th>Metragem</th>
-                        <th>Metr. Reservada</th>
+                        <th>Reservada</th>
+                        <th>Placa</th>
                         <th>Localização</th>
                         <th>Origem</th>
                         <th>Status</th>

@@ -169,6 +169,86 @@ exports.converterBobinaEmRetalho = async (req, res) => {
     }
 };
 
+// Listar todos os retalhos
+exports.listarRetalhos = async (req, res) => {
+    try {
+        // Query que funciona com ou sem as colunas novas (placa, corte_origem_id)
+        let query = `
+            SELECT 
+                r.id,
+                r.codigo_retalho,
+                r.qr_code,
+                r.produto_id,
+                r.metragem,
+                r.metragem_reservada,
+                r.localizacao_atual,
+                r.status,
+                r.observacoes,
+                r.data_entrada,
+                r.bobina_origem_id,
+                p.codigo,
+                p.loja,
+                p.fabricante,
+                c.nome_cor,
+                g.gramatura,
+                b.codigo_interno as bobina_codigo
+            FROM retalhos r
+            JOIN produtos p ON r.produto_id = p.id
+            JOIN configuracoes_cores c ON p.cor_id = c.id
+            JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            LEFT JOIN bobinas b ON r.bobina_origem_id = b.id
+            ORDER BY r.data_entrada DESC
+        `;
+        
+        let [retalhos] = await db.query(query);
+        
+        // Tentar adicionar campos novos se existirem
+        try {
+            const [retalhosComNovosCampos] = await db.query(`
+                SELECT 
+                    r.id,
+                    r.codigo_retalho,
+                    r.qr_code,
+                    r.produto_id,
+                    r.metragem,
+                    r.metragem_reservada,
+                    r.localizacao_atual,
+                    r.status,
+                    r.observacoes,
+                    r.data_entrada,
+                    r.bobina_origem_id,
+                    r.placa,
+                    r.corte_origem_id,
+                    p.codigo,
+                    p.loja,
+                    p.fabricante,
+                    c.nome_cor,
+                    g.gramatura,
+                    b.codigo_interno as bobina_codigo
+                FROM retalhos r
+                JOIN produtos p ON r.produto_id = p.id
+                JOIN configuracoes_cores c ON p.cor_id = c.id
+                JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                LEFT JOIN bobinas b ON r.bobina_origem_id = b.id
+                ORDER BY r.data_entrada DESC
+            `);
+            retalhos = retalhosComNovosCampos;
+        } catch (e) {
+            // Colunas novas não existem ainda, usar query básica
+            console.log('⚠️ Colunas placa/corte_origem_id não existem ainda');
+        }
+        
+        res.json({ success: true, data: retalhos });
+        
+    } catch (error) {
+        console.error('Erro ao listar retalhos:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
 // Listar retalhos de um produto
 exports.listarRetalhosPorProduto = async (req, res) => {
     try {

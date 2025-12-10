@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const retalhosController = require('../controllers/retalhosController');
 
+// Listar todos os retalhos
+router.get('/', retalhosController.listarRetalhos);
+
 // Criar retalho manualmente
 router.post('/', retalhosController.criarRetalho);
 
