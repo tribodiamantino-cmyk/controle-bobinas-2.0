@@ -29,7 +29,7 @@ if (MODO_TESTE) {
 // ========== CHECK API STATUS ==========
 async function checkApiStatus() {
     try {
-        const response = await fetch('/api/health', { timeout: 5000 });
+        const response = await fetch(API_CONFIG.url('api/health'), { timeout: 5000 });
         const statusEl = document.getElementById('api-status');
         if (response.ok) {
             statusEl.textContent = '🟢';
@@ -689,7 +689,7 @@ async function confirmarValidacao(event) {
             const formData = new FormData();
             formData.append('foto', fotoInput.files[0]);
             
-            const uploadResponse = await fetch('/api/mobile/upload-foto-medidor', {
+            const uploadResponse = await fetch(API_CONFIG.mobileUrl('upload-foto-medidor'), {
                 method: 'POST',
                 body: formData
             });
@@ -1316,7 +1316,7 @@ async function finalizarAlocacaoPlano() {
     try {
         mostrarLoading(true);
         
-        const response = await fetch('/api/mobile/plano/alocar-localizacoes', {
+        const response = await fetch(API_CONFIG.mobileUrl('plano/alocar-localizacoes'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1582,7 +1582,7 @@ async function carregarRetalho(retalhoId) {
     mostrarLoading(true);
     
     try {
-        const response = await fetch(`/api/mobile/retalho/${retalhoId}`);
+        const response = await fetch(API_CONFIG.mobileUrl(`retalho/${retalhoId}`));
         const data = await response.json();
         
         if (data.success) {
@@ -1728,7 +1728,7 @@ async function salvarCorte(event) {
     mostrarLoading(true);
     
     try {
-        const response = await fetch('/api/mobile/corte', {
+        const response = await fetch(API_CONFIG.mobileUrl('corte'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1943,7 +1943,7 @@ async function abrirValidarBobina(planoId, itemId, alocacaoId) {
     // Buscar info do item
     try {
         mostrarLoading(true);
-        const response = await fetch(`/api/mobile/plano/${planoId}`);
+        const response = await fetch(API_CONFIG.mobileUrl(`plano/${planoId}`));
         const data = await response.json();
         
         if (!data.success) throw new Error(data.error);
@@ -1978,7 +1978,7 @@ async function processarValidacaoBobina(qrData) {
     try {
         mostrarLoading(true);
         
-        const response = await fetch('/api/mobile/validar-qr-bobina', {
+        const response = await fetch(API_CONFIG.mobileUrl('validar-qr-bobina'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2032,7 +2032,7 @@ async function irParaRegistrarCorte() {
     
     // Buscar info da alocação
     try {
-        const response = await fetch(`/api/mobile/plano/${planoAtual}`);
+        const response = await fetch(API_CONFIG.mobileUrl(`plano/${planoAtual}`));
         const data = await response.json();
         const item = data.data.itens.find(i => i.item_id === itemAtual);
         const alocacao = item.alocacoes.find(a => a.id === alocacaoAtual);
@@ -2105,7 +2105,7 @@ async function salvarNovoCorte(event) {
         const formData = new FormData();
         formData.append('foto', fotoInput.files[0]);
         
-        const uploadResponse = await fetch('/api/mobile/upload-foto-medidor', {
+        const uploadResponse = await fetch(API_CONFIG.mobileUrl('upload-foto-medidor'), {
             method: 'POST',
             body: formData
         });
@@ -2114,7 +2114,7 @@ async function salvarNovoCorte(event) {
         if (!uploadData.success) throw new Error(uploadData.error);
         
         // 2. Registrar corte
-        const corteResponse = await fetch('/api/mobile/registrar-corte', {
+        const corteResponse = await fetch(API_CONFIG.mobileUrl('registrar-corte'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2129,7 +2129,7 @@ async function salvarNovoCorte(event) {
         if (!corteData.success) throw new Error(corteData.error);
         
         // 3. Buscar QR do corte
-        const qrResponse = await fetch(`/api/qrcodes/corte/${corteData.data.corte.codigo_corte}`);
+        const qrResponse = await fetch(API_CONFIG.url(`api/qrcodes/corte/${corteData.data.corte.codigo_corte}`));
         const qrData = await qrResponse.json();
         
         // 4. Mostrar tela de sucesso
@@ -2320,7 +2320,7 @@ async function processarConsultaCorte(qrData) {
         mostrarLoading(true);
         
         const codigoCorte = qrData.replace('CORTE-', '');
-        const response = await fetch(`/api/mobile/corte/${codigoCorte}`);
+        const response = await fetch(API_CONFIG.mobileUrl(`corte/${codigoCorte}`));
         const data = await response.json();
         
         if (!data.success) throw new Error(data.error);
@@ -2395,7 +2395,7 @@ async function carregarPlanosFinalizados() {
     try {
         mostrarLoading(true);
         
-        const response = await fetch('/api/mobile/planos-finalizados');
+        const response = await fetch(API_CONFIG.mobileUrl('planos-finalizados'));
         const data = await response.json();
         
         if (!data.success) throw new Error(data.error);
@@ -2467,7 +2467,7 @@ async function iniciarNovoCarregamento(planoId, codigoPlano, totalCortes) {
     try {
         mostrarLoading(true);
         
-        const response = await fetch('/api/mobile/carregamento/iniciar', {
+        const response = await fetch(API_CONFIG.mobileUrl('carregamento/iniciar'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -2547,7 +2547,7 @@ async function processarScanCarregamento(codigoCorte) {
         const feedbackDiv = document.getElementById('feedback-scan');
         
         // Validar corte no backend
-        const response = await fetch('/api/mobile/carregamento/validar-corte', {
+        const response = await fetch(API_CONFIG.mobileUrl('carregamento/validar-corte'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2684,7 +2684,7 @@ async function finalizarCarregamentoAtual() {
             }
         }
         
-        const response = await fetch('/api/mobile/carregamento/finalizar', {
+        const response = await fetch(API_CONFIG.mobileUrl('carregamento/finalizar'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
