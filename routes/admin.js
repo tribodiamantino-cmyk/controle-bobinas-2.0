@@ -206,4 +206,135 @@ router.get('/fix-placa', async (req, res) => {
     }
 });
 
+/**
+ * ROTA DEBUG: Verificar PLACA de uma bobina
+ * Acesse: GET /api/admin/debug-placa?codigo=BOB-0001
+ */
+router.get('/debug-placa', async (req, res) => {
+    try {
+        const { codigo } = req.query;
+        
+        if (!codigo) {
+            return res.status(400).json({ error: 'Código é obrigatório. Use: ?codigo=BOB-0001' });
+        }
+        
+        // Buscar bobina
+        const [bobinas] = await db.query(`
+            SELECT 
+                b.id,
+                b.codigo_interno,
+                b.placa,
+                b.nota_fiscal,
+                b.metragem_inicial,
+                b.metragem_atual,
+                b.produto_id,
+                b.loja,
+                b.data_entrada,
+                p.codigo as produto_codigo,
+                p.fabricante,
+                c.nome_cor,
+                g.gramatura
+            FROM bobinas b
+            LEFT JOIN produtos p ON b.produto_id = p.id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            WHERE b.codigo_interno = ?
+        `, [codigo]);
+        
+        if (bobinas.length === 0) {
+            return res.json({
+                success: false,
+                message: `❌ Bobina ${codigo} não encontrada no banco!`
+            });
+        }
+        
+        const bobina = bobinas[0];
+        
+        // Retornar HTML com resultado
+        res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Debug PLACA - ${codigo}</title>
+                <style>
+                    body { font-family: monospace; padding: 40px; background: #1e1e1e; color: #00ff00; }
+                    h1 { color: #00ff00; }
+                    .info { background: #2d2d2d; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                    .label { color: #888; display: inline-block; width: 180px; }
+                    .value { color: #00ff00; font-weight: bold; }
+                    .null { color: #ff0000; font-weight: bold; }
+                    .warning { color: #ffaa00; background: #3d2d00; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                    .success { color: #00ff00; background: #003d00; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                </style>
+            </head>
+            <body>
+                <h1>🔍 Debug PLACA - ${codigo}</h1>
+                
+                <div class="info">
+                    <div><span class="label">ID:</span> <span class="value">${bobina.id}</span></div>
+                    <div><span class="label">Código Interno:</span> <span class="value">${bobina.codigo_interno}</span></div>
+                    <div><span class="label">PLACA:</span> <span class="${bobina.placa ? 'value' : 'null'}">${bobina.placa || '❌ NULL/VAZIO'}</span></div>
+                    <div><span class="label">Nota Fiscal:</span> <span class="value">${bobina.nota_fiscal}</span></div>
+                    <div><span class="label">Loja:</span> <span class="value">${bobina.loja}</span></div>
+                    <div><span class="label">Metragem Inicial:</span> <span class="value">${bobina.metragem_inicial}m</span></div>
+                    <div><span class="label">Metragem Atual:</span> <span class="value">${bobina.metragem_atual}m</span></div>
+                    <div><span class="label">Produto:</span> <span class="value">${bobina.produto_codigo}</span></div>
+                    <div><span class="label">Fabricante:</span> <span class="value">${bobina.fabricante}</span></div>
+                    <div><span class="label">Cor:</span> <span class="value">${bobina.nome_cor}</span></div>
+                    <div><span class="label">Gramatura:</span> <span class="value">${bobina.gramatura}G</span></div>
+                    <div><span class="label">Data Entrada:</span> <span class="value">${new Date(bobina.data_entrada).toLocaleString('pt-BR')}</span></div>
+                </div>
+                
+                ${!bobina.placa ? `
+                    <div class="warning">
+                        <h2>⚠️ PROBLEMA IDENTIFICADO</h2>
+                        <p>A coluna PLACA existe no banco, mas está NULL para esta bobina!</p>
+                        <p><strong>Possíveis causas:</strong></p>
+                        <ul>
+                            <li>Bobina foi cadastrada ANTES da coluna placa ser criada</li>
+                            <li>Campo PLACA não foi preenchido no cadastro</li>
+                            <li>Erro no controller ao salvar (placa não chegou no INSERT)</li>
+                        </ul>
+                        <p><strong>Solução:</strong></p>
+                        <p>Para adicionar PLACA agora, acesse o sistema web → Editar bobina (se houver essa função)</p>
+                        <p>OU execute SQL manualmente no Railway:</p>
+                        <code style="background: #000; padding: 10px; display: block; margin: 10px 0;">
+                            UPDATE bobinas SET placa = 'SUA-PLACA-AQUI' WHERE codigo_interno = '${codigo}';
+                        </code>
+                    </div>
+                ` : `
+                    <div class="success">
+                        <h2>✅ PLACA ENCONTRADA NO BANCO!</h2>
+                        <p>Valor: <strong>${bobina.placa}</strong></p>
+                        <p>Se não está aparecendo no frontend, o problema é na query ou renderização!</p>
+                        <p><strong>Próximos passos:</strong></p>
+                        <ul>
+                            <li>Verificar se a query em routes/mobile.js retorna b.placa</li>
+                            <li>Verificar logs do backend (console.log da bobina)</li>
+                            <li>Verificar se o app mobile está usando cache antigo</li>
+                        </ul>
+                    </div>
+                `}
+                
+                <h2>📋 Query Completa (JSON)</h2>
+                <pre style="background: #000; padding: 20px; border-radius: 5px; overflow: auto;">${JSON.stringify(bobina, null, 2)}</pre>
+            </body>
+            </html>
+        `);
+        
+    } catch (error) {
+        res.status(500).send(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>Erro - Debug PLACA</title></head>
+            <body style="font-family: monospace; padding: 40px; background: #1e1e1e; color: #ff0000;">
+                <h1>❌ Erro ao buscar bobina</h1>
+                <pre>${error.message}</pre>
+                <pre>Stack: ${error.stack}</pre>
+            </body>
+            </html>
+        `);
+    }
+});
+
 module.exports = router;
