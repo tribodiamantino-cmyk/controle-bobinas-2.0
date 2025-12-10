@@ -35,6 +35,47 @@
 
     <!-- CONTEÚDO -->
     <main class="app-main">
+        <!-- SEÇÃO: Status da Impressora (sempre visível no topo) -->
+        <div id="secao-impressora" class="card" style="margin-bottom: 20px; padding: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">🖨️</span>
+                    <div>
+                        <div id="impressora-nome" style="font-weight: bold; color: #333;">Nenhuma impressora</div>
+                        <div id="impressora-status" style="font-size: 12px; color: #ef4444;">⚫ Desconectada</div>
+                    </div>
+                </div>
+                <button id="btn-conectar-impressora" class="btn btn-primary" onclick="abrirSeletorImpressora()" style="padding: 10px 16px;">
+                    🔌 Conectar
+                </button>
+            </div>
+        </div>
+
+        <!-- MODAL: Selecionar Impressora -->
+        <div id="modal-impressora" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; padding: 20px;">
+            <div style="background: white; border-radius: 12px; max-width: 400px; margin: 50px auto; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+                <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0;">🖨️ Selecionar Impressora</h3>
+                    <button onclick="fecharSeletorImpressora()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button>
+                </div>
+                <div style="padding: 20px; overflow-y: auto; flex: 1;">
+                    <div id="lista-impressoras" style="min-height: 100px;">
+                        <div style="text-align: center; padding: 30px; color: #666;">
+                            Clique em "Buscar" para encontrar impressoras
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="fecharSeletorImpressora()" style="flex: 1;">
+                        Cancelar
+                    </button>
+                    <button id="btn-buscar-impressoras" class="btn btn-primary" onclick="buscarImpressoras()" style="flex: 1;">
+                        🔍 Buscar
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- SEÇÃO: Etiquetas Pendentes (sempre visível no topo) -->
         <div id="secao-pendentes" class="card" style="display: none; margin-bottom: 20px; border: 2px solid #f59e0b; background: #fffbeb;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">

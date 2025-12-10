@@ -5,6 +5,148 @@ let dadosAtual = null;
 let html5QrCode = null;
 let bluetoothPrinter = null; // Instância do printer Bluetooth
 let isNativeApp = false; // Flag para detectar se está rodando em Capacitor
+let impressorasDisponiveis = []; // Lista de impressoras encontradas
+
+// ========== GERENCIAMENTO DE IMPRESSORA ==========
+
+function atualizarStatusImpressora() {
+    const nomeEl = document.getElementById('impressora-nome');
+    const statusEl = document.getElementById('impressora-status');
+    const btnEl = document.getElementById('btn-conectar-impressora');
+    
+    if (!nomeEl || !statusEl || !btnEl) return;
+    
+    if (window.bluetoothPrinter && window.bluetoothPrinter.isConnected) {
+        const nome = window.bluetoothPrinter.deviceName || 'Impressora Conectada';
+        nomeEl.textContent = nome;
+        statusEl.innerHTML = '<span style="color: #10b981;">🟢 Conectada</span>';
+        btnEl.textContent = '🔄 Trocar';
+        btnEl.classList.remove('btn-primary');
+        btnEl.classList.add('btn-secondary');
+    } else {
+        nomeEl.textContent = 'Nenhuma impressora';
+        statusEl.innerHTML = '<span style="color: #ef4444;">🔴 Desconectada</span>';
+        btnEl.textContent = '🔌 Conectar';
+        btnEl.classList.remove('btn-secondary');
+        btnEl.classList.add('btn-primary');
+    }
+}
+
+function abrirSeletorImpressora() {
+    document.getElementById('modal-impressora').style.display = 'block';
+}
+
+function fecharSeletorImpressora() {
+    document.getElementById('modal-impressora').style.display = 'none';
+}
+
+async function buscarImpressoras() {
+    const listaEl = document.getElementById('lista-impressoras');
+    const btnBuscar = document.getElementById('btn-buscar-impressoras');
+    
+    if (!isNativeApp) {
+        listaEl.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #ef4444;">
+                ⚠️ Bluetooth disponível apenas no app nativo Android
+            </div>
+        `;
+        return;
+    }
+    
+    btnBuscar.disabled = true;
+    btnBuscar.textContent = '🔄 Buscando...';
+    
+    listaEl.innerHTML = `
+        <div style="text-align: center; padding: 30px; color: #666;">
+            <div style="font-size: 32px; margin-bottom: 10px;">🔍</div>
+            Buscando impressoras Bluetooth...
+        </div>
+    `;
+    
+    try {
+        // Verificar se bluetoothPrinter está disponível
+        if (!window.bluetoothPrinter) {
+            throw new Error('Módulo Bluetooth não disponível');
+        }
+        
+        // Buscar dispositivos pareados (função correta é listDevices)
+        const dispositivos = await window.bluetoothPrinter.listDevices();
+        impressorasDisponiveis = dispositivos || [];
+        
+        if (impressorasDisponiveis.length === 0) {
+            listaEl.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #666;">
+                    <div style="font-size: 32px; margin-bottom: 10px;">📱</div>
+                    <p style="margin-bottom: 15px;">Nenhuma impressora encontrada</p>
+                    <p style="font-size: 12px; color: #999;">
+                        Certifique-se de que a impressora está:<br>
+                        • Ligada<br>
+                        • Pareada nas configurações do Android
+                    </p>
+                </div>
+            `;
+        } else {
+            listaEl.innerHTML = impressorasDisponiveis.map((disp, idx) => `
+                <div class="printer-item" onclick="conectarImpressora(${idx})" style="display: flex; align-items: center; padding: 15px; margin: 10px 0; background: #f8f9fa; border-radius: 8px; cursor: pointer;">
+                    <span style="font-size: 28px; margin-right: 12px;">🖨️</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; color: #333;">${disp.name || 'Dispositivo sem nome'}</div>
+                        <div style="font-size: 12px; color: #666;">${disp.address || disp.id || ''}</div>
+                    </div>
+                    <span style="color: #3b82f6;">Conectar →</span>
+                </div>
+            `).join('');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao buscar impressoras:', error);
+        listaEl.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #ef4444;">
+                <div style="font-size: 32px; margin-bottom: 10px;">❌</div>
+                Erro ao buscar: ${error.message || error}
+            </div>
+        `;
+    } finally {
+        btnBuscar.disabled = false;
+        btnBuscar.textContent = '🔍 Buscar';
+    }
+}
+
+async function conectarImpressora(idx) {
+    const dispositivo = impressorasDisponiveis[idx];
+    if (!dispositivo) {
+        mostrarMensagem('Dispositivo não encontrado', 'error');
+        return;
+    }
+    
+    const listaEl = document.getElementById('lista-impressoras');
+    
+    listaEl.innerHTML = `
+        <div style="text-align: center; padding: 30px; color: #3b82f6;">
+            <div style="font-size: 32px; margin-bottom: 10px;">🔌</div>
+            Conectando a ${dispositivo.name || 'impressora'}...
+        </div>
+    `;
+    
+    try {
+        // Função correta é connect()
+        await window.bluetoothPrinter.connect(dispositivo.address || dispositivo.id);
+        
+        // Salvar nome do dispositivo para exibir
+        window.bluetoothPrinter.deviceName = dispositivo.name;
+        
+        mostrarMensagem('✅ Impressora conectada!', 'success');
+        fecharSeletorImpressora();
+        atualizarStatusImpressora();
+        
+    } catch (error) {
+        console.error('Erro ao conectar:', error);
+        mostrarMensagem('❌ Erro: ' + (error.message || error), 'error');
+        
+        // Voltar a mostrar lista
+        buscarImpressoras();
+    }
+}
 
 // ========== FILA DE IMPRESSÃO (localStorage) ==========
 const FILA_STORAGE_KEY = 'fila_impressao_cortes';
@@ -216,6 +358,12 @@ async function inicializarApp() {
             console.log('ℹ️ Rodando em PWA - Impressão via navegador');
             isNativeApp = false;
         }
+        
+        // Atualizar status da impressora no topo
+        atualizarStatusImpressora();
+        
+        // Verificar conexão periodicamente
+        setInterval(atualizarStatusImpressora, 3000);
         
         // Renderizar fila de pendentes ao carregar
         renderizarFilaPendentes();
