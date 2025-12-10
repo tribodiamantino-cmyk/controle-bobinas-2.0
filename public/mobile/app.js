@@ -2441,22 +2441,7 @@ async function processarScanLocacao(qrData) {
             return;
         }
         
-        // Adicionar localização diretamente (modo simplificado)
-        // Formato: código é a própria descrição
-        const locacaoData = {
-            id: Date.now(), // ID temporário
-            codigo: codigoLocacao,
-            descricao: `Localização ${codigoLocacao}`
-        };
-        
-        locacoesEscaneadas.push(locacaoData);
-        renderizarLocacoesEscaneadas();
-        mostrarToast(`✅ Locação ${codigoLocacao} adicionada!`, 'success');
-        
-        // Habilitar botão de confirmar se pelo menos 1 locação
-        if (locacoesEscaneadas.length > 0) {
-            document.getElementById('btn-confirmar-finalizacao').disabled = false;
-        }
+        adicionarLocalizacao(codigoLocacao);
         
         // Reiniciar scanner para próxima locação
         iniciarScanner('locacao-plano');
@@ -2467,21 +2452,90 @@ async function processarScanLocacao(qrData) {
     }
 }
 
+// Adicionar localização digitada manualmente
+function adicionarLocalizacaoManual() {
+    const input = document.getElementById('input-localizacao');
+    if (!input) return;
+    
+    const codigo = input.value.trim().toUpperCase();
+    
+    if (!codigo) {
+        mostrarToast('Digite uma localização', 'warning');
+        return;
+    }
+    
+    // Validar formato N-X-N
+    const regexLocacao = /^\d{1,4}-[A-Z]-\d{1,4}$/;
+    if (!regexLocacao.test(codigo)) {
+        mostrarToast('Formato inválido! Use: número-letra-número (ex: 1-A-1)', 'error');
+        return;
+    }
+    
+    adicionarLocalizacao(codigo);
+    
+    // Limpar input
+    input.value = '';
+    input.focus();
+}
+
+// Função comum para adicionar localização (manual ou scan)
+function adicionarLocalizacao(codigoLocacao) {
+    // Verificar se já foi adicionada
+    if (locacoesEscaneadas.some(loc => loc.codigo === codigoLocacao)) {
+        mostrarToast('Localização já adicionada!', 'warning');
+        return;
+    }
+    
+    // Adicionar localização
+    const locacaoData = {
+        id: Date.now(),
+        codigo: codigoLocacao,
+        descricao: `Localização ${codigoLocacao}`
+    };
+    
+    locacoesEscaneadas.push(locacaoData);
+    renderizarLocacoesEscaneadas();
+    mostrarToast(`✅ Localização ${codigoLocacao} adicionada!`, 'success');
+    
+    // Habilitar botão de confirmar
+    const btnConfirmar = document.getElementById('btn-confirmar-finalizacao');
+    if (btnConfirmar) {
+        btnConfirmar.disabled = false;
+    }
+}
+
+// Remover localização da lista
+function removerLocalizacao(codigo) {
+    locacoesEscaneadas = locacoesEscaneadas.filter(loc => loc.codigo !== codigo);
+    renderizarLocacoesEscaneadas();
+    
+    // Desabilitar botão se não tiver mais localizações
+    const btnConfirmar = document.getElementById('btn-confirmar-finalizacao');
+    if (btnConfirmar && locacoesEscaneadas.length === 0) {
+        btnConfirmar.disabled = true;
+    }
+    
+    mostrarToast('Localização removida', 'info');
+}
+
 function renderizarLocacoesEscaneadas() {
     const container = document.getElementById('lista-locacoes');
+    if (!container) return;
     
     if (locacoesEscaneadas.length === 0) {
-        container.innerHTML = '<p class="text-muted">Nenhuma locação escaneada ainda...</p>';
+        container.innerHTML = '<p style="color: #9ca3af; text-align: center; margin: 10px 0;">Nenhuma localização adicionada</p>';
         return;
     }
     
     container.innerHTML = locacoesEscaneadas.map(loc => `
-        <div class="locacao-item">
-            <div class="icon">📍</div>
-            <div class="info">
-                <div class="codigo">${loc.codigo}</div>
-                <div class="descricao">${loc.descricao || 'Sem descrição'}</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f0fdf4; border-radius: 8px; margin-bottom: 8px; border: 1px solid #86efac;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 20px;">📍</span>
+                <span style="font-weight: bold; color: #166534;">${loc.codigo}</span>
             </div>
+            <button onclick="removerLocalizacao('${loc.codigo}')" style="background: #fee2e2; border: none; color: #dc2626; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                ✕ Remover
+            </button>
         </div>
     `).join('');
 }

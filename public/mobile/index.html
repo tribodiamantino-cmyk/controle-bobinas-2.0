@@ -339,31 +339,48 @@
 
             <div class="info-box info-success">
                 <strong>🎉 Todos os itens foram cortados!</strong>
-                <p>Agora escaneie as locações onde o plano será armazenado.</p>
+                <p>Informe onde o plano será armazenado.</p>
             </div>
 
             <div id="plano-info-finalizar">
                 <!-- Info do plano via JS -->
             </div>
 
-            <div class="scanner-container">
-                <div id="reader-locacao" class="qr-reader"></div>
-                <div class="scanner-instrucao">
-                    📱 Escaneie o QR Code da locação de armazenamento
+            <!-- Opção 1: Digitar manualmente -->
+            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e5e7eb;">
+                <h4 style="margin: 0 0 10px 0; color: #374151;">📝 Digitar Localização</h4>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="input-localizacao" placeholder="Ex: 1-A-1" 
+                           style="flex: 1; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 16px; text-transform: uppercase;"
+                           oninput="this.value = this.value.toUpperCase()">
+                    <button class="btn btn-primary" onclick="adicionarLocalizacaoManual()" style="white-space: nowrap;">
+                        ➕ Adicionar
+                    </button>
+                </div>
+                <small style="color: #6b7280; margin-top: 5px; display: block;">Formato: número-letra-número (ex: 1-A-1, 2-B-3)</small>
+            </div>
+
+            <!-- Opção 2: Escanear QR -->
+            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e5e7eb;">
+                <h4 style="margin: 0 0 10px 0; color: #374151;">📱 Ou Escanear QR Code</h4>
+                <div class="scanner-container" style="margin: 0;">
+                    <div id="reader-locacao" class="qr-reader"></div>
                 </div>
             </div>
 
-            <div id="locacoes-escaneadas" class="locacoes-list">
-                <h3>Locações Escaneadas:</h3>
+            <div id="locacoes-escaneadas" class="locacoes-list" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e5e7eb;">
+                <h4 style="margin: 0 0 10px 0; color: #374151;">📍 Localizações Adicionadas:</h4>
                 <div id="lista-locacoes">
                     <!-- Lista preenchida via JS -->
                 </div>
             </div>
 
-            <div class="form-actions">
-                <button class="btn btn-secondary" onclick="cancelarFinalizacao()">Cancelar</button>
-                <button id="btn-confirmar-finalizacao" class="btn btn-primary" disabled onclick="confirmarFinalizacao()">
-                    ✅ Confirmar Armazenamento
+            <div class="form-actions" style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="cancelarFinalizacao()" style="flex: 1;">
+                    ← Cancelar
+                </button>
+                <button id="btn-confirmar-finalizacao" class="btn btn-primary" disabled onclick="confirmarFinalizacao()" style="flex: 2;">
+                    ✅ Finalizar Plano
                 </button>
             </div>
         </div>
@@ -473,13 +490,13 @@
 
     <!-- VERSÃO DO APP -->
     <div style="position: fixed; bottom: 5px; right: 5px; font-size: 9px; color: #999; opacity: 0.7; font-family: monospace; z-index: 9999;">
-        v2.2.5-20251210-1025
+        v2.3.0
     </div>
 
     <!-- Bluetooth Printer (ESC/POS) -->
     <script src="/js/bluetooth-printer.js"></script>
     
     <!-- JavaScript -->
-    <script src="/mobile/app.js?v=20251210-1025"></script>
+    <script src="/mobile/app.js?v=2.3.0"></script>
 </body>
 </html>
