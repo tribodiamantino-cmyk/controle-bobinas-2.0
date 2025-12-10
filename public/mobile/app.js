@@ -142,7 +142,11 @@ async function carregarOrdensProducao() {
     
     try {
         // Usa endpoint de teste ou produção conforme o modo
-        const endpoint = MODO_TESTE ? '/api/mobile/teste/plano' : '/api/mobile/ordens-producao';
+        const endpoint = MODO_TESTE 
+            ? API_CONFIG.mobileUrl('teste/plano')
+            : API_CONFIG.mobileUrl('ordens-producao');
+        
+        console.log('🔍 Buscando ordens de:', endpoint);
         const response = await fetch(endpoint);
         
         // Verificar se resposta é JSON válido
@@ -150,6 +154,7 @@ async function carregarOrdensProducao() {
         if (!contentType || !contentType.includes('application/json')) {
             const text = await response.text();
             console.error('❌ Resposta não é JSON:', text.substring(0, 200));
+            console.error('❌ URL tentada:', endpoint);
             throw new Error('Servidor retornou resposta inválida (não-JSON)');
         }
         
