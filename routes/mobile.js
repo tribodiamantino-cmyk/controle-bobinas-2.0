@@ -1158,6 +1158,7 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                     metragem_atual: resultado.metragem_atual,
                     metragem_reservada: resultado.metragem_reservada,
                     produto: resultado.produto_codigo,
+                    placa: resultado.placa,
                     cor: resultado.nome_cor,
                     gramatura: resultado.gramatura
                 });
