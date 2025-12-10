@@ -227,6 +227,9 @@ async function buscarPorCodigoDigitado() {
     const input = document.getElementById('input-codigo');
     const codigo = input.value.trim().toUpperCase();
     
+    console.log('🔍 [INICIO] buscarPorCodigoDigitado chamada');
+    console.log('🔍 Código digitado:', codigo);
+    
     if (!codigo) {
         mostrarMensagem('Digite um código!', 'error');
         return;
@@ -387,9 +390,14 @@ document.addEventListener('DOMContentLoaded', () => {
 // ========== GERAÇÃO DE PREVIEW ==========
 
 function gerarPreview() {
+    console.log('🖼️ [INICIO] gerarPreview chamada');
+    console.log('🖼️ dadosAtual.tipo:', dadosAtual.tipo);
+    console.log('🖼️ dadosAtual completo:', dadosAtual);
+    
     const container = document.getElementById('etiqueta-preview');
     
     if (dadosAtual.tipo === 'bobina') {
+        console.log('🖼️ Chamando gerarPreviewBobina');
         gerarPreviewBobina(container);
     } else if (dadosAtual.tipo === 'retalho') {
         gerarPreviewRetalho(container);
