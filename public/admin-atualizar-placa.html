@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atualizar PLACA - Admin</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .alert {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏷️ Atualizar PLACA</h1>
+        <p class="subtitle">Adicione ou atualize a PLACA de uma bobina</p>
+        
+        <div class="info-box">
+            <strong>ℹ️ Sobre a PLACA:</strong><br>
+            É o código único do fabricante vinculado à garantia. Não pode ser alterado depois de definido (exceto via admin).
+        </div>
+        
+        <form id="formAtualizarPlaca">
+            <div class="form-group">
+                <label for="codigo">Código da Bobina *</label>
+                <input 
+                    type="text" 
+                    id="codigo" 
+                    name="codigo" 
+                    placeholder="Ex: BOB-0001" 
+                    required 
+                    pattern="BOB-\d{4}"
+                    title="Formato: BOB-0001"
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="placa">PLACA (Código do Fabricante) *</label>
+                <input 
+                    type="text" 
+                    id="placa" 
+                    name="placa" 
+                    placeholder="Ex: ABC-123-XYZ" 
+                    required
+                    maxlength="100"
+                >
+            </div>
+            
+            <button type="submit" id="btnEnviar">
+                ✅ Atualizar PLACA
+            </button>
+        </form>
+        
+        <div id="alertSuccess" class="alert alert-success"></div>
+        <div id="alertError" class="alert alert-error"></div>
+    </div>
+    
+    <script>
+        const API_URL = 'https://controle-bobinas-20-production.up.railway.app/api/admin/atualizar-placa';
+        
+        document.getElementById('formAtualizarPlaca').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btnEnviar = document.getElementById('btnEnviar');
+            const alertSuccess = document.getElementById('alertSuccess');
+            const alertError = document.getElementById('alertError');
+            
+            // Ocultar alertas
+            alertSuccess.style.display = 'none';
+            alertError.style.display = 'none';
+            
+            // Desabilitar botão
+            btnEnviar.disabled = true;
+            btnEnviar.textContent = '⏳ Atualizando...';
+            
+            const codigo = document.getElementById('codigo').value.trim().toUpperCase();
+            const placa = document.getElementById('placa').value.trim();
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ codigo, placa })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    alertSuccess.innerHTML = `
+                        <strong>✅ Sucesso!</strong><br>
+                        ${data.message}<br>
+                        <small>
+                            <strong>Código:</strong> ${data.data.codigo}<br>
+                            <strong>PLACA Antes:</strong> ${data.data.placa_antes}<br>
+                            <strong>PLACA Depois:</strong> ${data.data.placa_depois}
+                        </small>
+                    `;
+                    alertSuccess.style.display = 'block';
+                    
+                    // Limpar formulário
+                    document.getElementById('formAtualizarPlaca').reset();
+                } else {
+                    alertError.innerHTML = `
+                        <strong>❌ Erro!</strong><br>
+                        ${data.error || 'Erro desconhecido'}
+                    `;
+                    alertError.style.display = 'block';
+                }
+                
+            } catch (error) {
+                alertError.innerHTML = `
+                    <strong>❌ Erro de Conexão!</strong><br>
+                    ${error.message}<br>
+                    Verifique se o servidor está online.
+                `;
+                alertError.style.display = 'block';
+            } finally {
+                // Reabilitar botão
+                btnEnviar.disabled = false;
+                btnEnviar.textContent = '✅ Atualizar PLACA';
+            }
+        });
+    </script>
+</body>
+</html>
