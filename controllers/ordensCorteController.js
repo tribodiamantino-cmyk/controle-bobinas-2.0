@@ -287,14 +287,19 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo, debugInfo = []) {
     
     // ETAPA 1: Verificar se TODOS os cortes podem ser atendidos por RETALHOS
     // IMPORTANTE: Rastrear alocações temporárias para evitar duplicação
+    // OTIMIZAÇÃO: Processar do MAIOR para o MENOR para minimizar desperdício!
     const alocacoesTemporariasEtapa1 = {};
     const sugestoesComRetalhos = [];
     let todosTemRetalho = true;
     
-    debugInfo.push(`\n🔍 [ETAPA1] Verificando ${cortesGrupo.length} cortes do produto ${produtoId}:`);
-    cortesGrupo.forEach(c => debugInfo.push(`   - Item ${c.id}: ${c.metragem}m`));
+    // ORDENAR cortes do MAIOR para o MENOR (otimiza aproveitamento de retalhos)
+    const cortesOrdenados = [...cortesGrupo].sort((a, b) => parseFloat(b.metragem) - parseFloat(a.metragem));
     
-    for (const item of cortesGrupo) {
+    debugInfo.push(`\n🔍 [ETAPA1] Verificando ${cortesOrdenados.length} cortes do produto ${produtoId}:`);
+    debugInfo.push(`   📏 Ordem de processamento (MAIOR → MENOR para otimizar):`);
+    cortesOrdenados.forEach(c => debugInfo.push(`      - Item ${c.id}: ${c.metragem}m`));
+    
+    for (const item of cortesOrdenados) {
         debugInfo.push(`\n   🔎 [ETAPA1] Processando item ${item.id} (${item.metragem}m)...`);
         const [retalhos] = await db.query(`
             SELECT 
