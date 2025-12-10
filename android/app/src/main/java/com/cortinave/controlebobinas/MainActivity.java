@@ -22,7 +22,7 @@ public class MainActivity extends BridgeActivity {
             WebSettings settings = getBridge().getWebView().getSettings();
             settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
             
-            android.util.Log.d("MainActivity", "🔥 Cache WebView DESABILITADO! v2.2.1-20251210-0915");
+            android.util.Log.d("MainActivity", "🔥 Cache WebView DESABILITADO! v2.2.2-20251210-0935");
         }
     }
 }
