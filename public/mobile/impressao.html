@@ -35,6 +35,28 @@
 
     <!-- CONTEÚDO -->
     <main class="app-main">
+        <!-- SEÇÃO: Etiquetas Pendentes (sempre visível no topo) -->
+        <div id="secao-pendentes" class="card" style="display: none; margin-bottom: 20px; border: 2px solid #f59e0b; background: #fffbeb;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #b45309;">
+                    🕐 Etiquetas Pendentes (<span id="contador-pendentes">0</span>)
+                </h3>
+                <button class="btn btn-secondary" onclick="limparFilaImpressao()" style="font-size: 12px; padding: 6px 12px;">
+                    🗑️ Limpar
+                </button>
+            </div>
+            
+            <div id="lista-pendentes" style="max-height: 300px; overflow-y: auto;">
+                <!-- Lista de etiquetas pendentes -->
+            </div>
+            
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="imprimirTodasPendentes()" style="flex: 1;">
+                    🖨️ Imprimir Todas
+                </button>
+            </div>
+        </div>
+
         <!-- Passo 1: Escolher tipo de impressão -->
         <div id="passo-tipo" class="passo active">
             <div class="card">

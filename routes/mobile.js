@@ -229,14 +229,55 @@ router.get('/ordens-producao', async (req, res) => {
                     ORDER BY ipc.ordem
                 `, [plano.id]);
                 
-                // Mapear itens para incluir info de tipo
+                // Buscar cortes já realizados para este plano
+                const [cortesRealizados] = await db.query(`
+                    SELECT 
+                        cr.id AS corte_id,
+                        cr.codigo_corte,
+                        cr.item_plano_corte_id,
+                        cr.metragem_cortada,
+                        cr.placa_origem,
+                        cr.codigo_origem,
+                        cr.data_corte,
+                        cr.operador_nome,
+                        p.codigo AS produto_codigo,
+                        c.nome_cor,
+                        g.gramatura
+                    FROM cortes_realizados cr
+                    LEFT JOIN produtos p ON cr.produto_id = p.id
+                    LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                    LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                    WHERE cr.plano_corte_id = ?
+                    ORDER BY cr.data_corte DESC
+                `, [plano.id]);
+                
+                // Mapear itens pendentes para incluir info de tipo
                 plano.itens = itens.filter(i => i.alocacao_id !== null).map(i => ({
                     ...i,
                     origem_id: i.bobina_id || i.retalho_id,
-                    tipo: i.tipo_origem || (i.bobina_id ? 'bobina' : 'retalho')
+                    tipo: i.tipo_origem || (i.bobina_id ? 'bobina' : 'retalho'),
+                    cortado: false
                 }));
+                
+                // Mapear cortes realizados (aparecem no final)
+                plano.cortesRealizados = cortesRealizados.map(cr => ({
+                    corte_id: cr.corte_id,
+                    codigo_corte: cr.codigo_corte,
+                    item_plano_corte_id: cr.item_plano_corte_id,
+                    metragem_cortada: cr.metragem_cortada,
+                    placa_origem: cr.placa_origem,
+                    codigo_origem: cr.codigo_origem,
+                    produto_codigo: cr.produto_codigo,
+                    nome_cor: cr.nome_cor,
+                    gramatura: cr.gramatura,
+                    data_corte: cr.data_corte,
+                    operador_nome: cr.operador_nome,
+                    cortado: true
+                }));
+                
                 plano.qtd_itens = plano.itens.length;
-                plano.qtd_total = itens.length;
+                plano.qtd_cortados = cortesRealizados.length;
+                plano.qtd_total = itens.length + cortesRealizados.length;
                 plano.observacoes = (plano.cliente || '') + (plano.aviario ? ' - ' + plano.aviario : '');
                 plano.fonte = 'planos';
                 

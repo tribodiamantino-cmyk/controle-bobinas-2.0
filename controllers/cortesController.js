@@ -73,6 +73,30 @@ exports.registrarCorte = async (req, res) => {
         // Gerar código do corte
         const codigo_corte = await gerarCodigoCorte();
         
+        // Buscar placa e código da origem (bobina ou retalho)
+        let placa_origem = null;
+        let codigo_origem = null;
+        
+        if (aloc.tipo_origem === 'bobina' && aloc.bobina_id) {
+            const [bobina] = await db.query(
+                `SELECT placa, codigo_interno FROM bobinas WHERE id = ?`,
+                [aloc.bobina_id]
+            );
+            if (bobina.length > 0) {
+                placa_origem = bobina[0].placa;
+                codigo_origem = bobina[0].codigo_interno;
+            }
+        } else if (aloc.tipo_origem === 'retalho' && aloc.retalho_id) {
+            const [retalho] = await db.query(
+                `SELECT placa, codigo_retalho FROM retalhos WHERE id = ?`,
+                [aloc.retalho_id]
+            );
+            if (retalho.length > 0) {
+                placa_origem = retalho[0].placa;
+                codigo_origem = retalho[0].codigo_retalho;
+            }
+        }
+        
         // Inserir corte
         const [result] = await db.query(`
             INSERT INTO cortes_realizados (
@@ -83,6 +107,10 @@ exports.registrarCorte = async (req, res) => {
                 origem_tipo,
                 bobina_id,
                 retalho_id,
+                bobina_origem_id,
+                retalho_origem_id,
+                placa_origem,
+                codigo_origem,
                 metragem_cortada,
                 produto_id,
                 bobina_validada_qr,
@@ -92,7 +120,7 @@ exports.registrarCorte = async (req, res) => {
                 operador_nome,
                 status,
                 observacoes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW(), ?, 'concluido', ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW(), ?, 'concluido', ?)
         `, [
             codigo_corte,
             aloc.plano_corte_id,
@@ -101,6 +129,10 @@ exports.registrarCorte = async (req, res) => {
             aloc.tipo_origem,
             aloc.bobina_id,
             aloc.retalho_id,
+            aloc.tipo_origem === 'bobina' ? aloc.bobina_id : null,
+            aloc.tipo_origem === 'retalho' ? aloc.retalho_id : null,
+            placa_origem,
+            codigo_origem,
             metragem_cortada,
             aloc.produto_id,
             true, // bobina_validada_qr (assumindo que validou)
@@ -142,7 +174,9 @@ exports.registrarCorte = async (req, res) => {
             success: true,
             corte: {
                 id: result.insertId,
-                codigo_corte: codigo_corte
+                codigo_corte: codigo_corte,
+                placa_origem: placa_origem,
+                codigo_origem: codigo_origem
             },
             restante: novaMetragemRestante,
             message: 'Corte registrado com sucesso!'

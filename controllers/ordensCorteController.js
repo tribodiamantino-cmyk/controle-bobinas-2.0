@@ -1139,10 +1139,12 @@ exports.finalizarPlano = async (req, res) => {
     }
 };
 
-// Excluir plano de corte (apenas se estiver em planejamento)
+// Excluir plano de corte
+// Se tiver cortes realizados, converte-os em retalhos para não perder material
 exports.excluirPlano = async (req, res) => {
     try {
         const { id } = req.params;
+        const { confirmarConversao } = req.body; // Flag para confirmar conversão de cortes
         
         const [planos] = await db.query(`
             SELECT status FROM planos_corte WHERE id = ?
@@ -1155,11 +1157,39 @@ exports.excluirPlano = async (req, res) => {
             });
         }
         
-        if (planos[0].status !== 'planejamento') {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Apenas planos em planejamento podem ser excluídos' 
+        // Verificar se há cortes realizados neste plano
+        const [cortesRealizados] = await db.query(`
+            SELECT cr.id, cr.codigo_corte, cr.metragem_cortada, cr.placa_origem
+            FROM cortes_realizados cr
+            WHERE cr.plano_corte_id = ?
+        `, [id]);
+        
+        // Se tem cortes e não confirmou conversão, retorna para pedir confirmação
+        if (cortesRealizados.length > 0 && !confirmarConversao) {
+            return res.status(409).json({
+                success: false,
+                requiresConfirmation: true,
+                cortesCount: cortesRealizados.length,
+                error: `Este plano possui ${cortesRealizados.length} corte(s) já realizado(s). Ao excluir, esses cortes serão convertidos em retalhos.`
             });
+        }
+        
+        // Se tem cortes, converter em retalhos
+        const retalhosConvertidos = [];
+        if (cortesRealizados.length > 0) {
+            const { converterCorteEmRetalho } = require('./retalhosController');
+            
+            for (const corte of cortesRealizados) {
+                try {
+                    const retalho = await converterCorteEmRetalho(corte.id);
+                    retalhosConvertidos.push(retalho);
+                } catch (err) {
+                    console.error(`❌ Erro ao converter corte ${corte.codigo_corte}:`, err);
+                }
+            }
+            
+            // Excluir cortes após converter
+            await db.query(`DELETE FROM cortes_realizados WHERE plano_corte_id = ?`, [id]);
         }
         
         // IMPORTANTE: Liberar reservas de metragem antes de excluir
@@ -1191,9 +1221,15 @@ exports.excluirPlano = async (req, res) => {
         // Excluir plano (cascata exclui itens e alocações)
         await db.query(`DELETE FROM planos_corte WHERE id = ?`, [id]);
         
+        let message = `Plano excluído com sucesso! ${alocacoes.length} reserva(s) liberada(s).`;
+        if (retalhosConvertidos.length > 0) {
+            message += ` ${retalhosConvertidos.length} corte(s) convertido(s) em retalhos.`;
+        }
+        
         res.json({ 
             success: true, 
-            message: `Plano excluído com sucesso! ${alocacoes.length} reserva(s) liberada(s).` 
+            message,
+            retalhosConvertidos
         });
         
     } catch (error) {
@@ -1336,9 +1372,11 @@ exports.adicionarItensPlano = async (req, res) => {
 };
 
 // Remover um item do plano
+// Se tiver corte realizado, converte em retalho
 exports.removerItemPlano = async (req, res) => {
     try {
         const { itemId } = req.params;
+        const { confirmarConversao } = req.body;
         
         // Buscar item e verificar status do plano
         const [itens] = await db.query(
@@ -1356,27 +1394,53 @@ exports.removerItemPlano = async (req, res) => {
             });
         }
         
-        if (itens[0].status !== 'planejamento') {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Apenas itens de planos em planejamento podem ser removidos' 
+        // Verificar se há cortes realizados para este item
+        const [cortesRealizados] = await db.query(`
+            SELECT cr.id, cr.codigo_corte, cr.metragem_cortada, cr.placa_origem
+            FROM cortes_realizados cr
+            WHERE cr.item_plano_corte_id = ?
+        `, [itemId]);
+        
+        // Se tem cortes e não confirmou conversão, retorna para pedir confirmação
+        if (cortesRealizados.length > 0 && !confirmarConversao) {
+            return res.status(409).json({
+                success: false,
+                requiresConfirmation: true,
+                cortesCount: cortesRealizados.length,
+                error: `Este item possui ${cortesRealizados.length} corte(s) já realizado(s). Ao remover, esses cortes serão convertidos em retalhos.`
             });
         }
         
-        // Verificar se tem alocação
-        const [alocacoes] = await db.query(
-            `SELECT id FROM alocacoes_corte WHERE item_plano_corte_id = ?`,
-            [itemId]
-        );
+        // Se tem cortes, converter em retalhos
+        const retalhosConvertidos = [];
+        if (cortesRealizados.length > 0) {
+            const { converterCorteEmRetalho } = require('./retalhosController');
+            
+            for (const corte of cortesRealizados) {
+                try {
+                    const retalho = await converterCorteEmRetalho(corte.id);
+                    retalhosConvertidos.push(retalho);
+                } catch (err) {
+                    console.error(`❌ Erro ao converter corte ${corte.codigo_corte}:`, err);
+                }
+            }
+            
+            // Excluir cortes após converter
+            await db.query(`DELETE FROM cortes_realizados WHERE item_plano_corte_id = ?`, [itemId]);
+        }
         
-        // Se tem alocação, excluir primeiro (CASCADE vai fazer isso automaticamente)
-        
-        // Excluir item
+        // Excluir item (CASCADE remove alocações)
         await db.query(`DELETE FROM itens_plano_corte WHERE id = ?`, [itemId]);
+        
+        let message = 'Item removido do plano';
+        if (retalhosConvertidos.length > 0) {
+            message += `. ${retalhosConvertidos.length} corte(s) convertido(s) em retalhos.`;
+        }
         
         res.json({ 
             success: true, 
-            message: 'Item removido do plano' 
+            message,
+            retalhosConvertidos
         });
         
     } catch (error) {

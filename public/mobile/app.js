@@ -13,6 +13,125 @@ const MODO_TESTE = new URLSearchParams(window.location.search).get('teste') === 
 // Estado de itens validados no modo teste (persiste na sessão)
 let itensValidadosTeste = [];
 
+// ========== FILA DE IMPRESSÃO (localStorage) ==========
+const FILA_STORAGE_KEY = 'fila_impressao_cortes';
+
+function obterFilaImpressao() {
+    try {
+        const fila = localStorage.getItem(FILA_STORAGE_KEY);
+        return fila ? JSON.parse(fila) : [];
+    } catch (e) {
+        console.error('Erro ao ler fila de impressão:', e);
+        return [];
+    }
+}
+
+function salvarFilaImpressao(fila) {
+    try {
+        localStorage.setItem(FILA_STORAGE_KEY, JSON.stringify(fila));
+    } catch (e) {
+        console.error('Erro ao salvar fila de impressão:', e);
+    }
+}
+
+function adicionarFilaImpressao(corte) {
+    const fila = obterFilaImpressao();
+    // Evitar duplicatas
+    if (!fila.find(c => c.codigo_corte === corte.codigo_corte)) {
+        fila.push({
+            codigo_corte: corte.codigo_corte,
+            metragem_cortada: corte.metragem_cortada,
+            produto_codigo: corte.produto_codigo,
+            nome_cor: corte.nome_cor,
+            gramatura: corte.gramatura,
+            largura: corte.largura,
+            codigo_plano: corte.codigo_plano,
+            placa_origem: corte.placa_origem,
+            operador: corte.operador || corte.operador_nome,
+            data_corte: corte.data_corte || new Date().toISOString(),
+            adicionado_em: new Date().toISOString()
+        });
+        salvarFilaImpressao(fila);
+        console.log(`📋 Etiqueta ${corte.codigo_corte} adicionada à fila de impressão`);
+    }
+    return fila;
+}
+
+function removerDaFilaImpressao(codigoCorte) {
+    let fila = obterFilaImpressao();
+    fila = fila.filter(c => c.codigo_corte !== codigoCorte);
+    salvarFilaImpressao(fila);
+    return fila;
+}
+
+function limparFilaImpressao() {
+    localStorage.removeItem(FILA_STORAGE_KEY);
+    mostrarToast('Fila de impressão limpa', 'success');
+    atualizarBadgeFilaImpressao();
+}
+
+function atualizarBadgeFilaImpressao() {
+    const fila = obterFilaImpressao();
+    const badges = document.querySelectorAll('.badge-fila-impressao');
+    badges.forEach(badge => {
+        if (fila.length > 0) {
+            badge.textContent = fila.length;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    });
+}
+
+// Modal para forçar impressão de etiquetas pendentes antes de finalizar
+async function mostrarModalImpressaoPendente(filaPendentes) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); display: flex; justify-content: center;
+            align-items: center; z-index: 10000; padding: 20px;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
+                <h3 style="color: #b45309; margin-bottom: 15px;">Etiquetas Pendentes!</h3>
+                <p style="color: #666; margin-bottom: 20px;">
+                    Você tem <strong style="color: #f59e0b;">${filaPendentes.length}</strong> etiqueta(s) aguardando impressão.
+                </p>
+                <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+                    Antes de finalizar o plano, imprima as etiquetas para identificação do material cortado.
+                </p>
+                
+                <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; max-height: 150px; overflow-y: auto;">
+                    ${filaPendentes.map(c => `
+                        <div style="display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px dashed #fcd34d;">
+                            <span style="font-weight: bold;">${c.codigo_corte}</span>
+                            <span>${c.metragem_cortada}m</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button onclick="irParaImpressao()" style="padding: 14px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">
+                        🖨️ Ir para Central de Impressão
+                    </button>
+                    <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" style="padding: 12px; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; font-size: 14px; cursor: pointer;">
+                        ← Voltar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    });
+}
+
+function irParaImpressao() {
+    window.location.href = '/mobile/impressao.html';
+}
+
 // Mostra banner de teste se ativo
 if (MODO_TESTE) {
     document.addEventListener('DOMContentLoaded', () => {
@@ -234,6 +353,9 @@ function renderizarDetalhesOrdem() {
     let itensComOrigem = ordemAtual.itens.filter(item => item.origem_id !== null && item.origem_id !== undefined);
     const itensSemOrigem = ordemAtual.itens.filter(item => item.origem_id === null || item.origem_id === undefined);
     
+    // Cortes já realizados (vem do backend)
+    const cortesRealizados = ordemAtual.cortesRealizados || [];
+    
     // No modo teste, filtrar itens já validados
     if (MODO_TESTE) {
         itensComOrigem = itensComOrigem.filter(item => {
@@ -242,8 +364,8 @@ function renderizarDetalhesOrdem() {
         });
     }
     
-    // Verificar se todos os itens foram concluídos (modo teste)
-    const todosItensConcluidos = MODO_TESTE && itensComOrigem.length === 0 && itensSemOrigem.length === 0 && itensValidadosTeste.length > 0;
+    // Verificar se todos os itens foram concluídos
+    const todosItensConcluidos = itensComOrigem.length === 0 && itensSemOrigem.length === 0 && (cortesRealizados.length > 0 || (MODO_TESTE && itensValidadosTeste.length > 0));
     
     container.innerHTML = `
         <div class="ordem-detalhes-header">
@@ -305,6 +427,32 @@ function renderizarDetalhesOrdem() {
                         </div>
                         <div style="color: #9ca3af; font-size: 0.875rem;">
                             ⚠️ Aguardando alocação no desktop
+                        </div>
+                    </div>
+                `).join('')}
+            ` : ''}
+            
+            ${cortesRealizados.length > 0 ? `
+                <h4 style="margin-top: 1.5rem; color: #059669;">✅ Cortes Realizados (${cortesRealizados.length})</h4>
+                ${cortesRealizados.map(corte => `
+                    <div class="item-card item-cortado" style="background: #d1fae5; border: 1px solid #10b981; opacity: 0.85;">
+                        <div class="item-header">
+                            <span class="item-bobina" style="color: #047857;">✅ ${corte.codigo_corte}</span>
+                            <span class="item-metragem" style="background: #10b981; color: white;">${corte.metragem_cortada}m</span>
+                        </div>
+                        <div class="item-info">
+                            <span>${corte.produto_codigo || ''} ${corte.nome_cor ? '- ' + corte.nome_cor : ''}</span>
+                            ${corte.placa_origem ? `<span style="color: #065f46;">🏷️ ${corte.placa_origem}</span>` : ''}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #6ee7b7;">
+                            <span style="font-size: 11px; color: #059669;">
+                                ${corte.operador_nome ? '👷 ' + corte.operador_nome : ''}
+                                ${corte.data_corte ? ' - ' + new Date(corte.data_corte).toLocaleString('pt-BR') : ''}
+                            </span>
+                            <button onclick="reimprimirCorte('${corte.codigo_corte}', ${JSON.stringify(corte).replace(/"/g, '&quot;')})" 
+                                    style="padding: 6px 12px; background: #047857; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                🖨️ Reimprimir
+                            </button>
                         </div>
                     </div>
                 `).join('')}
@@ -956,7 +1104,57 @@ async function oferecerImpressaoCorte(corte) {
     });
 }
 
-function imprimirEtiquetaCorte(corte) {
+async function imprimirEtiquetaCorte(corte) {
+    // Verificar se há impressora Bluetooth conectada (app nativo)
+    if (window.bluetoothPrinter && window.bluetoothPrinter.isConnected) {
+        try {
+            mostrarToast('🖨️ Imprimindo via Bluetooth...', 'info');
+            
+            // Formatar data
+            const dataCorte = corte.data_corte 
+                ? new Date(corte.data_corte).toLocaleDateString('pt-BR')
+                : new Date().toLocaleDateString('pt-BR');
+            
+            // Formatar item do produto
+            const itemProduto = [
+                corte.nome_cor || '',
+                corte.gramatura ? corte.gramatura + 'g' : '',
+                corte.largura ? corte.largura + 'm' : ''
+            ].filter(Boolean).join(' - ');
+            
+            await window.bluetoothPrinter.imprimirCorte({
+                codigo: corte.codigo_corte,
+                plano: corte.codigo_plano || 'Avulso',
+                item: itemProduto || corte.produto_codigo,
+                metragem: corte.metragem_cortada,
+                operador: corte.operador || 'N/A',
+                data: dataCorte
+            });
+            
+            mostrarToast('✅ Etiqueta impressa com sucesso!', 'success');
+            // Remover da fila se estava pendente
+            removerDaFilaImpressao(corte.codigo_corte);
+            atualizarBadgeFilaImpressao();
+            return;
+        } catch (error) {
+            console.error('❌ Erro na impressão Bluetooth:', error);
+            mostrarToast('❌ Erro na impressão: ' + (error.message || error), 'error');
+            // Adicionar à fila para imprimir depois
+            adicionarFilaImpressao(corte);
+            atualizarBadgeFilaImpressao();
+            return;
+        }
+    }
+    
+    // App nativo sem impressora conectada: adiciona à fila
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        adicionarFilaImpressao(corte);
+        atualizarBadgeFilaImpressao();
+        mostrarToast('📋 Etiqueta adicionada à fila (conecte a impressora para imprimir)', 'info');
+        return;
+    }
+    
+    // Fallback para browser: usa window.open (não funciona em Capacitor nativo)
     const htmlImpressao = `
         <!DOCTYPE html>
         <html>
@@ -2177,6 +2375,14 @@ async function finalizarItemCorte() {
 
 // ========== FINALIZAR PLANO (ESCANEAR LOCAÇÕES) ==========
 async function abrirFinalizarPlano(planoId) {
+    // Verificar se há etiquetas pendentes na fila
+    const filaPendentes = obterFilaImpressao();
+    if (filaPendentes.length > 0) {
+        // Mostrar modal obrigando impressão
+        await mostrarModalImpressaoPendente(filaPendentes);
+        return;
+    }
+    
     planoAtual = planoId;
     locacoesEscaneadas = [];
     
@@ -2384,15 +2590,44 @@ async function escanearOutroCorte() {
     iniciarScanner('consulta-corte');
 }
 
-function imprimirEtiquetaCorte() {
+async function imprimirEtiquetaCorteAtual() {
     if (!corteAtual) {
         mostrarToast('Erro: nenhum corte selecionado', 'error');
         return;
     }
     
-    // Abrir página de impressão em nova janela
-    const url = `/impressao/etiqueta-corte.html?codigo=${corteAtual.codigo_corte}`;
-    window.open(url, '_blank', 'width=800,height=600');
+    // Usar a função principal de impressão que já suporta Bluetooth
+    await imprimirEtiquetaCorte(corteAtual);
+}
+
+// Função para reimprimir etiqueta de corte já realizado
+async function reimprimirCorte(codigoCorte, corteData) {
+    // Converter de HTML entities se necessário
+    let corte = corteData;
+    if (typeof corteData === 'string') {
+        try {
+            corte = JSON.parse(corteData.replace(/&quot;/g, '"'));
+        } catch (e) {
+            console.error('Erro ao parsear dados do corte:', e);
+            mostrarToast('Erro ao preparar impressão', 'error');
+            return;
+        }
+    }
+    
+    // Mapear campos do corte realizado para formato de impressão
+    const corteParaImprimir = {
+        codigo_corte: corte.codigo_corte || codigoCorte,
+        metragem_cortada: corte.metragem_cortada,
+        produto_codigo: corte.produto_codigo,
+        nome_cor: corte.nome_cor,
+        gramatura: corte.gramatura,
+        codigo_plano: corte.codigo_plano,
+        placa_origem: corte.placa_origem,
+        operador: corte.operador_nome,
+        data_corte: corte.data_corte
+    };
+    
+    await imprimirEtiquetaCorte(corteParaImprimir);
 }
 
 // ========== CARREGAMENTO - LISTAR PLANOS ==========

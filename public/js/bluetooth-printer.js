@@ -325,6 +325,7 @@ class BluetoothPrinterManager {
 
     /**
      * Imprimir etiqueta de retalho
+     * Inclui placa se disponível (herdada da bobina de origem ou do corte convertido)
      */
     async imprimirRetalho(dados) {
         try {
@@ -334,6 +335,10 @@ class BluetoothPrinterManager {
             await this.printText(dados.codigo, 'center', true, '2x');
             await this.printText(dados.produto, 'center', false, 'normal');
             await this.printText(`${dados.metragem}m`, 'center', true, '2x');
+            // Placa de origem (para garantia/rastreabilidade)
+            if (dados.placa) {
+                await this.printText(`Placa: ${dados.placa}`, 'center', true, 'normal');
+            }
             await this.printText(dados.detalhes, 'center', false, 'normal');
             await this.sendCommand(this.ESC_POS.LINE_FEED + this.ESC_POS.LINE_FEED);
             await this.sendCommand(this.ESC_POS.CUT_PAPER);
@@ -348,16 +353,23 @@ class BluetoothPrinterManager {
 
     /**
      * Imprimir etiqueta de corte
+     * QR Code contém apenas o código simples (COR-2025-00001)
+     * Placa aparece no texto para rastreabilidade
      */
     async imprimirCorte(dados) {
         try {
             await this.sendCommand(this.ESC_POS.INIT);
+            // QR Code simples - apenas código do corte
             await this.printQRCode(dados.codigo, 5);
             await this.sendCommand(this.ESC_POS.LINE_FEED);
             await this.printText(dados.codigo, 'center', true, '2x');
             await this.printText(`Plano: ${dados.plano}`, 'center', false, 'normal');
             await this.printText(dados.item, 'center', false, 'normal');
             await this.printText(`${dados.metragem}m`, 'center', true, '2x');
+            // Placa de origem (para garantia/rastreabilidade)
+            if (dados.placa) {
+                await this.printText(`Placa: ${dados.placa}`, 'center', true, 'normal');
+            }
             await this.printText(`Op: ${dados.operador}`, 'center', false, 'normal');
             await this.printText(dados.data, 'center', false, 'normal');
             await this.sendCommand(this.ESC_POS.LINE_FEED + this.ESC_POS.LINE_FEED);

@@ -6,6 +6,188 @@ let html5QrCode = null;
 let bluetoothPrinter = null; // Instância do printer Bluetooth
 let isNativeApp = false; // Flag para detectar se está rodando em Capacitor
 
+// ========== FILA DE IMPRESSÃO (localStorage) ==========
+const FILA_STORAGE_KEY = 'fila_impressao_cortes';
+
+function obterFilaImpressao() {
+    try {
+        const fila = localStorage.getItem(FILA_STORAGE_KEY);
+        return fila ? JSON.parse(fila) : [];
+    } catch (e) {
+        console.error('Erro ao ler fila de impressão:', e);
+        return [];
+    }
+}
+
+function salvarFilaImpressao(fila) {
+    localStorage.setItem(FILA_STORAGE_KEY, JSON.stringify(fila));
+}
+
+function removerDaFilaImpressao(codigoCorte) {
+    let fila = obterFilaImpressao();
+    fila = fila.filter(c => c.codigo_corte !== codigoCorte);
+    salvarFilaImpressao(fila);
+    renderizarFilaPendentes();
+    return fila;
+}
+
+function limparFilaImpressao() {
+    localStorage.removeItem(FILA_STORAGE_KEY);
+    renderizarFilaPendentes();
+    mostrarMensagem('Fila de impressão limpa', 'success');
+}
+
+function renderizarFilaPendentes() {
+    const fila = obterFilaImpressao();
+    const secao = document.getElementById('secao-pendentes');
+    const lista = document.getElementById('lista-pendentes');
+    const contador = document.getElementById('contador-pendentes');
+    
+    if (!secao || !lista || !contador) return;
+    
+    contador.textContent = fila.length;
+    
+    if (fila.length === 0) {
+        secao.style.display = 'none';
+        return;
+    }
+    
+    secao.style.display = 'block';
+    
+    lista.innerHTML = fila.map(corte => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; border-radius: 6px; margin-bottom: 8px; border: 1px solid #fcd34d;">
+            <div style="flex: 1;">
+                <div style="font-weight: bold; color: #92400e;">${corte.codigo_corte}</div>
+                <div style="font-size: 12px; color: #78350f;">
+                    ${corte.metragem_cortada}m - ${corte.nome_cor || ''} ${corte.gramatura ? corte.gramatura + 'g' : ''}
+                </div>
+                ${corte.placa_origem ? `<div style="font-size: 11px; color: #a16207;">Placa: ${corte.placa_origem}</div>` : ''}
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="imprimirPendente('${corte.codigo_corte}')" style="padding: 8px 12px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    🖨️
+                </button>
+                <button onclick="removerDaFilaImpressao('${corte.codigo_corte}')" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    🗑️
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function imprimirPendente(codigoCorte) {
+    const fila = obterFilaImpressao();
+    const corte = fila.find(c => c.codigo_corte === codigoCorte);
+    
+    if (!corte) {
+        mostrarMensagem('Corte não encontrado na fila', 'error');
+        return;
+    }
+    
+    // Verificar se impressora está conectada
+    if (!window.bluetoothPrinter || !window.bluetoothPrinter.isConnected) {
+        mostrarMensagem('⚠️ Conecte a impressora primeiro', 'warning');
+        return;
+    }
+    
+    try {
+        mostrarMensagem('🖨️ Imprimindo...', 'info');
+        
+        const dataCorte = corte.data_corte 
+            ? new Date(corte.data_corte).toLocaleDateString('pt-BR')
+            : new Date().toLocaleDateString('pt-BR');
+        
+        const itemProduto = [
+            corte.nome_cor || '',
+            corte.gramatura ? corte.gramatura + 'g' : '',
+            corte.largura ? corte.largura + 'm' : ''
+        ].filter(Boolean).join(' - ');
+        
+        await window.bluetoothPrinter.imprimirCorte({
+            codigo: corte.codigo_corte,
+            plano: corte.codigo_plano || 'Avulso',
+            item: itemProduto || corte.produto_codigo,
+            metragem: corte.metragem_cortada,
+            operador: corte.operador || 'N/A',
+            data: dataCorte,
+            placa: corte.placa_origem
+        });
+        
+        // Remover da fila após imprimir com sucesso
+        removerDaFilaImpressao(codigoCorte);
+        mostrarMensagem('✅ Etiqueta impressa!', 'success');
+        
+    } catch (error) {
+        console.error('Erro ao imprimir:', error);
+        mostrarMensagem('❌ Erro: ' + (error.message || error), 'error');
+    }
+}
+
+async function imprimirTodasPendentes() {
+    const fila = obterFilaImpressao();
+    
+    if (fila.length === 0) {
+        mostrarMensagem('Nenhuma etiqueta pendente', 'info');
+        return;
+    }
+    
+    // Verificar se impressora está conectada
+    if (!window.bluetoothPrinter || !window.bluetoothPrinter.isConnected) {
+        mostrarMensagem('⚠️ Conecte a impressora primeiro', 'warning');
+        return;
+    }
+    
+    mostrarMensagem(`🖨️ Imprimindo ${fila.length} etiquetas...`, 'info');
+    
+    let impressas = 0;
+    let erros = 0;
+    
+    for (const corte of fila) {
+        try {
+            const dataCorte = corte.data_corte 
+                ? new Date(corte.data_corte).toLocaleDateString('pt-BR')
+                : new Date().toLocaleDateString('pt-BR');
+            
+            const itemProduto = [
+                corte.nome_cor || '',
+                corte.gramatura ? corte.gramatura + 'g' : '',
+                corte.largura ? corte.largura + 'm' : ''
+            ].filter(Boolean).join(' - ');
+            
+            await window.bluetoothPrinter.imprimirCorte({
+                codigo: corte.codigo_corte,
+                plano: corte.codigo_plano || 'Avulso',
+                item: itemProduto || corte.produto_codigo,
+                metragem: corte.metragem_cortada,
+                operador: corte.operador || 'N/A',
+                data: dataCorte,
+                placa: corte.placa_origem
+            });
+            
+            impressas++;
+            
+            // Pequeno delay entre impressões
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+        } catch (error) {
+            console.error(`Erro ao imprimir ${corte.codigo_corte}:`, error);
+            erros++;
+        }
+    }
+    
+    // Limpar fila após impressão
+    if (impressas > 0) {
+        localStorage.removeItem(FILA_STORAGE_KEY);
+        renderizarFilaPendentes();
+    }
+    
+    if (erros === 0) {
+        mostrarMensagem(`✅ ${impressas} etiquetas impressas!`, 'success');
+    } else {
+        mostrarMensagem(`⚠️ ${impressas} impressas, ${erros} com erro`, 'warning');
+    }
+}
+
 // ========== INICIALIZAÇÃO ==========
 
 // Detectar se está rodando em app nativo (Capacitor)
@@ -34,6 +216,10 @@ async function inicializarApp() {
             console.log('ℹ️ Rodando em PWA - Impressão via navegador');
             isNativeApp = false;
         }
+        
+        // Renderizar fila de pendentes ao carregar
+        renderizarFilaPendentes();
+        
     } catch (error) {
         console.error('Erro ao inicializar app:', error);
         isNativeApp = false;
@@ -41,7 +227,9 @@ async function inicializarApp() {
 }
 
 // Executar inicialização
-inicializarApp();
+document.addEventListener('DOMContentLoaded', () => {
+    inicializarApp();
+});
 
 // ========== MENSAGENS (TOAST) ==========
 

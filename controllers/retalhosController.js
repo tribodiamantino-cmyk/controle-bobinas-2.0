@@ -109,16 +109,17 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         // Gerar código do retalho
         const codigo_retalho = await gerarCodigoRetalho();
         
-        // Criar retalho com a metragem atual da bobina
+        // Criar retalho com a metragem atual da bobina (herdando placa)
         const [result] = await db.query(
             `INSERT INTO retalhos 
-            (codigo_retalho, produto_id, metragem, bobina_origem_id, observacoes) 
-            VALUES (?, ?, ?, ?, ?)`,
+            (codigo_retalho, produto_id, metragem, bobina_origem_id, placa, observacoes) 
+            VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 codigo_retalho, 
                 bobina.produto_id, 
                 bobina.metragem_atual,
                 bobina_id,
+                bobina.placa || null, // Herdar placa da bobina
                 `Convertido da bobina ${bobina.codigo_interno}`
             ]
         );
@@ -395,3 +396,63 @@ exports.excluirRetalho = async (req, res) => {
         });
     }
 };
+
+// ========== FUNÇÕES AUXILIARES EXPORTADAS ==========
+
+/**
+ * Gerar código de retalho (exportado para uso em outros controllers)
+ */
+exports.gerarCodigoRetalho = gerarCodigoRetalho;
+
+/**
+ * Converter um corte realizado em retalho
+ * Usado quando plano ou item é excluído e já tinha cortes realizados
+ * @param {number} corteId - ID do corte a converter
+ * @returns {Object} - Dados do retalho criado
+ */
+exports.converterCorteEmRetalho = async function(corteId) {
+    // Buscar dados do corte
+    const [cortes] = await db.query(`
+        SELECT 
+            cr.*,
+            p.id as produto_id,
+            p.codigo as produto_codigo
+        FROM cortes_realizados cr
+        JOIN produtos p ON cr.produto_id = p.id
+        WHERE cr.id = ?
+    `, [corteId]);
+    
+    if (cortes.length === 0) {
+        throw new Error(`Corte ID ${corteId} não encontrado`);
+    }
+    
+    const corte = cortes[0];
+    
+    // Gerar código do retalho
+    const codigo_retalho = await gerarCodigoRetalho();
+    
+    // Criar retalho com dados do corte
+    const [result] = await db.query(`
+        INSERT INTO retalhos 
+        (codigo_retalho, produto_id, metragem, placa, corte_origem_id, observacoes) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    `, [
+        codigo_retalho,
+        corte.produto_id,
+        corte.metragem_cortada,
+        corte.placa_origem,
+        corteId,
+        `Convertido do corte ${corte.codigo_corte}`
+    ]);
+    
+    console.log(`✅ Corte ${corte.codigo_corte} convertido em retalho ${codigo_retalho}`);
+    
+    return {
+        id: result.insertId,
+        codigo_retalho: codigo_retalho,
+        metragem: corte.metragem_cortada,
+        placa: corte.placa_origem,
+        corte_origem: corte.codigo_corte
+    };
+};
+
