@@ -76,7 +76,7 @@ exports.criarObraPadraoDePlano = async (req, res) => {
             });
         }
 
-        // Verificar se plano existe
+        // Verificar se plano existe e pegar a loja
         const [planos] = await connection.query(`
             SELECT * FROM planos_corte WHERE id = ?
         `, [plano_id]);
@@ -86,11 +86,13 @@ exports.criarObraPadraoDePlano = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Plano não encontrado' });
         }
 
-        // Criar obra padrão
+        const plano = planos[0];
+
+        // Criar obra padrão com a loja do plano
         const [result] = await connection.query(`
-            INSERT INTO obras_padrao (nome, descricao, criado_de_plano_id)
-            VALUES (?, ?, ?)
-        `, [nome, descricao || null, plano_id]);
+            INSERT INTO obras_padrao (nome, descricao, criado_de_plano_id, loja)
+            VALUES (?, ?, ?, ?)
+        `, [nome, descricao || null, plano_id, plano.loja || 'Cortinave']);
 
         const obraPadraoId = result.insertId;
 
@@ -183,6 +185,30 @@ exports.criarObraPadraoManual = async (req, res) => {
     }
 };
 
+// Função auxiliar para gerar código do plano
+async function gerarCodigoPlano(connection, loja = 'Cortinave') {
+    const prefixo = loja === 'BN' ? 'BNN' : 'PLA';
+    const ano = new Date().getFullYear();
+    
+    // Buscar último código do ano para esta loja
+    const [ultimoCodigo] = await connection.query(`
+        SELECT codigo_plano FROM planos_corte 
+        WHERE codigo_plano LIKE ? 
+        AND YEAR(data_criacao) = ?
+        ORDER BY id DESC LIMIT 1
+    `, [`${prefixo}-%`, ano]);
+    
+    let sequencial = 1;
+    if (ultimoCodigo.length > 0) {
+        const match = ultimoCodigo[0].codigo_plano.match(/-(\d+)$/);
+        if (match) {
+            sequencial = parseInt(match[1]) + 1;
+        }
+    }
+    
+    return `${prefixo}-${sequencial.toString().padStart(4, '0')}`;
+}
+
 // Criar novo plano a partir de uma obra padrão
 exports.criarPlanoDeObraPadrao = async (req, res) => {
     const connection = await db.getConnection();
@@ -190,12 +216,12 @@ exports.criarPlanoDeObraPadrao = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const { obra_padrao_id, codigo_plano, cliente, aviario } = req.body;
+        const { obra_padrao_id, codigo_plano, cliente, aviario, loja } = req.body;
 
-        if (!obra_padrao_id || !codigo_plano) {
+        if (!obra_padrao_id) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Obra padrão ID e código do plano são obrigatórios' 
+                error: 'Obra padrão ID é obrigatório' 
             });
         }
 
@@ -209,11 +235,17 @@ exports.criarPlanoDeObraPadrao = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Obra padrão não encontrada' });
         }
 
+        // Determinar loja (do parâmetro, da obra padrão, ou padrão)
+        const lojaFinal = loja || obras[0].loja || 'Cortinave';
+        
+        // Gerar código automaticamente (ou usar o fornecido para compatibilidade)
+        const codigoFinal = codigo_plano || await gerarCodigoPlano(connection, lojaFinal);
+
         // Criar novo plano
         const [result] = await connection.query(`
-            INSERT INTO planos_corte (codigo_plano, cliente, aviario, status, obra_padrao_id)
-            VALUES (?, ?, ?, 'planejamento', ?)
-        `, [codigo_plano, cliente || null, aviario || null, obra_padrao_id]);
+            INSERT INTO planos_corte (codigo_plano, cliente, aviario, status, obra_padrao_id, loja)
+            VALUES (?, ?, ?, 'planejamento', ?, ?)
+        `, [codigoFinal, cliente || null, aviario || null, obra_padrao_id, lojaFinal]);
 
         const planoId = result.insertId;
 

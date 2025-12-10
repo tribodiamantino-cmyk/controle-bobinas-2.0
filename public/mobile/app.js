@@ -925,6 +925,31 @@ async function confirmarValidacao(event) {
                 // Acabaram todos os cortes deste grupo/bobina
                 console.log('📦 Todos os cortes desta bobina foram concluídos!');
                 
+                // Verificar se bobina/retalho zerou completamente
+                const metragemRestante = parseFloat(data.data.metragem_restante) || 0;
+                
+                if (metragemRestante <= 0) {
+                    console.log('🗑️ Material zerou após corte - não precisa guardar');
+                    mostrarToast('✅ Material utilizado completamente!', 'success');
+                    
+                    // Limpar estado do grupo
+                    itensGrupoAtual = [];
+                    indiceItemAtual = 0;
+                    itemValidando = null;
+                    bobinaAtual = null;
+                    
+                    // Verificar se plano completo
+                    if (data.data.plano_completo) {
+                        await solicitarAlocacaoPlano(ordemAtual.id, ordemAtual.numero_ordem || ordemAtual.id);
+                        return;
+                    }
+                    
+                    // Voltar para lista de ordens
+                    await carregarOrdensProducao();
+                    mostrarPasso('passo-lista-ordens');
+                    return;
+                }
+                
                 // Guardar ID da bobina que precisa ser guardada
                 const bobinaParaGuardar = {
                     id: bobinaAtual.id,
@@ -946,6 +971,29 @@ async function confirmarValidacao(event) {
             if (data.data.bobina_concluida) {
                 console.log('📦 Todos os cortes desta bobina foram concluídos!');
                 console.log('📍 Bobina ID:', bobinaAtual.id);
+                
+                // Verificar se bobina/retalho zerou completamente
+                const metragemRestante = parseFloat(data.data.metragem_restante) || 0;
+                
+                if (metragemRestante <= 0) {
+                    console.log('🗑️ Material zerou após corte - não precisa guardar');
+                    mostrarToast('✅ Material utilizado completamente!', 'success');
+                    
+                    // Limpar estado
+                    itemValidando = null;
+                    bobinaAtual = null;
+                    
+                    // Verificar se plano completo
+                    if (data.data.plano_completo) {
+                        await solicitarAlocacaoPlano(ordemAtual.id, ordemAtual.numero_ordem || ordemAtual.id);
+                        return;
+                    }
+                    
+                    // Voltar para lista de ordens
+                    await carregarOrdensProducao();
+                    mostrarPasso('passo-lista-ordens');
+                    return;
+                }
                 
                 // Guardar ID da bobina que precisa ser guardada
                 const bobinaParaGuardar = {

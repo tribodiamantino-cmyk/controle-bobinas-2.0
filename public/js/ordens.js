@@ -434,6 +434,7 @@ function removerProduto(produtoId) {
 document.getElementById('formNovoPlano').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const loja = document.getElementById('lojaPlano').value;
     const cliente = document.getElementById('clientePlano').value.trim();
     const aviario = document.getElementById('aviarioPlano').value.trim();
     
@@ -460,7 +461,7 @@ document.getElementById('formNovoPlano').addEventListener('submit', async (e) =>
         const response = await fetch(`${API_BASE}/ordens-corte`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cliente, aviario, itens })
+            body: JSON.stringify({ loja, cliente, aviario, itens })
         });
         
         const data = await response.json();
@@ -1563,13 +1564,18 @@ async function carregarTemplates() {
             return;
         }
         
-        container.innerHTML = templates.map(template => `
+        container.innerHTML = templates.map(template => {
+            const lojaBadge = template.loja === 'BN' 
+                ? '<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">BN</span>'
+                : '<span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">CTV</span>';
+            
+            return `
             <div class="template-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; cursor: pointer; transition: all 0.2s;" 
-                 onclick="usarTemplate(${template.id})"
+                 onclick="usarTemplate(${template.id}, '${template.loja || 'Cortinave'}')"
                  onmouseenter="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
                  onmouseleave="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                    <h3 style="margin: 0; color: var(--primary-color);">📋 ${template.nome}</h3>
+                    <h3 style="margin: 0; color: var(--primary-color);">📋 ${template.nome}${lojaBadge}</h3>
                     <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); excluirTemplate(${template.id})" title="Excluir template">🗑️</button>
                 </div>
                 ${template.descricao ? `<p style="color: #666; margin: 8px 0;">${template.descricao}</p>` : ''}
@@ -1580,7 +1586,7 @@ async function carregarTemplates() {
                 </div>
                 ${template.produtos ? `<div style="margin-top: 10px; font-size: 13px; color: #888;">Produtos: ${template.produtos}</div>` : ''}
             </div>
-        `).join('');
+        `}).join('');
         
     } catch (error) {
         showNotification('Erro ao carregar templates: ' + error.message, 'error');
@@ -1588,11 +1594,17 @@ async function carregarTemplates() {
     }
 }
 
-async function usarTemplate(templateId) {
+async function usarTemplate(templateId, lojaTemplate) {
     // Armazenar o ID do template e abrir modal para pedir cliente e aviário
     window.templateSelecionadoId = templateId;
     document.getElementById('modalCriarPlanoTemplate').style.display = 'flex';
     document.getElementById('formCriarPlanoTemplate').reset();
+    
+    // Pré-selecionar a loja do template
+    const lojaSelect = document.getElementById('lojaPlanoTemplate');
+    if (lojaSelect && lojaTemplate) {
+        lojaSelect.value = lojaTemplate;
+    }
     
     // Focar no primeiro campo
     setTimeout(() => {
@@ -1607,6 +1619,7 @@ function fecharModalCriarPlanoTemplate() {
 
 async function confirmarCriarPlanoTemplate() {
     try {
+        const loja = document.getElementById('lojaPlanoTemplate').value;
         const cliente = document.getElementById('clientePlanoTemplate').value.trim();
         const aviario = document.getElementById('aviarioPlanoTemplate').value.trim();
         
@@ -1621,18 +1634,15 @@ async function confirmarCriarPlanoTemplate() {
             return;
         }
         
-        // Criar código do plano
-        const timestamp = Date.now();
-        const codigoPlano = `${cliente.substring(0, 3).toUpperCase()}-${aviario.substring(0, 3).toUpperCase()}-${timestamp}`;
-        
         showNotification('Criando plano a partir do template...', 'info');
         
+        // Backend gera o código automaticamente baseado na loja
         const response = await fetch(`${API_BASE}/obras-padrao/criar-plano`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 obra_padrao_id: templateId,
-                codigo_plano: codigoPlano,
+                loja: loja,
                 cliente: cliente,
                 aviario: aviario
             })

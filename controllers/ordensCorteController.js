@@ -1,12 +1,16 @@
 const db = require('../config/database');
 const { validarECorrigirReservas } = require('../middleware/validarReservas');
 
-// Gerar código QR único para plano de corte (formato: PLA-0001)
-async function gerarCodigoPlano() {
+// Gerar código QR único para plano de corte
+// PLA-XXXX para Cortinave/Palotina, BNN-XXXX para BN
+async function gerarCodigoPlano(loja = 'Cortinave') {
+    const prefixo = loja === 'BN' ? 'BNN' : 'PLA';
+    
     const [rows] = await db.query(
         `SELECT codigo_plano FROM planos_corte 
-         WHERE codigo_plano LIKE 'PLA-%' 
-         ORDER BY id DESC LIMIT 1`
+         WHERE codigo_plano LIKE ? 
+         ORDER BY id DESC LIMIT 1`,
+        [`${prefixo}-%`]
     );
     
     let proximoNumero = 1;
@@ -16,13 +20,16 @@ async function gerarCodigoPlano() {
         proximoNumero = numeroAtual + 1;
     }
     
-    return `PLA-${proximoNumero.toString().padStart(4, '0')}`;
+    return `${prefixo}-${proximoNumero.toString().padStart(4, '0')}`;
 }
 
 // Criar novo plano de corte
 exports.criarPlano = async (req, res) => {
     try {
-        const { cliente, aviario, itens } = req.body;
+        const { cliente, aviario, itens, loja } = req.body;
+        
+        // Usar loja passada ou default para Cortinave
+        const lojaPlano = loja || 'Cortinave';
         
         if (!cliente || !aviario || !itens || itens.length === 0) {
             return res.status(400).json({ 
@@ -31,14 +38,14 @@ exports.criarPlano = async (req, res) => {
             });
         }
         
-        // Gerar código único
-        const codigo_plano = await gerarCodigoPlano();
+        // Gerar código único baseado na loja
+        const codigo_plano = await gerarCodigoPlano(lojaPlano);
         
         // Inserir plano de corte
         const [resultPlano] = await db.query(
-            `INSERT INTO planos_corte (codigo_plano, cliente, aviario) 
-             VALUES (?, ?, ?)`,
-            [codigo_plano, cliente, aviario]
+            `INSERT INTO planos_corte (codigo_plano, cliente, aviario, loja) 
+             VALUES (?, ?, ?, ?)`,
+            [codigo_plano, cliente, aviario, lojaPlano]
         );
         
         const planoId = resultPlano.insertId;
