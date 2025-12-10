@@ -9,7 +9,6 @@ let corteAtual = null; // Para função de impressão
 
 // MODO TESTE - detecta ?teste=1 na URL
 const MODO_TESTE = new URLSearchParams(window.location.search).get('teste') === '1';
-const API_BASE = MODO_TESTE ? '/api/mobile/teste' : '/api/mobile';
 
 // Estado de itens validados no modo teste (persiste na sessão)
 let itensValidadosTeste = [];
@@ -720,7 +719,9 @@ async function confirmarValidacao(event) {
         }
         
         // Usa endpoint de teste ou produção conforme o modo
-        const endpoint = MODO_TESTE ? '/api/mobile/teste/validar-item' : '/api/mobile/validar-item';
+        const endpoint = MODO_TESTE 
+            ? API_CONFIG.mobileUrl('teste/validar-item') 
+            : API_CONFIG.mobileUrl('validar-item');
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -1111,8 +1112,8 @@ async function processarLocalizacao(codigoLocalizacao) {
         
         // Atualizar localização da bobina no banco
         const endpoint = bobinaAguardandoLocalizacao.tipo === 'retalho' 
-            ? '/api/mobile/atualizar-localizacao-retalho'
-            : '/api/mobile/atualizar-localizacao-bobina';
+            ? API_CONFIG.mobileUrl('atualizar-localizacao-retalho')
+            : API_CONFIG.mobileUrl('atualizar-localizacao-bobina');
             
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -1547,7 +1548,9 @@ async function carregarBobina(bobinaId, tipo) {
     
     try {
         // Usa endpoint de teste ou produção conforme o modo
-        const endpoint = MODO_TESTE ? `/api/mobile/teste/bobina/${bobinaId}` : `/api/mobile/bobina/${bobinaId}`;
+        const endpoint = MODO_TESTE 
+            ? API_CONFIG.mobileUrl(`teste/bobina/${bobinaId}`) 
+            : API_CONFIG.mobileUrl(`bobina/${bobinaId}`);
         const response = await fetch(endpoint);
         const data = await response.json();
         
@@ -2181,7 +2184,9 @@ async function abrirFinalizarPlano(planoId) {
     
     // Buscar info do plano
     try {
-        const endpoint = MODO_TESTE ? `/api/mobile/teste/plano/${planoId}` : `/api/mobile/plano/${planoId}`;
+        const endpoint = MODO_TESTE 
+            ? API_CONFIG.mobileUrl(`teste/plano/${planoId}`) 
+            : API_CONFIG.mobileUrl(`plano/${planoId}`);
         const response = await fetch(endpoint);
         const data = await response.json();
         
@@ -2229,8 +2234,8 @@ async function processarScanLocacao(qrData) {
         
         // Buscar info da locação (endpoint de teste ou real)
         const endpoint = MODO_TESTE 
-            ? `/api/mobile/teste/locacao/${encodeURIComponent(codigoLocacao)}` 
-            : `/api/locacoes/codigo/${encodeURIComponent(codigoLocacao)}`;
+            ? API_CONFIG.mobileUrl(`teste/locacao/${encodeURIComponent(codigoLocacao)}`)
+            : API_CONFIG.url(`api/locacoes/codigo/${encodeURIComponent(codigoLocacao)}`);
         const response = await fetch(endpoint);
         const data = await response.json();
         
@@ -2281,8 +2286,8 @@ async function confirmarFinalizacao() {
         await pararScanner();
         
         const endpoint = MODO_TESTE 
-            ? `/api/mobile/teste/plano/${planoAtual}/finalizar` 
-            : `/api/mobile/plano/${planoAtual}/finalizar`;
+            ? API_CONFIG.mobileUrl(`teste/plano/${planoAtual}/finalizar`)
+            : API_CONFIG.mobileUrl(`plano/${planoAtual}/finalizar`);
             
         const response = await fetch(endpoint, {
             method: 'POST',
