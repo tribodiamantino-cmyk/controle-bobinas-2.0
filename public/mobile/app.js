@@ -144,6 +144,15 @@ async function carregarOrdensProducao() {
         // Usa endpoint de teste ou produção conforme o modo
         const endpoint = MODO_TESTE ? '/api/mobile/teste/plano' : '/api/mobile/ordens-producao';
         const response = await fetch(endpoint);
+        
+        // Verificar se resposta é JSON válido
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('❌ Resposta não é JSON:', text.substring(0, 200));
+            throw new Error('Servidor retornou resposta inválida (não-JSON)');
+        }
+        
         const data = await response.json();
         
         if (data.success) {
@@ -2731,6 +2740,28 @@ window.onScanSucesso = async function(qrData, tipo) {
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', () => {
     console.log('📱 Bobinas App carregado!');
+    
+    // HANDLER BOTÃO VOLTAR DO ANDROID
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        document.addEventListener('backbutton', (e) => {
+            e.preventDefault();
+            
+            // Se está no menu principal, minimiza o app (não fecha)
+            const menuPrincipal = document.getElementById('menu-principal');
+            if (menuPrincipal && menuPrincipal.classList.contains('tela-ativa')) {
+                // Minimizar app ao invés de fechar
+                if (window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                    window.Capacitor.Plugins.App.minimizeApp();
+                }
+                return;
+            }
+            
+            // Se está em outra tela, volta pro menu
+            voltarMenu();
+        });
+        
+        console.log('✅ Back button handler registrado');
+    }
     
     // Registrar Service Worker para PWA
     if ('serviceWorker' in navigator) {
