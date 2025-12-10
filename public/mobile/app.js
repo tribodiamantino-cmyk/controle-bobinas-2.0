@@ -2830,19 +2830,23 @@ async function iniciarNovoCarregamento(planoId, codigoPlano, totalCortes) {
         });
         
         const data = await response.json();
+        console.log('📦 Resposta carregamento/iniciar:', data);
         
         if (!data.success) {
             // Se já existe carregamento em andamento, continuar com ele
             if (data.carregamento_id) {
                 mostrarToast('Continuando carregamento em andamento...', 'info');
-                // Aqui poderia buscar dados do carregamento existente
-                // Por ora, apenas mostra mensagem
                 return;
             }
             throw new Error(data.error);
         }
         
-        carregamentoEmAndamento = data.data;
+        // Backend retorna { carregamento: {...}, cortes: [...] }
+        carregamentoEmAndamento = {
+            ...data.carregamento,
+            codigo_plano: codigoPlano,
+            cortes: data.cortes || []
+        };
         cortesValidados = [];
         
         // Exibir tela de validação
@@ -2855,7 +2859,7 @@ async function iniciarNovoCarregamento(planoId, codigoPlano, totalCortes) {
                     ${carregamentoEmAndamento.codigo_carregamento}
                 </h3>
                 <div style="font-size: 14px; color: #075985;">
-                    <div>📋 Plano: <strong>${carregamentoEmAndamento.codigo_plano}</strong></div>
+                    <div>📋 Plano: <strong>${codigoPlano}</strong></div>
                     <div>📦 Total de cortes: <strong>${carregamentoEmAndamento.total_cortes}</strong></div>
                 </div>
             </div>
