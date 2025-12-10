@@ -248,19 +248,27 @@ exports.sugerirAlocacoes = async (req, res) => {
         });
         
         const sugestoes = [];
+        const debugInfo = []; // Para mostrar no console do navegador
         
         // Processar cada grupo de produto
         for (const produtoId in cortesPorProduto) {
             const cortesGrupo = cortesPorProduto[produtoId];
             
+            debugInfo.push(`🔍 Processando ${cortesGrupo.length} cortes do produto ${produtoId}`);
+            cortesGrupo.forEach(c => debugInfo.push(`   - Item ${c.id}: ${c.metragem}m`));
+            
             // Tentar alocar todos os cortes do mesmo produto em UMA bobina
-            const sugestoesGrupo = await sugerirOrigemParaGrupo(produtoId, cortesGrupo);
+            const sugestoesGrupo = await sugerirOrigemParaGrupo(produtoId, cortesGrupo, debugInfo);
             sugestoes.push(...sugestoesGrupo);
         }
         
+        // Adicionar debug info na resposta
+        console.log('\n' + debugInfo.join('\n') + '\n');
+        
         res.json({ 
             success: true, 
-            data: sugestoes 
+            data: sugestoes,
+            debug: debugInfo // Enviar para o navegador também
         });
         
     } catch (error) {
@@ -274,7 +282,7 @@ exports.sugerirAlocacoes = async (req, res) => {
 
 // Função auxiliar: sugerir origens para um GRUPO de cortes do mesmo produto
 // PRIORIZA: 1º Retalhos individuais, 2º Bobina única, 3º Bobinas individuais
-async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
+async function sugerirOrigemParaGrupo(produtoId, cortesGrupo, debugInfo = []) {
     const metragemTotal = cortesGrupo.reduce((sum, item) => sum + parseFloat(item.metragem), 0);
     
     // ETAPA 1: Verificar se TODOS os cortes podem ser atendidos por RETALHOS
@@ -283,11 +291,11 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
     const sugestoesComRetalhos = [];
     let todosTemRetalho = true;
     
-    console.log(`\n🔍 [ETAPA1] Verificando ${cortesGrupo.length} cortes do produto ${produtoId}:`);
-    cortesGrupo.forEach(c => console.log(`   - Item ${c.id}: ${c.metragem}m`));
+    debugInfo.push(`\n🔍 [ETAPA1] Verificando ${cortesGrupo.length} cortes do produto ${produtoId}:`);
+    cortesGrupo.forEach(c => debugInfo.push(`   - Item ${c.id}: ${c.metragem}m`));
     
     for (const item of cortesGrupo) {
-        console.log(`\n   🔎 [ETAPA1] Processando item ${item.id} (${item.metragem}m)...`);
+        debugInfo.push(`\n   🔎 [ETAPA1] Processando item ${item.id} (${item.metragem}m)...`);
         const [retalhos] = await db.query(`
             SELECT 
                 r.*,
@@ -300,7 +308,7 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
         `, [produtoId, item.metragem, item.metragem]);
         
         // Verificar CADA retalho descontando alocações temporárias
-        console.log(`   📦 [ETAPA1] Query retornou ${retalhos.length} retalho(s) com >= ${item.metragem}m`);
+        debugInfo.push(`   📦 [ETAPA1] Query retornou ${retalhos.length} retalho(s) com >= ${item.metragem}m`);
         
         let retalhoEncontrado = false;
         for (const retalho of retalhos) {
@@ -308,12 +316,12 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
             const metragemJaAlocada = alocacoesTemporariasEtapa1[chave] || 0;
             const metragemRealDisponivel = parseFloat(retalho.metragem_disponivel) - metragemJaAlocada;
             
-            console.log(`      📊 [ETAPA1] ${retalho.codigo_retalho} (ID:${retalho.id}): ${retalho.metragem_disponivel}m banco - ${metragemJaAlocada}m temp = ${metragemRealDisponivel.toFixed(2)}m real`);
+            debugInfo.push(`      📊 [ETAPA1] ${retalho.codigo_retalho} (ID:${retalho.id}): ${retalho.metragem_disponivel}m banco - ${metragemJaAlocada}m temp = ${metragemRealDisponivel.toFixed(2)}m real`);
             
             if (metragemRealDisponivel >= parseFloat(item.metragem)) {
                 // Retalho OK! Registrar alocação temporária
                 alocacoesTemporariasEtapa1[chave] = metragemJaAlocada + parseFloat(item.metragem);
-                console.log(`      ✅ [ETAPA1] Retalho ${retalho.codigo_retalho} ALOCADO para item ${item.id} (${item.metragem}m) - Nova temp: ${alocacoesTemporariasEtapa1[chave]}m`);
+                debugInfo.push(`      ✅ [ETAPA1] Retalho ${retalho.codigo_retalho} ALOCADO para item ${item.id} (${item.metragem}m) - Nova temp: ${alocacoesTemporariasEtapa1[chave]}m`);
                 
                 sugestoesComRetalhos.push({
                     item_id: item.id,
@@ -338,20 +346,20 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
         
         if (!retalhoEncontrado) {
             todosTemRetalho = false;
-            console.log(`      ❌ [ETAPA1] SEM retalho suficiente para item ${item.id} (precisa ${item.metragem}m)`);
+            debugInfo.push(`      ❌ [ETAPA1] SEM retalho suficiente para item ${item.id} (precisa ${item.metragem}m)`);
             break; // Se um não tem retalho, já para de procurar
         }
     }
     
-    console.log(`\n   📋 [ETAPA1] Resultado: todosTemRetalho=${todosTemRetalho}, sugestoes=${sugestoesComRetalhos.length}/${cortesGrupo.length}`);
+    debugInfo.push(`\n   📋 [ETAPA1] Resultado: todosTemRetalho=${todosTemRetalho}, sugestoes=${sugestoesComRetalhos.length}/${cortesGrupo.length}`);
     
     // Se TODOS os cortes têm retalhos disponíveis, usar retalhos!
     if (todosTemRetalho && sugestoesComRetalhos.length === cortesGrupo.length) {
-        console.log(`   ✅ [ETAPA1] SUCESSO! Usando ${sugestoesComRetalhos.length} retalho(s) individuais para produto ${produtoId}\n`);
+        debugInfo.push(`   ✅ [ETAPA1] SUCESSO! Usando ${sugestoesComRetalhos.length} retalho(s) individuais para produto ${produtoId}\n`);
         return sugestoesComRetalhos;
     }
     
-    console.log(`   ⚠️  [ETAPA1] FALHOU. Tentando bobina única...`);
+    debugInfo.push(`   ⚠️  [ETAPA1] FALHOU. Tentando bobina única...`);
     
     // ETAPA 2: Tentar encontrar UMA BOBINA que atenda TODOS os cortes
     const [bobinaUnica] = await db.query(`

@@ -1123,6 +1123,15 @@ async function alocarAutomaticamente(planoId) {
         const response = await fetch(`${API_BASE}/ordens-corte/${planoId}/sugestoes`);
         const data = await response.json();
         
+        // 🔍 MOSTRAR DEBUG INFO NO CONSOLE
+        if (data.debug && data.debug.length > 0) {
+            console.log('\n========================================');
+            console.log('🔍 DEBUG AUTOALOCAR');
+            console.log('========================================');
+            data.debug.forEach(msg => console.log(msg));
+            console.log('========================================\n');
+        }
+        
         if (!data.success) {
             showNotification('Erro ao buscar sugestões: ' + data.error, 'error');
             return;
