@@ -1381,27 +1381,65 @@ function fecharModalFinalizacao() {
 }
 
 // ========== EXCLUIR PLANO ==========
-async function excluirPlano(planoId) {
-    if (!confirm('Deseja realmente excluir este plano de corte? Esta ação não pode ser desfeita.')) {
+async function excluirPlano(planoId, confirmarConversao = false) {
+    if (!confirmarConversao && !confirm('Deseja realmente excluir este plano de corte? Esta ação não pode ser desfeita.')) {
         return;
     }
     
     try {
         const response = await fetch(`${API_BASE}/ordens-corte/${planoId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ confirmarConversao })
         });
         
         const data = await response.json();
         
+        // Se requer confirmação de conversão de cortes em retalhos
+        if (data.requiresConfirmation) {
+            const confirmar = confirm(
+                `⚠️ ATENÇÃO: ${data.error}\n\n` +
+                `Deseja continuar e converter os cortes em retalhos?`
+            );
+            if (confirmar) {
+                return excluirPlano(planoId, true);
+            }
+            return;
+        }
+        
         if (data.success) {
             showNotification(data.message, 'success');
             carregarPlanos();
+            
+            // Se houve retalhos convertidos, alertar para impressão de etiquetas
+            if (data.retalhosConvertidos && data.retalhosConvertidos.length > 0) {
+                mostrarAlertaEtiquetasRetalhos(data.retalhosConvertidos);
+            }
         } else {
             showNotification(data.error, 'error');
         }
     } catch (error) {
         console.error('Erro ao excluir plano:', error);
         showNotification('Erro ao excluir plano', 'error');
+    }
+}
+
+// Mostrar alerta para imprimir etiquetas de retalhos convertidos
+function mostrarAlertaEtiquetasRetalhos(retalhos) {
+    const listaRetalhos = retalhos.map(r => 
+        `• ${r.codigo_retalho} - ${r.metragem}m${r.placa ? ` (Placa: ${r.placa})` : ''}`
+    ).join('\n');
+    
+    const mensagem = 
+        `📦 RETALHOS CRIADOS!\n\n` +
+        `Os seguintes retalhos foram criados a partir dos cortes:\n\n` +
+        `${listaRetalhos}\n\n` +
+        `⚠️ IMPORTANTE: Imprima as etiquetas destes retalhos para identificação!\n\n` +
+        `Deseja ir para a tela de retalhos agora?`;
+    
+    if (confirm(mensagem)) {
+        // Redirecionar para tela de retalhos
+        window.location.href = '/retalhos.html';
     }
 }
 
