@@ -3,135 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retalhos - Controle de Bobinas</title>
-    <link rel="stylesheet" href="css/style.css?v=1732632000">
+    <title>Retalhos - Controle de Bobinas 2.0</title>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+    <!-- NAVBAR -->
     <nav class="navbar">
-        <div class="nav-brand">
-            <h1>🎯 Retalhos</h1>
-        </div>
-        <div class="nav-menu">
-            <a href="index.html">Início</a>
-            <a href="produtos.html">Produtos</a>
-            <a href="estoque.html">Estoque</a>
-            <a href="ordens.html">Ordens de Corte</a>
-            <a href="retalhos.html" class="active">Retalhos</a>
-            <a href="configuracoes.html">⚙️ Config</a>
-        </div>
+        <a href="/" class="navbar-brand">🎯 Controle de Bobinas 2.0</a>
+        <ul class="navbar-menu">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/produtos.html">Produtos</a></li>
+            <li><a href="/estoque.html">Estoque</a></li>
+            <li><a href="/ordens.html">Ordens</a></li>
+            <li><a href="/retalhos.html" class="active">Retalhos</a></li>
+            <li><a href="/templates.html">Obras Padrão</a></li>
+            <li><a href="/configuracoes.html">Config</a></li>
+        </ul>
     </nav>
 
     <div class="container">
-        <!-- Filtros -->
-        <div class="filter-bar">
-            <div class="filter-group">
-                <label>🔍 Buscar:</label>
-                <input type="text" id="busca" placeholder="Código, produto, localização, placa...">
-            </div>
-            <div class="filter-group">
-                <label>📦 Produto:</label>
-                <select id="filtroProduto">
-                    <option value="">Todos</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>🏪 Loja:</label>
-                <select id="filtroLoja">
-                    <option value="">Todas</option>
-                    <option value="Cortinave">Cortinave</option>
-                    <option value="BN">BN</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>📏 Metragem:</label>
-                <select id="filtroMetragem">
-                    <option value="">Todas</option>
-                    <option value="0-10">Até 10m</option>
-                    <option value="10-30">10m - 30m</option>
-                    <option value="30-50">30m - 50m</option>
-                    <option value="50+">Acima de 50m</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>📍 Status:</label>
-                <select id="filtroStatus">
-                    <option value="">Todos</option>
-                    <option value="Disponível">Disponível</option>
-                    <option value="Reservado">Reservado</option>
-                    <option value="Usado">Usado</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>📂 Origem:</label>
-                <select id="filtroOrigem">
-                    <option value="">Todas</option>
-                    <option value="bobina">De Bobina</option>
-                    <option value="corte">De Corte</option>
-                    <option value="manual">Manual</option>
-                </select>
-            </div>
-        </div>
-        
-        <div class="filter-bar" style="margin-top: 10px;">
-            <div class="filter-group">
-                <label>📅 Ordenar por:</label>
-                <select id="ordenacao">
-                    <option value="recentes">Mais Recentes</option>
-                    <option value="antigos">Mais Antigos</option>
-                    <option value="maior-metragem">Maior Metragem</option>
-                    <option value="menor-metragem">Menor Metragem</option>
-                    <option value="codigo">Código</option>
-                </select>
-            </div>
-            <button class="btn btn-secondary" onclick="limparFiltros()">🔄 Limpar Filtros</button>
-            <button class="btn btn-primary" onclick="abrirModalNovoRetalho()">➕ Novo Retalho</button>
+        <div class="page-header">
+            <h1>🧵 Retalhos em Estoque</h1>
+            <button class="btn btn-primary btn-lg" onclick="abrirModalNovoRetalho()">
+                ➕ Novo Retalho
+            </button>
         </div>
 
-        <!-- Stats -->
-        <div class="stats-grid" style="margin: 20px 0;">
-            <div class="stat-card">
-                <div class="stat-label">Total de Retalhos</div>
-                <div class="stat-value" id="statTotal">-</div>
+        <!-- Card Principal -->
+        <div class="card">
+            <div class="card-header-compact">
+                <h2>📊 Estoque de Retalhos</h2>
+                <button class="btn-toggle-filters" onclick="toggleFiltros()" id="btn-toggle-filters">
+                    🔽 Mostrar Filtros
+                </button>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Metragem Total</div>
-                <div class="stat-value" id="statMetragem">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Disponíveis</div>
-                <div class="stat-value" id="statDisponiveis">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Reservados</div>
-                <div class="stat-value" id="statReservados">-</div>
-            </div>
-        </div>
 
-        <!-- Tabela -->
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>Produto</th>
-                        <th>Metragem</th>
-                        <th>Reservada</th>
-                        <th>Placa</th>
-                        <th>Localização</th>
-                        <th>Origem</th>
-                        <th>Status</th>
-                        <th>Data</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="tabelaRetalhos">
-                    <tr>
-                        <td colspan="10" style="text-align: center; padding: 40px;">
-                            Carregando retalhos...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <!-- Filtros (Colapsáveis) -->
+            <div class="filter-container-compact" id="filter-container" style="display: none;">
+                <div class="filter-grid">
+                    <div class="form-group">
+                        <label class="form-label">🔍 Buscar</label>
+                        <input type="text" id="busca" class="form-control" placeholder="Código, produto, localização...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📦 Produto</label>
+                        <select id="filtroProduto" class="form-control">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🏪 Loja</label>
+                        <select id="filtroLoja" class="form-control">
+                            <option value="">Todas</option>
+                            <option value="Cortinave">Cortinave</option>
+                            <option value="BN">BN</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📏 Metragem</label>
+                        <select id="filtroMetragem" class="form-control">
+                            <option value="">Todas</option>
+                            <option value="0-10">Até 10m</option>
+                            <option value="10-30">10m - 30m</option>
+                            <option value="30-50">30m - 50m</option>
+                            <option value="50+">Acima de 50m</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📍 Status</label>
+                        <select id="filtroStatus" class="form-control">
+                            <option value="">Todos</option>
+                            <option value="Disponível">Disponível</option>
+                            <option value="Reservado">Reservado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📂 Origem</label>
+                        <select id="filtroOrigem" class="form-control">
+                            <option value="">Todas</option>
+                            <option value="bobina">De Bobina</option>
+                            <option value="corte">De Corte</option>
+                            <option value="manual">Manual</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📅 Ordenar por</label>
+                        <select id="ordenacao" class="form-control">
+                            <option value="recentes">Mais Recentes</option>
+                            <option value="antigos">Mais Antigos</option>
+                            <option value="maior-metragem">Maior Metragem</option>
+                            <option value="menor-metragem">Menor Metragem</option>
+                            <option value="codigo">Código</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end;">
+                        <button class="btn btn-secondary" onclick="limparFiltros()">🔄 Limpar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-box">
+                    <span class="stat-label">Total</span>
+                    <span class="stat-value" id="statTotal">-</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Metragem</span>
+                    <span class="stat-value" id="statMetragem">-</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Disponíveis</span>
+                    <span class="stat-value" id="statDisponiveis">-</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Reservados</span>
+                    <span class="stat-value" id="statReservados">-</span>
+                </div>
+            </div>
+
+            <!-- Tabela -->
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Produto</th>
+                            <th>Metragem</th>
+                            <th>Reservada</th>
+                            <th>Placa</th>
+                            <th>Localização</th>
+                            <th>Origem</th>
+                            <th>Status</th>
+                            <th>Data</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaRetalhos">
+                        <tr>
+                            <td colspan="10" style="text-align: center; padding: 40px;">
+                                Carregando retalhos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

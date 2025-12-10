@@ -3,6 +3,20 @@ let retalhosCache = [];
 let produtosCache = [];
 let retalhoParaImprimir = null;
 
+// ========== TOGGLE FILTROS ==========
+function toggleFiltros() {
+    const container = document.getElementById('filter-container');
+    const btn = document.getElementById('btn-toggle-filters');
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        btn.textContent = '🔼 Ocultar Filtros';
+    } else {
+        container.style.display = 'none';
+        btn.textContent = '🔽 Mostrar Filtros';
+    }
+}
+
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', () => {
     carregarProdutos();

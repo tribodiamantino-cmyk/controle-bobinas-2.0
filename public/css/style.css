@@ -2531,6 +2531,78 @@ body {
 }
 
 
+/* === STATS ROW (Retalhos) === */
+.stats-row {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+.stat-box {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 15px 25px;
+    border-radius: 10px;
+    text-align: center;
+    min-width: 120px;
+    box-shadow: var(--shadow);
+}
+
+.stat-box .stat-label {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.stat-box .stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    display: block;
+}
+
+/* === TABLE RESPONSIVE === */
+.table-responsive {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead {
+    background: var(--primary-color);
+    color: white;
+}
+
+.table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9rem;
+}
+
+.table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+
 /* CARIMBO DE VERS�O */
 .version-stamp {
     position: fixed;

@@ -173,6 +173,7 @@ exports.converterBobinaEmRetalho = async (req, res) => {
 exports.listarRetalhos = async (req, res) => {
     try {
         // Query que funciona com ou sem as colunas novas (placa, corte_origem_id)
+        // IMPORTANTE: Não retornar retalhos com metragem zerada
         let query = `
             SELECT 
                 r.id,
@@ -197,6 +198,7 @@ exports.listarRetalhos = async (req, res) => {
             JOIN configuracoes_cores c ON p.cor_id = c.id
             JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
             LEFT JOIN bobinas b ON r.bobina_origem_id = b.id
+            WHERE r.metragem > 0
             ORDER BY r.data_entrada DESC
         `;
         
@@ -230,6 +232,7 @@ exports.listarRetalhos = async (req, res) => {
                 JOIN configuracoes_cores c ON p.cor_id = c.id
                 JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
                 LEFT JOIN bobinas b ON r.bobina_origem_id = b.id
+                WHERE r.metragem > 0
                 ORDER BY r.data_entrada DESC
             `);
             retalhos = retalhosComNovosCampos;
@@ -265,7 +268,7 @@ exports.listarRetalhosPorProduto = async (req, res) => {
             JOIN produtos p ON r.produto_id = p.id
             JOIN configuracoes_cores c ON p.cor_id = c.id
             JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-            WHERE r.produto_id = ?
+            WHERE r.produto_id = ? AND r.metragem > 0
             ORDER BY r.data_entrada DESC`,
             [produto_id]
         );
