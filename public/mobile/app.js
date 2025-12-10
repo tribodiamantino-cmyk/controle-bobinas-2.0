@@ -2715,7 +2715,7 @@ async function carregarPlanosFinalizados() {
     try {
         mostrarLoading(true);
         
-        const response = await fetch(API_CONFIG.mobileUrl('planos-finalizados'));
+        const response = await fetch(API_CONFIG.mobileUrl('carregamento/planos-finalizados'));
         const data = await response.json();
         
         if (!data.success) throw new Error(data.error);
@@ -2734,24 +2734,24 @@ async function carregarPlanosFinalizados() {
         }
         
         container.innerHTML = data.data.map(plano => {
-            const locacoesTexto = plano.localizacoes && plano.localizacoes.length > 0
-                ? plano.localizacoes.map(l => l.codigo_locacao).join(', ')
-                : 'Sem localização';
+            // locacoes vem como string separada por vírgula do backend
+            const locacoesTexto = plano.locacoes || 'Sem localização';
             
-            const temCarregamento = plano.carregamento !== null;
-            const carregamentoConcluido = temCarregamento && plano.carregamento.status === 'concluido';
+            // Campos do backend: carregamento_id, status_carregamento
+            const temCarregamento = plano.carregamento_id !== null;
+            const carregamentoConcluido = plano.status_carregamento === 'concluido';
             
             return `
                 <div class="ordem-card ${carregamentoConcluido ? 'ordem-sem-itens' : ''}" 
-                     onclick="${!carregamentoConcluido ? `iniciarNovoCarregamento(${plano.id}, '${plano.codigo_plano}', ${plano.total_cortes})` : ''}">
+                     onclick="${!carregamentoConcluido ? `iniciarNovoCarregamento(${plano.plano_id}, '${plano.codigo_plano}', ${plano.total_cortes})` : ''}">
                     <div class="ordem-header">
                         <span class="ordem-numero">${plano.codigo_plano}</span>
                         <span class="ordem-status ${carregamentoConcluido ? 'status-concluida' : 'status-finalizado'}">
-                            ${carregamentoConcluido ? '✅ Carregado' : 'Finalizado'}
+                            ${carregamentoConcluido ? '✅ Carregado' : '📦 Pronto'}
                         </span>
                     </div>
                     <div class="ordem-info">
-                        <span>📦 ${plano.total_cortes} cortes realizados</span>
+                        <span>📦 ${plano.total_cortes} cortes</span>
                         <span>📍 ${locacoesTexto}</span>
                     </div>
                     ${plano.cliente || plano.aviario ? `
@@ -2762,11 +2762,15 @@ async function carregarPlanosFinalizados() {
                     ${temCarregamento ? `
                         <div style="background: ${carregamentoConcluido ? '#d1fae5' : '#fef3c7'}; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 13px;">
                             ${carregamentoConcluido 
-                                ? `✅ ${plano.carregamento.codigo_carregamento} - ${plano.carregamento.cortes_carregados} cortes`
-                                : `⏳ ${plano.carregamento.codigo_carregamento} em andamento (${plano.carregamento.cortes_carregados}/${plano.carregamento.total_cortes})`
+                                ? `✅ Carregado (${plano.cortes_carregados}/${plano.total_cortes})`
+                                : `⏳ Em andamento (${plano.cortes_carregados}/${plano.total_cortes})`
                             }
                         </div>
-                    ` : ''}
+                    ` : `
+                        <div style="background: #dbeafe; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 13px; color: #1e40af;">
+                            👆 Toque para iniciar carregamento
+                        </div>
+                    `}
                 </div>
             `;
         }).join('');
