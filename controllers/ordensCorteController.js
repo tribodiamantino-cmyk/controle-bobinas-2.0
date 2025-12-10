@@ -278,6 +278,8 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
     const metragemTotal = cortesGrupo.reduce((sum, item) => sum + parseFloat(item.metragem), 0);
     
     // ETAPA 1: Verificar se TODOS os cortes podem ser atendidos por RETALHOS
+    // IMPORTANTE: Rastrear alocações temporárias para evitar duplicação
+    const alocacoesTemporariasEtapa1 = {};
     const sugestoesComRetalhos = [];
     let todosTemRetalho = true;
     
@@ -291,35 +293,53 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
                 AND r.status = 'Disponível'
                 AND (r.metragem - COALESCE(r.metragem_reservada, 0)) >= ?
             ORDER BY (r.metragem - ?) ASC
-            LIMIT 1
         `, [produtoId, item.metragem, item.metragem]);
         
-        if (retalhos.length > 0) {
-            sugestoesComRetalhos.push({
-                item_id: item.id,
-                produto_id: item.produto_id,
-                metragem_corte: parseFloat(item.metragem),
-                origem: {
-                    tipo: 'retalho',
-                    id: retalhos[0].id,
-                    codigo: retalhos[0].codigo_retalho,
-                    metragem_total: parseFloat(retalhos[0].metragem),
-                    metragem_disponivel: parseFloat(retalhos[0].metragem_disponivel),
-                    localizacao: retalhos[0].localizacao_atual,
-                    motivo: '📦 Retalho disponível (prioridade)',
-                    prioridade: 'alta',
-                    estrategia: 'retalho_individual'
-                }
-            });
-        } else {
+        // Verificar CADA retalho descontando alocações temporárias
+        let retalhoEncontrado = false;
+        for (const retalho of retalhos) {
+            const chave = `retalho-${retalho.id}`;
+            const metragemJaAlocada = alocacoesTemporariasEtapa1[chave] || 0;
+            const metragemRealDisponivel = parseFloat(retalho.metragem_disponivel) - metragemJaAlocada;
+            
+            console.log(`   📊 [ETAPA1] ${retalho.codigo_retalho}: ${retalho.metragem_disponivel}m banco - ${metragemJaAlocada}m temp = ${metragemRealDisponivel}m real`);
+            
+            if (metragemRealDisponivel >= parseFloat(item.metragem)) {
+                // Retalho OK! Registrar alocação temporária
+                alocacoesTemporariasEtapa1[chave] = metragemJaAlocada + parseFloat(item.metragem);
+                console.log(`   ✅ [ETAPA1] Retalho ${retalho.codigo_retalho} alocado para item ${item.id} (${item.metragem}m)`);
+                
+                sugestoesComRetalhos.push({
+                    item_id: item.id,
+                    produto_id: item.produto_id,
+                    metragem_corte: parseFloat(item.metragem),
+                    origem: {
+                        tipo: 'retalho',
+                        id: retalho.id,
+                        codigo: retalho.codigo_retalho,
+                        metragem_total: parseFloat(retalho.metragem),
+                        metragem_disponivel: metragemRealDisponivel,
+                        localizacao: retalho.localizacao_atual,
+                        motivo: '📦 Retalho disponível (prioridade)',
+                        prioridade: 'alta',
+                        estrategia: 'retalho_individual'
+                    }
+                });
+                retalhoEncontrado = true;
+                break; // Encontrou retalho para este item, próximo!
+            }
+        }
+        
+        if (!retalhoEncontrado) {
             todosTemRetalho = false;
+            console.log(`   ❌ [ETAPA1] Sem retalho disponível para item ${item.id} (${item.metragem}m)`);
             break; // Se um não tem retalho, já para de procurar
         }
     }
     
     // Se TODOS os cortes têm retalhos disponíveis, usar retalhos!
     if (todosTemRetalho && sugestoesComRetalhos.length === cortesGrupo.length) {
-        console.log(`   ✅ Usando ${sugestoesComRetalhos.length} retalho(s) individuais para produto ${produtoId}`);
+        console.log(`   ✅ [ETAPA1] Usando ${sugestoesComRetalhos.length} retalho(s) individuais para produto ${produtoId}`);
         return sugestoesComRetalhos;
     }
     
