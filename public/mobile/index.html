@@ -363,7 +363,10 @@
             <!-- Opção 2: Escanear QR -->
             <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e5e7eb;">
                 <h4 style="margin: 0 0 10px 0; color: #374151;">📱 Ou Escanear QR Code</h4>
-                <div class="scanner-container" style="margin: 0;">
+                <button id="btn-iniciar-scanner-locacao" class="btn btn-secondary" onclick="iniciarScannerLocacao()" style="width: 100%; margin-bottom: 10px;">
+                    📷 Abrir Câmera para Escanear
+                </button>
+                <div class="scanner-container" style="margin: 0; display: none;" id="container-scanner-locacao">
                     <div id="reader-locacao" class="qr-reader"></div>
                 </div>
             </div>

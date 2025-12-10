@@ -769,13 +769,32 @@ router.get('/carregamento/planos-finalizados', async (req, res) => {
             ORDER BY pc.data_finalizacao DESC
         `);
         
-        const planosFormatados = planos.map(p => ({
-            ...p,
-            percentual: p.total_cortes > 0 ? Math.round((p.cortes_carregados / p.total_cortes) * 100) : 0,
-            status_carregamento: p.status_carregamento || 'pendente'
+        // Buscar cortes de cada plano
+        const planosComCortes = await Promise.all(planos.map(async (p) => {
+            const [cortes] = await db.query(`
+                SELECT 
+                    cr.id,
+                    cr.codigo_corte,
+                    cr.metragem_cortada,
+                    cr.carregado,
+                    pr.codigo as produto_codigo,
+                    cc.nome_cor
+                FROM cortes_realizados cr
+                JOIN produtos pr ON pr.id = cr.produto_id
+                LEFT JOIN configuracoes_cores cc ON pr.cor_id = cc.id
+                WHERE cr.plano_corte_id = ?
+                ORDER BY cr.codigo_corte
+            `, [p.plano_id]);
+            
+            return {
+                ...p,
+                percentual: p.total_cortes > 0 ? Math.round((p.cortes_carregados / p.total_cortes) * 100) : 0,
+                status_carregamento: p.status_carregamento || 'pendente',
+                cortes: cortes
+            };
         }));
         
-        res.json({ success: true, data: planosFormatados });
+        res.json({ success: true, data: planosComCortes });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

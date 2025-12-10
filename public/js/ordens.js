@@ -200,6 +200,25 @@ function criarCardPlano(plano) {
         `;
     }
     
+    // Lista de cortes para planos finalizados
+    let cortesHtml = '';
+    if (plano.status === 'finalizado' && plano.cortes && plano.cortes.length > 0) {
+        cortesHtml = `
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 6px;">
+                    ✂️ Cortes realizados:
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                    ${plano.cortes.map(c => `
+                        <span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">
+                            ${c.codigo_corte} (${c.metragem_cortada}m)
+                        </span>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
     return `
         <div class="${classeCard}" onclick="abrirDetalhesPlano(${plano.id})">
             <div class="plano-card-header">
@@ -220,6 +239,7 @@ function criarCardPlano(plano) {
                     <span class="plano-info-label">Data:</span>
                     <span>${dataFormatada}</span>
                 </div>
+                ${cortesHtml}
             </div>
             <div class="plano-card-footer">
                 <div class="plano-stats">

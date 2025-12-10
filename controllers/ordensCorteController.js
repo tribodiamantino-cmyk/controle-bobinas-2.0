@@ -138,9 +138,30 @@ exports.listarPlanos = async (req, res) => {
         
         const [planos] = await db.query(query, params);
         
+        // Para planos finalizados, buscar os cortes realizados
+        const planosComCortes = await Promise.all(planos.map(async (plano) => {
+            if (plano.status === 'finalizado') {
+                const [cortes] = await db.query(`
+                    SELECT 
+                        cr.codigo_corte,
+                        cr.metragem_cortada,
+                        p.codigo as produto_codigo,
+                        cc.nome_cor
+                    FROM cortes_realizados cr
+                    JOIN produtos p ON p.id = cr.produto_id
+                    LEFT JOIN configuracoes_cores cc ON p.cor_id = cc.id
+                    WHERE cr.plano_corte_id = ?
+                    ORDER BY cr.codigo_corte
+                `, [plano.id]);
+                
+                return { ...plano, cortes };
+            }
+            return plano;
+        }));
+        
         res.json({ 
             success: true, 
-            data: planos 
+            data: planosComCortes 
         });
         
     } catch (error) {

@@ -2533,6 +2533,30 @@ function adicionarLocalizacao(codigoLocacao) {
     }
 }
 
+// Iniciar scanner de localização manualmente
+async function iniciarScannerLocacao() {
+    console.log('📷 Iniciando scanner de localização...');
+    
+    // Mostrar container do scanner
+    const container = document.getElementById('container-scanner-locacao');
+    const btn = document.getElementById('btn-iniciar-scanner-locacao');
+    
+    if (container) {
+        container.style.display = 'block';
+    }
+    if (btn) {
+        btn.style.display = 'none';
+    }
+    
+    // Parar scanner anterior se houver
+    await pararScanner();
+    
+    // Iniciar novo scanner
+    setTimeout(() => {
+        iniciarScanner('locacao-plano');
+    }, 300);
+}
+
 // Remover localização da lista
 function removerLocalizacao(codigo) {
     locacoesEscaneadas = locacoesEscaneadas.filter(loc => loc.codigo !== codigo);
@@ -2627,8 +2651,16 @@ async function confirmarFinalizacao() {
     }
 }
 
-function cancelarFinalizacao() {
+async function cancelarFinalizacao() {
+    await pararScanner();
     locacoesEscaneadas = [];
+    
+    // Resetar UI do scanner
+    const container = document.getElementById('container-scanner-locacao');
+    const btn = document.getElementById('btn-iniciar-scanner-locacao');
+    if (container) container.style.display = 'none';
+    if (btn) btn.style.display = 'block';
+    
     voltarProducao();
 }
 
@@ -2770,10 +2802,21 @@ async function carregarPlanosFinalizados() {
             const temCarregamento = plano.carregamento_id !== null;
             const carregamentoConcluido = plano.status_carregamento === 'concluido';
             
+            // Renderizar lista de cortes
+            const cortesHtml = plano.cortes && plano.cortes.length > 0 
+                ? plano.cortes.map(c => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: ${c.carregado ? '#d1fae5' : '#f3f4f6'}; border-radius: 4px; margin-bottom: 4px; font-size: 12px;">
+                        <span style="font-weight: 600; color: ${c.carregado ? '#059669' : '#374151'};">
+                            ${c.carregado ? '✅' : '📦'} ${c.codigo_corte}
+                        </span>
+                        <span style="color: #6b7280;">${c.metragem_cortada}m ${c.nome_cor || ''}</span>
+                    </div>
+                `).join('')
+                : '<p style="color: #9ca3af; font-size: 12px; margin: 0;">Nenhum corte</p>';
+            
             return `
-                <div class="ordem-card ${carregamentoConcluido ? 'ordem-sem-itens' : ''}" 
-                     onclick="${!carregamentoConcluido ? `iniciarNovoCarregamento(${plano.plano_id}, '${plano.codigo_plano}', ${plano.total_cortes})` : ''}">
-                    <div class="ordem-header">
+                <div class="ordem-card ${carregamentoConcluido ? 'ordem-sem-itens' : ''}">
+                    <div class="ordem-header" onclick="${!carregamentoConcluido ? `iniciarNovoCarregamento(${plano.plano_id}, '${plano.codigo_plano}', ${plano.total_cortes})` : ''}">
                         <span class="ordem-numero">${plano.codigo_plano}</span>
                         <span class="ordem-status ${carregamentoConcluido ? 'status-concluida' : 'status-finalizado'}">
                             ${carregamentoConcluido ? '✅ Carregado' : '📦 Pronto'}
@@ -2788,6 +2831,15 @@ async function carregarPlanosFinalizados() {
                             ${plano.cliente || ''} ${plano.aviario ? '- ' + plano.aviario : ''}
                         </div>
                     ` : ''}
+                    
+                    <!-- Lista de Cortes -->
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                        <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">
+                            ✂️ Cortes nesta carga:
+                        </div>
+                        ${cortesHtml}
+                    </div>
+                    
                     ${temCarregamento ? `
                         <div style="background: ${carregamentoConcluido ? '#d1fae5' : '#fef3c7'}; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 13px;">
                             ${carregamentoConcluido 
@@ -2796,7 +2848,7 @@ async function carregarPlanosFinalizados() {
                             }
                         </div>
                     ` : `
-                        <div style="background: #dbeafe; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 13px; color: #1e40af;">
+                        <div style="background: #dbeafe; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 13px; color: #1e40af; cursor: pointer;" onclick="iniciarNovoCarregamento(${plano.plano_id}, '${plano.codigo_plano}', ${plano.total_cortes})">
                             👆 Toque para iniciar carregamento
                         </div>
                     `}
