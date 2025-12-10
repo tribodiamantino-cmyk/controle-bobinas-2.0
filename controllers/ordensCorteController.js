@@ -365,9 +365,20 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
     console.log(`   ⚠️  Sem bobina única. Alocando individualmente...`);
     
     // ETAPA 3: Alocar individualmente (fallback - tenta retalho, senão bobina individual)
+    // IMPORTANTE: Rastrear alocações temporárias para evitar duplicação
+    const alocacoesTemporarias = {}; // { 'retalho-123': metragem_alocada, 'bobina-456': metragem_alocada }
+    
     const sugestoes = [];
     for (const item of cortesGrupo) {
-        const origem = await sugerirOrigemParaCorte(item.produto_id, item.metragem);
+        const origem = await sugerirOrigemParaCorte(item.produto_id, item.metragem, alocacoesTemporarias);
+        
+        // Registrar alocação temporária
+        if (origem) {
+            const chave = `${origem.tipo}-${origem.id}`;
+            alocacoesTemporarias[chave] = (alocacoesTemporarias[chave] || 0) + parseFloat(item.metragem);
+            console.log(`   📝 Alocação temporária: ${chave} += ${item.metragem}m (total: ${alocacoesTemporarias[chave]}m)`);
+        }
+        
         sugestoes.push({
             item_id: item.id,
             produto_id: item.produto_id,
@@ -380,7 +391,7 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
 }
 
 // Função auxiliar: sugerir melhor origem para um corte
-async function sugerirOrigemParaCorte(produtoId, metragem) {
+async function sugerirOrigemParaCorte(produtoId, metragem, alocacoesTemporarias = {}) {
     console.log(`\n🔍 [DEBUG] Buscando origem para produto ${produtoId}, metragem ${metragem}m`);
     
     // 1. PRIORIDADE: RETALHOS (aproveitar sobras)
@@ -394,25 +405,33 @@ async function sugerirOrigemParaCorte(produtoId, metragem) {
             AND r.status = 'Disponível'
             AND (r.metragem - COALESCE(r.metragem_reservada, 0)) >= ?
         ORDER BY (r.metragem - ?) ASC
-        LIMIT 1
     `, [produtoId, metragem, metragem]);
     
     console.log(`   📦 Retalhos encontrados: ${retalhos.length}`);
-    if (retalhos.length > 0) {
-        console.log(`   ✅ Retalho selecionado: ${retalhos[0].codigo_retalho} - Disponível: ${retalhos[0].metragem_disponivel}m`);
-    }
     
-    if (retalhos.length > 0) {
-        return {
-            tipo: 'retalho',
-            id: retalhos[0].id,
-            codigo: retalhos[0].codigo_retalho,
-            metragem_total: parseFloat(retalhos[0].metragem),
-            metragem_disponivel: parseFloat(retalhos[0].metragem_disponivel),
-            localizacao: retalhos[0].localizacao_atual,
-            motivo: 'Retalho com tamanho próximo',
-            prioridade: 'alta'
-        };
+    // Verificar se retalho tem metragem disponível DESCONTANDO alocações temporárias
+    for (const retalho of retalhos) {
+        const chave = `retalho-${retalho.id}`;
+        const metragemJaAlocada = alocacoesTemporarias[chave] || 0;
+        const metragemRealDisponivel = parseFloat(retalho.metragem_disponivel) - metragemJaAlocada;
+        
+        console.log(`   📊 ${retalho.codigo_retalho}: ${retalho.metragem_disponivel}m banco - ${metragemJaAlocada}m temp = ${metragemRealDisponivel}m real`);
+        
+        if (metragemRealDisponivel >= parseFloat(metragem)) {
+            console.log(`   ✅ Retalho selecionado: ${retalho.codigo_retalho} - Disponível REAL: ${metragemRealDisponivel}m`);
+            return {
+                tipo: 'retalho',
+                id: retalho.id,
+                codigo: retalho.codigo_retalho,
+                metragem_total: parseFloat(retalho.metragem),
+                metragem_disponivel: metragemRealDisponivel,
+                localizacao: retalho.localizacao_atual,
+                motivo: 'Retalho com tamanho próximo',
+                prioridade: 'alta'
+            };
+        } else {
+            console.log(`   ⚠️  ${retalho.codigo_retalho} insuficiente (precisa ${metragem}m, tem ${metragemRealDisponivel}m)`);
+        }
     }
     
     // 2. BOBINAS MENORES (preservar bobinas grandes)
@@ -427,26 +446,34 @@ async function sugerirOrigemParaCorte(produtoId, metragem) {
             AND b.convertida_em_retalho = FALSE
             AND (b.metragem_atual - COALESCE(b.metragem_reservada, 0)) >= ?
         ORDER BY b.metragem_atual ASC
-        LIMIT 1
     `, [produtoId, metragem]);
     
     console.log(`   🎯 Bobinas encontradas: ${bobinas.length}`);
-    if (bobinas.length > 0) {
-        console.log(`   ✅ Bobina selecionada: ${bobinas[0].codigo_interno} - Disponível: ${bobinas[0].metragem_disponivel}m (Total: ${bobinas[0].metragem_atual}m, Reservada: ${bobinas[0].metragem_reservada || 0}m)`);
-    }
     
-    if (bobinas.length > 0) {
-        return {
-            tipo: 'bobina',
-            id: bobinas[0].id,
-            codigo: bobinas[0].codigo_interno,
-            metragem_total: parseFloat(bobinas[0].metragem_atual),
-            metragem_disponivel: parseFloat(bobinas[0].metragem_disponivel),
-            nota_fiscal: bobinas[0].nota_fiscal,
-            localizacao: bobinas[0].localizacao_atual,
-            motivo: 'Bobina menor disponível',
-            prioridade: 'media'
-        };
+    // Verificar bobinas DESCONTANDO alocações temporárias
+    for (const bobina of bobinas) {
+        const chave = `bobina-${bobina.id}`;
+        const metragemJaAlocada = alocacoesTemporarias[chave] || 0;
+        const metragemRealDisponivel = parseFloat(bobina.metragem_disponivel) - metragemJaAlocada;
+        
+        console.log(`   📊 ${bobina.codigo_interno}: ${bobina.metragem_disponivel}m banco - ${metragemJaAlocada}m temp = ${metragemRealDisponivel}m real`);
+        
+        if (metragemRealDisponivel >= parseFloat(metragem)) {
+            console.log(`   ✅ Bobina selecionada: ${bobina.codigo_interno} - Disponível REAL: ${metragemRealDisponivel}m`);
+            return {
+                tipo: 'bobina',
+                id: bobina.id,
+                codigo: bobina.codigo_interno,
+                metragem_total: parseFloat(bobina.metragem_atual),
+                metragem_disponivel: metragemRealDisponivel,
+                nota_fiscal: bobina.nota_fiscal,
+                localizacao: bobina.localizacao_atual,
+                motivo: 'Bobina menor disponível',
+                prioridade: 'media'
+            };
+        } else {
+            console.log(`   ⚠️  ${bobina.codigo_interno} insuficiente (precisa ${metragem}m, tem ${metragemRealDisponivel}m)`);
+        }
     }
     
     // 3. SEM ESTOQUE SUFICIENTE - INVESTIGAR
