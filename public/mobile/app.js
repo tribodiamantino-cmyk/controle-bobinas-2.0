@@ -481,14 +481,14 @@ async function processarValidacao(codigoEscaneado) {
         // Usar o ID numérico da bobina/retalho para buscar no backend
         const origemId = itemValidando.origem_id || itemValidando.bobina_id || itemValidando.retalho_id;
         
-        // Determinar endpoint baseado no tipo E no modo teste - usar apiUrl()
+        // Determinar endpoint baseado no tipo E no modo teste
         let endpoint;
         if (itemValidando.tipo === 'retalho') {
             const path = MODO_TESTE ? `api/mobile/teste/retalho/${origemId}` : `api/mobile/retalho/${origemId}`;
-            endpoint = apiUrl(path);
+            endpoint = API_CONFIG.url(path);
         } else {
             const path = MODO_TESTE ? `api/mobile/teste/bobina/${origemId}` : `api/mobile/bobina/${origemId}`;
-            endpoint = apiUrl(path);
+            endpoint = API_CONFIG.url(path);
         }
         
         console.log('🔧 Buscando origem ID:', origemId, 'em:', endpoint);
