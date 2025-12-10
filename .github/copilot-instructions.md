@@ -2,16 +2,19 @@
 
 ## System Overview
 
-Fabric roll inventory management system for Cortinave & BN (poultry tarp manufacturers). Tracks **physical bobinas** (rolls) containing **logical produtos** (fabric specs), manages **planos de corte** (cut plans) with automatic allocation, and includes mobile PWA for shop floor operations.
+Fabric roll inventory management system for Cortinave & BN (poultry tarp manufacturers). Tracks **physical bobinas** (rolls) containing **logical produtos** (fabric specs), manages **planos de corte** (cut plans) with automatic allocation, and includes **native Android app** with Bluetooth thermal printing.
 
 **Critical Distinction**: A `produto` is an abstract fabric specification (color, weight, width). A `bobina` is a physical roll containing that product with specific metragem (meters). One produto → many bobinas.
 
 ## Architecture
 
-- **Stack**: Node.js + Express + MySQL, deployed on Railway (manual deploys only)
-- **Pattern**: Traditional MVC with routes → controllers → direct DB queries (no ORM)
+- **Backend**: Node.js + Express + MySQL, deployed on Railway (manual deploys only)
+- **Pattern**: Traditional MVC with routes → controllers → direct DB queries (no ORM, no TypeScript)
 - **Database**: Connection pool via `config/database.js` with Railway-specific env vars (`MYSQLHOST`, `MYSQLUSER`, etc.)
-- **Frontend**: Vanilla JS with server-side rendered HTML (no build step)
+- **Frontend**: 
+  - Desktop: Vanilla JS with server-side rendered HTML in `public/` (no build step)
+  - Mobile: Capacitor v8 + Vanilla JS in `public/mobile/` → Android APK with native features
+- **External Services**: Bluetooth thermal printer (M58-LL) via `cordova-plugin-bluetooth-serial`
 
 ## Database Schema & Business Logic
 
@@ -141,9 +144,32 @@ Located in `public/mobile/` with:
 2. Verify triggers exist: `SELECT * FROM information_schema.TRIGGERS`
 3. Manually validate: Compare SUM(metragem_alocada) from alocacoes_corte to metragem_reservada in bobinas
 
+**Build Android APK**:
+```powershell
+npm run android:sync    # Sync web assets to Capacitor
+npm run android:build   # Build debug APK (in android/app/build/outputs/apk/debug/)
+npm run android:release # Build release APK (requires keystore config)
+```
+- APK connects to server via `public/mobile/api-config.js` (hardcoded URL)
+- Bluetooth printing: `public/mobile/bluetooth-printer.js` + `cordova-plugin-bluetooth-serial`
+- Version in `capacitor.config.json` format: `2.2.5-YYYYMMDD-HHMM`
+
+**Test workflows**:
+- No automated tests (manual testing only)
+- See `GUIA_TESTES_SISTEMA_COMPLETO.md` for comprehensive test checklist
+- Use `teste-qrcodes.html` for QR code scanning simulation
+- Debug logs: Emoji prefixes (✅ success, ❌ error, ⚠️ warning, 🔄 processing)
+
 ## Documentation Standards
 
 Project uses extensive MD documentation - when adding features, update:
 - `ROADMAP.md` if changing planned features
 - `CHANGELOG.md` for user-facing changes
 - Create `{FEATURE}_SISTEMA.md` for complex technical decisions (follow `SISTEMA_VALIDACAO_RESERVAS.md` pattern)
+
+**Key docs by topic**:
+- Database reserves: `SISTEMA_VALIDACAO_RESERVAS.md`
+- QR system: `SISTEMA_CORTES_QR.md` + `ROADMAP_SISTEMA_CORTES_QR.md`
+- Android setup: `SETUP_ANDROID_ENV.md` + `BUILD_APK.md`
+- Railway deploy: `CONFIGURAR_RAILWAY.md` + `FLUXO_DEPLOY_MANUAL.md`
+- Mobile PWA: `PLANEJAMENTO_MOBILE.md`
