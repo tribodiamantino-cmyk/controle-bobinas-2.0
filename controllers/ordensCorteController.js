@@ -309,11 +309,22 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo, debugInfo = []) {
             WHERE r.produto_id = ?
                 AND r.status = 'Disponível'
                 AND (r.metragem - COALESCE(r.metragem_reservada, 0)) >= ?
-            ORDER BY (r.metragem - ?) ASC
-        `, [produtoId, item.metragem, item.metragem]);
+            ORDER BY r.metragem ASC
+        `, [produtoId, item.metragem]);
         
         // Verificar CADA retalho descontando alocações temporárias
-        debugInfo.push(`   📦 [ETAPA1] Query retornou ${retalhos.length} retalho(s) com >= ${item.metragem}m`);
+        debugInfo.push(`   📦 [ETAPA1] Query retornou ${retalhos.length} retalho(s) com >= ${item.metragem}m (ordenados do MENOR para o MAIOR)`);
+        
+        // Mostrar todos os candidatos antes de escolher
+        if (retalhos.length > 0) {
+            debugInfo.push(`   📋 [ETAPA1] Candidatos disponíveis:`);
+            retalhos.slice(0, 5).forEach(r => {
+                const disponivel = parseFloat(r.metragem_disponivel);
+                const desperdicio = disponivel - parseFloat(item.metragem);
+                debugInfo.push(`      - ${r.codigo_retalho}: ${disponivel}m (desperdício: ${desperdicio.toFixed(2)}m)`);
+            });
+            if (retalhos.length > 5) debugInfo.push(`      ... e mais ${retalhos.length - 5} retalho(s)`);
+        }
         
         let retalhoEncontrado = false;
         for (const retalho of retalhos) {
@@ -321,7 +332,7 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo, debugInfo = []) {
             const metragemJaAlocada = alocacoesTemporariasEtapa1[chave] || 0;
             const metragemRealDisponivel = parseFloat(retalho.metragem_disponivel) - metragemJaAlocada;
             
-            debugInfo.push(`      📊 [ETAPA1] ${retalho.codigo_retalho} (ID:${retalho.id}): ${retalho.metragem_disponivel}m banco - ${metragemJaAlocada}m temp = ${metragemRealDisponivel.toFixed(2)}m real`);
+            debugInfo.push(`      � [ETAPA1] Testando ${retalho.codigo_retalho} (ID:${retalho.id}): ${retalho.metragem_disponivel}m banco - ${metragemJaAlocada}m temp = ${metragemRealDisponivel.toFixed(2)}m real`);
             
             if (metragemRealDisponivel >= parseFloat(item.metragem)) {
                 // Retalho OK! Registrar alocação temporária
