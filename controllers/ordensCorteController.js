@@ -283,7 +283,11 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
     const sugestoesComRetalhos = [];
     let todosTemRetalho = true;
     
+    console.log(`\n🔍 [ETAPA1] Verificando ${cortesGrupo.length} cortes do produto ${produtoId}:`);
+    cortesGrupo.forEach(c => console.log(`   - Item ${c.id}: ${c.metragem}m`));
+    
     for (const item of cortesGrupo) {
+        console.log(`\n   🔎 [ETAPA1] Processando item ${item.id} (${item.metragem}m)...`);
         const [retalhos] = await db.query(`
             SELECT 
                 r.*,
@@ -296,18 +300,20 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
         `, [produtoId, item.metragem, item.metragem]);
         
         // Verificar CADA retalho descontando alocações temporárias
+        console.log(`   📦 [ETAPA1] Query retornou ${retalhos.length} retalho(s) com >= ${item.metragem}m`);
+        
         let retalhoEncontrado = false;
         for (const retalho of retalhos) {
             const chave = `retalho-${retalho.id}`;
             const metragemJaAlocada = alocacoesTemporariasEtapa1[chave] || 0;
             const metragemRealDisponivel = parseFloat(retalho.metragem_disponivel) - metragemJaAlocada;
             
-            console.log(`   📊 [ETAPA1] ${retalho.codigo_retalho}: ${retalho.metragem_disponivel}m banco - ${metragemJaAlocada}m temp = ${metragemRealDisponivel}m real`);
+            console.log(`      📊 [ETAPA1] ${retalho.codigo_retalho} (ID:${retalho.id}): ${retalho.metragem_disponivel}m banco - ${metragemJaAlocada}m temp = ${metragemRealDisponivel.toFixed(2)}m real`);
             
             if (metragemRealDisponivel >= parseFloat(item.metragem)) {
                 // Retalho OK! Registrar alocação temporária
                 alocacoesTemporariasEtapa1[chave] = metragemJaAlocada + parseFloat(item.metragem);
-                console.log(`   ✅ [ETAPA1] Retalho ${retalho.codigo_retalho} alocado para item ${item.id} (${item.metragem}m)`);
+                console.log(`      ✅ [ETAPA1] Retalho ${retalho.codigo_retalho} ALOCADO para item ${item.id} (${item.metragem}m) - Nova temp: ${alocacoesTemporariasEtapa1[chave]}m`);
                 
                 sugestoesComRetalhos.push({
                     item_id: item.id,
@@ -332,18 +338,20 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo) {
         
         if (!retalhoEncontrado) {
             todosTemRetalho = false;
-            console.log(`   ❌ [ETAPA1] Sem retalho disponível para item ${item.id} (${item.metragem}m)`);
+            console.log(`      ❌ [ETAPA1] SEM retalho suficiente para item ${item.id} (precisa ${item.metragem}m)`);
             break; // Se um não tem retalho, já para de procurar
         }
     }
     
+    console.log(`\n   📋 [ETAPA1] Resultado: todosTemRetalho=${todosTemRetalho}, sugestoes=${sugestoesComRetalhos.length}/${cortesGrupo.length}`);
+    
     // Se TODOS os cortes têm retalhos disponíveis, usar retalhos!
     if (todosTemRetalho && sugestoesComRetalhos.length === cortesGrupo.length) {
-        console.log(`   ✅ [ETAPA1] Usando ${sugestoesComRetalhos.length} retalho(s) individuais para produto ${produtoId}`);
+        console.log(`   ✅ [ETAPA1] SUCESSO! Usando ${sugestoesComRetalhos.length} retalho(s) individuais para produto ${produtoId}\n`);
         return sugestoesComRetalhos;
     }
     
-    console.log(`   ⚠️  Nem todos os cortes têm retalhos. Tentando bobina única...`);
+    console.log(`   ⚠️  [ETAPA1] FALHOU. Tentando bobina única...`);
     
     // ETAPA 2: Tentar encontrar UMA BOBINA que atenda TODOS os cortes
     const [bobinaUnica] = await db.query(`
