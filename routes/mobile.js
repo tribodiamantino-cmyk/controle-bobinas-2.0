@@ -202,7 +202,15 @@ router.get('/ordens-producao', async (req, res) => {
     try {
         let ordens = [];
         try {
-            const [planos] = await db.query('SELECT pc.id, pc.codigo_plano AS numero_ordem, pc.status, pc.cliente, pc.aviario, pc.data_criacao FROM planos_corte pc WHERE pc.status IN (\'em_producao\', \'pendente\', \'Em Andamento\', \'Pendente\') ORDER BY pc.data_criacao DESC LIMIT 20');
+            console.log('📱 Buscando ordens de produção...');
+            const [planos] = await db.query(`
+                SELECT pc.id, pc.codigo_plano AS numero_ordem, pc.status, pc.cliente, pc.aviario, pc.data_criacao 
+                FROM planos_corte pc 
+                WHERE pc.status = 'em_producao'
+                ORDER BY pc.data_criacao DESC 
+                LIMIT 20
+            `);
+            console.log(`📱 Encontrados ${planos.length} planos em produção`);
             for (let plano of planos) {
                 // Buscar itens com alocações (bobina OU retalho)
                 const [itens] = await db.query(`
@@ -230,26 +238,53 @@ router.get('/ordens-producao', async (req, res) => {
                 `, [plano.id]);
                 
                 // Buscar cortes já realizados para este plano
-                const [cortesRealizados] = await db.query(`
-                    SELECT 
-                        cr.id AS corte_id,
-                        cr.codigo_corte,
-                        cr.item_plano_corte_id,
-                        cr.metragem_cortada,
-                        cr.placa_origem,
-                        cr.codigo_origem,
-                        cr.data_corte,
-                        cr.operador_nome,
-                        p.codigo AS produto_codigo,
-                        c.nome_cor,
-                        g.gramatura
-                    FROM cortes_realizados cr
-                    LEFT JOIN produtos p ON cr.produto_id = p.id
-                    LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
-                    LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-                    WHERE cr.plano_corte_id = ?
-                    ORDER BY cr.data_corte DESC
-                `, [plano.id]);
+                let cortesRealizados = [];
+                try {
+                    // Tentar com campos novos (após migration 028)
+                    const [cortes] = await db.query(`
+                        SELECT 
+                            cr.id AS corte_id,
+                            cr.codigo_corte,
+                            cr.item_plano_corte_id,
+                            cr.metragem_cortada,
+                            cr.placa_origem,
+                            cr.codigo_origem,
+                            cr.data_corte,
+                            cr.operador_nome,
+                            p.codigo AS produto_codigo,
+                            c.nome_cor,
+                            g.gramatura
+                        FROM cortes_realizados cr
+                        LEFT JOIN produtos p ON cr.produto_id = p.id
+                        LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                        LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                        WHERE cr.plano_corte_id = ?
+                        ORDER BY cr.data_corte DESC
+                    `, [plano.id]);
+                    cortesRealizados = cortes;
+                } catch (errCortes) {
+                    // Fallback sem campos novos
+                    console.log('⚠️ Usando query de cortes sem campos novos');
+                    const [cortes] = await db.query(`
+                        SELECT 
+                            cr.id AS corte_id,
+                            cr.codigo_corte,
+                            cr.item_plano_corte_id,
+                            cr.metragem_cortada,
+                            cr.data_corte,
+                            cr.operador_nome,
+                            p.codigo AS produto_codigo,
+                            c.nome_cor,
+                            g.gramatura
+                        FROM cortes_realizados cr
+                        LEFT JOIN produtos p ON cr.produto_id = p.id
+                        LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                        LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                        WHERE cr.plano_corte_id = ?
+                        ORDER BY cr.data_corte DESC
+                    `, [plano.id]);
+                    cortesRealizados = cortes;
+                }
                 
                 // Mapear itens pendentes para incluir info de tipo
                 plano.itens = itens.filter(i => i.alocacao_id !== null).map(i => ({
