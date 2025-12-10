@@ -2354,35 +2354,27 @@ async function abrirFinalizarPlano(planoId) {
     
     await mostrarTela('tela-finalizar-plano');
     
-    // Buscar info do plano
-    try {
-        const endpoint = MODO_TESTE 
-            ? API_CONFIG.mobileUrl(`teste/plano/${planoId}`) 
-            : API_CONFIG.mobileUrl(`plano/${planoId}`);
-        const response = await fetch(endpoint);
-        const data = await response.json();
-        
-        document.getElementById('plano-info-finalizar').innerHTML = `
-            <div class="info-row">
-                <span class="label">Plano:</span>
-                <span class="value">#${data.data.id}</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Cliente:</span>
-                <span class="value">${data.data.cliente}</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Total de Itens:</span>
-                <span class="value">${data.data.itens.length}</span>
-            </div>
-        `;
-        
-        renderizarLocacoesEscaneadas();
-        iniciarScanner('locacao');
-        
-    } catch (error) {
-        mostrarToast('Erro ao carregar plano: ' + error.message, 'error');
-    }
+    // Usar dados de ordemAtual que já estão carregados
+    const ordem = ordemAtual;
+    const totalItens = ordem ? (ordem.qtd_total || ordem.itens?.length || 0) : 0;
+    
+    document.getElementById('plano-info-finalizar').innerHTML = `
+        <div class="info-row">
+            <span class="label">Plano:</span>
+            <span class="value">#${planoId}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Ordem:</span>
+            <span class="value">${ordem?.numero_ordem || 'N/A'}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Total de Itens:</span>
+            <span class="value">${totalItens}</span>
+        </div>
+    `;
+    
+    renderizarLocacoesEscaneadas();
+    iniciarScanner('locacao');
 }
 
 async function processarScanLocacao(qrData) {
