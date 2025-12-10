@@ -1547,6 +1547,8 @@ function iniciarScanner(tipo) {
         readerId = 'reader-validacao';
     } else if (tipo === 'localizacao') {
         readerId = 'reader-localizacao';
+    } else if (tipo === 'locacao-plano') {
+        readerId = 'reader-locacao';
     }
     
     if (scannerTransicao || scannerAtivo) {
@@ -1626,10 +1628,17 @@ async function onScanSucesso(qrData, tipo) {
         // Limpar espaços em branco
         qrData = qrData.trim();
         
-        // Se está escaneando localização (formato N-X-N como 1-A-1)
+        // Se está escaneando localização para BOBINA (formato N-X-N como 1-A-1)
         if (tipo === 'localizacao') {
-            console.log('📍 Processando localização:', qrData);
+            console.log('📍 Processando localização para bobina:', qrData);
             await processarLocalizacao(qrData);
+            return;
+        }
+        
+        // Se está escaneando localização para FINALIZAR PLANO
+        if (tipo === 'locacao-plano') {
+            console.log('📍 Processando localização para plano:', qrData);
+            await processarScanLocacao(qrData);
             return;
         }
         
@@ -2374,7 +2383,7 @@ async function abrirFinalizarPlano(planoId) {
     `;
     
     renderizarLocacoesEscaneadas();
-    iniciarScanner('locacao');
+    iniciarScanner('locacao-plano');
 }
 
 async function processarScanLocacao(qrData) {
@@ -2385,6 +2394,7 @@ async function processarScanLocacao(qrData) {
         
         if (!regexLocacao.test(qrData)) {
             mostrarToast('QR Code inválido. Escaneie uma locação (formato: N-X-N).', 'error');
+            iniciarScanner('locacao-plano');
             return;
         }
         
@@ -2393,30 +2403,33 @@ async function processarScanLocacao(qrData) {
         // Verificar se já foi escaneada
         if (locacoesEscaneadas.some(loc => loc.codigo === codigoLocacao)) {
             mostrarToast('Locação já escaneada!', 'warning');
+            iniciarScanner('locacao-plano');
             return;
         }
         
-        // Buscar info da locação (endpoint de teste ou real)
-        const endpoint = MODO_TESTE 
-            ? API_CONFIG.mobileUrl(`teste/locacao/${encodeURIComponent(codigoLocacao)}`)
-            : API_CONFIG.url(`api/locacoes/codigo/${encodeURIComponent(codigoLocacao)}`);
-        const response = await fetch(endpoint);
-        const data = await response.json();
+        // Adicionar localização diretamente (modo simplificado)
+        // Formato: código é a própria descrição
+        const locacaoData = {
+            id: Date.now(), // ID temporário
+            codigo: codigoLocacao,
+            descricao: `Localização ${codigoLocacao}`
+        };
         
-        if (data.success) {
-            locacoesEscaneadas.push(data.data);
-            renderizarLocacoesEscaneadas();
-            mostrarToast(`Locação ${data.data.codigo} adicionada!`, 'success');
-            
-            // Habilitar botão de confirmar se pelo menos 1 locação
-            if (locacoesEscaneadas.length > 0) {
-                document.getElementById('btn-confirmar-finalizacao').disabled = false;
-            }
-        } else {
-            mostrarToast(data.message || 'Locação não encontrada', 'error');
+        locacoesEscaneadas.push(locacaoData);
+        renderizarLocacoesEscaneadas();
+        mostrarToast(`✅ Locação ${codigoLocacao} adicionada!`, 'success');
+        
+        // Habilitar botão de confirmar se pelo menos 1 locação
+        if (locacoesEscaneadas.length > 0) {
+            document.getElementById('btn-confirmar-finalizacao').disabled = false;
         }
+        
+        // Reiniciar scanner para próxima locação
+        iniciarScanner('locacao-plano');
+        
     } catch (error) {
         mostrarToast('Erro ao processar locação: ' + error.message, 'error');
+        iniciarScanner('locacao-plano');
     }
 }
 
@@ -2449,27 +2462,47 @@ async function confirmarFinalizacao() {
         mostrarLoading(true);
         await pararScanner();
         
-        const endpoint = MODO_TESTE 
-            ? API_CONFIG.mobileUrl(`teste/plano/${planoAtual}/finalizar`)
-            : API_CONFIG.mobileUrl(`plano/${planoAtual}/finalizar`);
-            
+        // 1. Primeiro alocar as localizações
+        const alocarResponse = await fetch(API_CONFIG.mobileUrl('plano/alocar-localizacoes'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plano_id: planoAtual,
+                localizacoes: locacoesEscaneadas.map(loc => ({ codigo: loc.codigo }))
+            })
+        });
+        
+        const alocarData = await alocarResponse.json();
+        console.log('📍 Resultado alocação:', alocarData);
+        
+        // 2. Então finalizar o plano
+        const endpoint = API_CONFIG.mobileUrl(`plano/${planoAtual}/finalizar`);
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                locacoes_ids: locacoesEscaneadas.map(loc => loc.id)
+                operador_nome: 'Mobile App'
             })
         });
         
         const data = await response.json();
         
         if (data.success) {
-            mostrarToast('Plano finalizado com sucesso!', 'success');
-            voltarMenu();
+            mostrarToast('✅ Plano finalizado e armazenado com sucesso!', 'success');
+            
+            // Limpar estado
+            locacoesEscaneadas = [];
+            planoAtual = null;
+            ordemAtual = null;
+            
+            // Voltar para lista de ordens
+            await carregarOrdensProducao();
+            mostrarPasso('passo-lista-ordens');
         } else {
-            throw new Error(data.error);
+            throw new Error(data.error || 'Erro ao finalizar plano');
         }
     } catch (error) {
+        console.error('❌ Erro ao finalizar:', error);
         mostrarToast('Erro ao finalizar: ' + error.message, 'error');
     } finally {
         mostrarLoading(false);
