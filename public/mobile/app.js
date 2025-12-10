@@ -321,8 +321,33 @@ function renderizarOrdensProducao() {
     
     container.innerHTML = ordensProducao.map(ordem => {
         const temItensPendentes = ordem.qtd_itens > 0;
+        const todosCortados = ordem.qtd_itens === 0 && ordem.qtd_cortados > 0;
+        
+        // Se todos cortados, mostrar card especial com botão de guardar
+        if (todosCortados) {
+            return `
+                <div class="ordem-card" style="border: 2px solid #10b981; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);">
+                    <div class="ordem-header">
+                        <span class="ordem-numero">${ordem.numero_ordem}</span>
+                        <span class="ordem-status" style="background: #10b981; color: white;">✅ Pronto</span>
+                    </div>
+                    <div class="ordem-info">
+                        <span>✂️ ${ordem.qtd_cortados} cortes realizados</span>
+                        <span>📅 ${formatarData(ordem.data_criacao)}</span>
+                    </div>
+                    ${ordem.observacoes ? `<div class="ordem-obs">${ordem.observacoes}</div>` : ''}
+                    <div style="margin-top: 12px;">
+                        <button class="btn btn-primary" onclick="abrirFinalizarPlano(${ordem.id})" style="width: 100%; padding: 12px; font-size: 16px;">
+                            📍 Guardar no Estoque
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Card normal para ordens com itens pendentes
         return `
-            <div class="ordem-card ${!temItensPendentes ? 'ordem-sem-itens' : ''}" onclick="${temItensPendentes ? `abrirOrdem(${ordem.id})` : 'mostrarToast(\"Todos os itens desta ordem já foram concluídos\", \"info\")'}">
+            <div class="ordem-card" onclick="abrirOrdem(${ordem.id})">
                 <div class="ordem-header">
                     <span class="ordem-numero">${ordem.numero_ordem}</span>
                     <span class="ordem-status status-${ordem.status.toLowerCase().replace(' ', '-')}">${ordem.status}</span>
@@ -332,7 +357,6 @@ function renderizarOrdensProducao() {
                     <span>📅 ${formatarData(ordem.data_criacao)}</span>
                 </div>
                 ${ordem.observacoes ? `<div class="ordem-obs">${ordem.observacoes}</div>` : ''}
-                ${!temItensPendentes ? '<div class="ordem-completa">✅ Todos itens concluídos</div>' : ''}
             </div>
         `;
     }).join('');
@@ -2352,6 +2376,17 @@ async function finalizarItemCorte() {
 async function abrirFinalizarPlano(planoId) {
     console.log('🎯 abrirFinalizarPlano chamado com ID:', planoId);
     
+    // Buscar a ordem correspondente ao planoId
+    const ordem = ordensProducao.find(o => o.id === planoId);
+    if (!ordem) {
+        console.error('❌ Ordem não encontrada para planoId:', planoId);
+        mostrarToast('Erro: ordem não encontrada', 'error');
+        return;
+    }
+    
+    // Guardar referência
+    ordemAtual = ordem;
+    
     // Verificar se há etiquetas pendentes na fila
     const filaPendentes = obterFilaImpressao();
     if (filaPendentes.length > 0) {
@@ -2381,25 +2416,24 @@ async function abrirFinalizarPlano(planoId) {
     // Mostrar tela de finalização
     telaFinalizar.classList.add('active');
     
-    // Usar dados de ordemAtual que já estão carregados
-    const ordem = ordemAtual;
-    const totalItens = ordem ? (ordem.qtd_total || ordem.itens?.length || 0) : 0;
+    // Usar dados da ordem
+    const totalItens = ordem.qtd_total || ordem.qtd_cortados || 0;
     
     const infoEl = document.getElementById('plano-info-finalizar');
     if (infoEl) {
         infoEl.innerHTML = `
             <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="color: #166534;">Plano:</span>
-                    <strong>#${planoId}</strong>
+                    <span style="color: #166534;">Ordem:</span>
+                    <strong>${ordem.numero_ordem}</strong>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="color: #166534;">Ordem:</span>
-                    <strong>${ordem?.numero_ordem || 'N/A'}</strong>
+                    <span style="color: #166534;">Cliente:</span>
+                    <strong>${ordem.cliente || ordem.observacoes || 'N/A'}</strong>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #166534;">Total de Itens:</span>
-                    <strong>${totalItens}</strong>
+                    <span style="color: #166534;">Cortes Realizados:</span>
+                    <strong>${ordem.qtd_cortados || 0}</strong>
                 </div>
             </div>
         `;
@@ -2407,17 +2441,12 @@ async function abrirFinalizarPlano(planoId) {
     
     renderizarLocacoesEscaneadas();
     
-    // Iniciar scanner
-    console.log('📷 Iniciando scanner para locacao-plano...');
-    const readerEl = document.getElementById('reader-locacao');
-    if (!readerEl) {
-        console.error('❌ Elemento reader-locacao não encontrado!');
-        mostrarToast('Erro: scanner não encontrado', 'error');
-        return;
-    }
+    // Desabilitar botão até adicionar localização
+    const btnConfirmar = document.getElementById('btn-confirmar-finalizacao');
+    if (btnConfirmar) btnConfirmar.disabled = true;
     
-    await pararScanner();
-    iniciarScanner('locacao-plano');
+    // NÃO iniciar scanner automaticamente - deixar usuário digitar ou escanear
+    console.log('📝 Aguardando input de localização...');
 }
 
 async function processarScanLocacao(qrData) {
