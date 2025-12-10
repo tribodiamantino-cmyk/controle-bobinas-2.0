@@ -753,17 +753,18 @@ router.get('/carregamento/planos-finalizados', async (req, res) => {
                 pc.cliente,
                 pc.aviario,
                 pc.status,
+                pc.data_finalizacao,
                 COUNT(DISTINCT cr.id) as total_cortes,
                 COUNT(DISTINCT CASE WHEN cr.carregado = TRUE THEN cr.id END) as cortes_carregados,
                 GROUP_CONCAT(DISTINCT pl.codigo_locacao ORDER BY pl.ordem_scan SEPARATOR ', ') as locacoes,
-                c.id as carregamento_id,
-                c.status as status_carregamento
+                MAX(c.id) as carregamento_id,
+                MAX(c.status) as status_carregamento
             FROM planos_corte pc
             LEFT JOIN cortes_realizados cr ON cr.plano_corte_id = pc.id
             LEFT JOIN plano_locacoes pl ON pl.plano_corte_id = pc.id
             LEFT JOIN carregamentos c ON c.plano_corte_id = pc.id AND c.status != 'cancelado'
             WHERE pc.status = 'finalizado'
-            GROUP BY pc.id
+            GROUP BY pc.id, pc.codigo_plano, pc.cliente, pc.aviario, pc.status, pc.data_finalizacao
             HAVING total_cortes > 0
             ORDER BY pc.data_finalizacao DESC
         `);
