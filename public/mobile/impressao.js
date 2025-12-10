@@ -301,6 +301,9 @@ async function buscarPorCodigoDigitado() {
         
         const data = await response.json();
         
+        console.log('📦 Resposta da API:', JSON.stringify(data.data, null, 2));
+        console.log('🏷️ PLACA recebida:', data.data?.placa);
+        
         if (!data.success) {
             throw new Error(data.error || 'Código não encontrado');
         }
@@ -405,6 +408,9 @@ function gerarPreviewBobina(container) {
     const largura = dadosAtual.largura_final || dadosAtual.largura_sem_costura || null;
     const bainha = dadosAtual.tipo_bainha || null;
     const placa = dadosAtual.placa || null;
+    
+    console.log('🖼️ Gerando preview - PLACA:', placa);
+    console.log('🖼️ dadosAtual completo:', dadosAtual);
     
     container.innerHTML = `
         <div class="etiqueta-content">
