@@ -2,7 +2,7 @@
   "appId": "com.cortinave.controlebobinas",
   "appName": "Controle Bobinas",
   "webDir": "public",
-  "version": "2.2.4-20251210-1015",
+  "version": "2.2.5-20251210-1025",
   "server": {
     "androidScheme": "http",
     "cleartext": true,

@@ -452,22 +452,35 @@ function cancelarValidacao() {
 }
 
 // ========== PROCESSAMENTO DA VALIDAÇÃO ==========
-async function processarValidacao(origemId) {
-    // Verificar se origem escaneada corresponde ao item (bobina_id ou retalho_id)
-    const idEsperado = itemValidando.origem_id || itemValidando.bobina_id || itemValidando.retalho_id;
+async function processarValidacao(codigoEscaneado) {
+    // codigoEscaneado vem como "0001" do QR code BOB-0001 ou RET-0001
+    // Montar código completo para comparação
+    const prefixo = itemValidando.tipo === 'retalho' ? 'RET-' : 'BOB-';
+    const codigoCompleto = prefixo + codigoEscaneado;
+    const codigoEsperado = itemValidando.origem_codigo; // Ex: "BOB-0001"
     
-    if (idEsperado != origemId) {
+    console.log('🔍 Validação:', {
+        escaneado: codigoCompleto,
+        esperado: codigoEsperado,
+        match: codigoCompleto === codigoEsperado
+    });
+    
+    if (codigoCompleto !== codigoEsperado) {
         const tipoLabel = itemValidando.tipo === 'retalho' ? 'retalho' : 'bobina';
-        mostrarToast('❌ ' + tipoLabel.charAt(0).toUpperCase() + tipoLabel.slice(1) + ' incorreta! Escaneie ' + (itemValidando.origem_codigo || '#' + idEsperado), 'error');
+        mostrarToast('❌ ' + tipoLabel.charAt(0).toUpperCase() + tipoLabel.slice(1) + ' incorreta! Escaneie ' + codigoEsperado, 'error');
+        console.log('❌ Código incorreto! Esperado:', codigoEsperado, 'Recebido:', codigoCompleto);
         // Reiniciar scanner para tentar novamente
         setTimeout(() => iniciarScanner('validacao'), 1500);
         return;
     }
     
-    // Origem correta - buscar dados atualizados
+    // Origem correta - buscar dados atualizados usando ID numérico
     mostrarLoading(true);
     
     try {
+        // Usar o ID numérico da bobina/retalho para buscar no backend
+        const origemId = itemValidando.origem_id || itemValidando.bobina_id || itemValidando.retalho_id;
+        
         // Determinar endpoint baseado no tipo E no modo teste - usar apiUrl()
         let endpoint;
         if (itemValidando.tipo === 'retalho') {
@@ -478,7 +491,7 @@ async function processarValidacao(origemId) {
             endpoint = apiUrl(path);
         }
         
-        console.log('🔧 Buscando origem:', endpoint);
+        console.log('🔧 Buscando origem ID:', origemId, 'em:', endpoint);
             
         const response = await fetch(endpoint);
         const data = await response.json();
