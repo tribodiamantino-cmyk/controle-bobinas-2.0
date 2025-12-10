@@ -395,7 +395,7 @@ function renderizarDetalhesOrdem() {
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
                 <h4 style="color: #047857; margin-bottom: 0.5rem;">Todos os ${itensValidadosTeste.length} cortes concluídos!</h4>
                 <p style="color: #065f46; font-size: 0.875rem;">Agora escaneie os QR codes das locações para finalizar o plano.</p>
-                <button class="btn btn-primary" onclick="abrirFinalizarPlano()" style="margin-top: 1rem; width: 100%;">
+                <button class="btn btn-primary" onclick="abrirFinalizarPlano(${ordemAtual.id})" style="margin-top: 1rem; width: 100%;">
                     📍 Finalizar Plano com Locações
                 </button>
             </div>
