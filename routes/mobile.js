@@ -1982,4 +1982,44 @@ router.post('/carregamento/finalizar', async (req, res) => {
     }
 });
 
+// ========== ADMIN: Reverter plano para em_producao ==========
+router.post('/plano/reverter/:id', async (req, res) => {
+    try {
+        const planoId = req.params.id;
+        
+        // Verificar se plano existe
+        const [plano] = await db.query(
+            'SELECT id, codigo_plano, status FROM planos_corte WHERE id = ?',
+            [planoId]
+        );
+        
+        if (!plano || plano.length === 0) {
+            return res.status(404).json({ success: false, error: 'Plano não encontrado' });
+        }
+        
+        // Limpar localizações
+        await db.query('DELETE FROM plano_locacoes WHERE plano_corte_id = ?', [planoId]);
+        
+        // Reverter status
+        await db.query(`
+            UPDATE planos_corte 
+            SET status = 'em_producao', 
+                data_finalizacao = NULL 
+            WHERE id = ?
+        `, [planoId]);
+        
+        console.log(`✅ Plano ${plano[0].codigo_plano} revertido para em_producao`);
+        
+        res.json({
+            success: true,
+            message: `Plano ${plano[0].codigo_plano} revertido para em_producao`,
+            data: { plano_id: planoId, status: 'em_producao' }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao reverter plano:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
