@@ -21,7 +21,6 @@ public class MainActivity extends BridgeActivity {
             // DESABILITAR CACHE COMPLETAMENTE
             WebSettings settings = getBridge().getWebView().getSettings();
             settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-            settings.setAppCacheEnabled(false);
             
             android.util.Log.d("MainActivity", "🔥 Cache WebView DESABILITADO! v2.2.1-20251210-0915");
         }
