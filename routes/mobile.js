@@ -1364,6 +1364,100 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
 });
 
 // ========================================
+// SALVAR LOCALIZAÇÕES DO PLANO (SIMPLIFICADO)
+// Salva diretamente o código da locação sem precisar existir no banco
+// ========================================
+router.post('/plano/salvar-localizacoes', async (req, res) => {
+    try {
+        const { plano_id, localizacoes } = req.body;
+        
+        console.log('📍 Salvando localizações para plano:', plano_id);
+        console.log('📍 Localizações recebidas:', localizacoes);
+        
+        if (!plano_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'plano_id é obrigatório'
+            });
+        }
+        
+        if (!localizacoes || !Array.isArray(localizacoes) || localizacoes.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Pelo menos uma localização deve ser fornecida'
+            });
+        }
+        
+        // Verificar se plano existe
+        const [plano] = await db.query(
+            'SELECT id, codigo_plano, status FROM planos_corte WHERE id = ?',
+            [plano_id]
+        );
+        
+        if (!plano || plano.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Plano não encontrado'
+            });
+        }
+        
+        // Limpar localizações anteriores (se houver)
+        await db.query('DELETE FROM plano_locacoes WHERE plano_corte_id = ?', [plano_id]);
+        
+        // Inserir novas localizações
+        const locacoesInseridas = [];
+        
+        for (let i = 0; i < localizacoes.length; i++) {
+            const codigoLocacao = localizacoes[i];
+            
+            // Inserir diretamente com código (locacao_id pode ser NULL)
+            await db.query(
+                `INSERT INTO plano_locacoes 
+                (plano_corte_id, locacao_id, codigo_locacao, validada_qr, data_scan, ordem_scan)
+                VALUES (?, NULL, ?, TRUE, NOW(), ?)`,
+                [plano_id, codigoLocacao, i + 1]
+            );
+            
+            locacoesInseridas.push({
+                codigo: codigoLocacao,
+                ordem: i + 1
+            });
+            
+            console.log(`✅ Localização ${codigoLocacao} salva para plano ${plano[0].codigo_plano}`);
+        }
+        
+        // Atualizar status do plano para finalizado
+        await db.query(`
+            UPDATE planos_corte
+            SET status = 'finalizado',
+                locacoes_validadas = TRUE,
+                data_finalizacao = NOW(),
+                data_armazenamento = NOW()
+            WHERE id = ?
+        `, [plano_id]);
+        
+        console.log(`✅ Plano ${plano[0].codigo_plano} finalizado com ${locacoesInseridas.length} localização(ões)`);
+        
+        res.json({
+            success: true,
+            message: `Plano finalizado e armazenado em ${locacoesInseridas.length} localização(ões)`,
+            data: {
+                plano_id,
+                codigo_plano: plano[0].codigo_plano,
+                localizacoes: locacoesInseridas
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar localizações:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========================================
 // ALOCAR LOCALIZAÇÕES PARA PLANO FINALIZADO
 // ========================================
 router.post('/plano/alocar-localizacoes', async (req, res) => {

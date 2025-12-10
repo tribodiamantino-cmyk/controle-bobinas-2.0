@@ -2350,10 +2350,12 @@ async function finalizarItemCorte() {
 
 // ========== FINALIZAR PLANO (ESCANEAR LOCAÇÕES) ==========
 async function abrirFinalizarPlano(planoId) {
+    console.log('🎯 abrirFinalizarPlano chamado com ID:', planoId);
+    
     // Verificar se há etiquetas pendentes na fila
     const filaPendentes = obterFilaImpressao();
     if (filaPendentes.length > 0) {
-        // Mostrar modal obrigando impressão
+        console.log('⚠️ Há etiquetas pendentes:', filaPendentes.length);
         await mostrarModalImpressaoPendente(filaPendentes);
         return;
     }
@@ -2361,28 +2363,60 @@ async function abrirFinalizarPlano(planoId) {
     planoAtual = planoId;
     locacoesEscaneadas = [];
     
-    await mostrarTela('tela-finalizar-plano');
+    // Verificar se a tela existe
+    const telaFinalizar = document.getElementById('tela-finalizar-plano');
+    if (!telaFinalizar) {
+        console.error('❌ Tela tela-finalizar-plano não encontrada!');
+        mostrarToast('Erro: tela de finalização não encontrada', 'error');
+        return;
+    }
+    
+    console.log('📺 Mostrando tela de finalização...');
+    
+    // Esconder todas as telas
+    document.querySelectorAll('.tela').forEach(tela => {
+        tela.classList.remove('active');
+    });
+    
+    // Mostrar tela de finalização
+    telaFinalizar.classList.add('active');
     
     // Usar dados de ordemAtual que já estão carregados
     const ordem = ordemAtual;
     const totalItens = ordem ? (ordem.qtd_total || ordem.itens?.length || 0) : 0;
     
-    document.getElementById('plano-info-finalizar').innerHTML = `
-        <div class="info-row">
-            <span class="label">Plano:</span>
-            <span class="value">#${planoId}</span>
-        </div>
-        <div class="info-row">
-            <span class="label">Ordem:</span>
-            <span class="value">${ordem?.numero_ordem || 'N/A'}</span>
-        </div>
-        <div class="info-row">
-            <span class="label">Total de Itens:</span>
-            <span class="value">${totalItens}</span>
-        </div>
-    `;
+    const infoEl = document.getElementById('plano-info-finalizar');
+    if (infoEl) {
+        infoEl.innerHTML = `
+            <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #166534;">Plano:</span>
+                    <strong>#${planoId}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #166534;">Ordem:</span>
+                    <strong>${ordem?.numero_ordem || 'N/A'}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #166534;">Total de Itens:</span>
+                    <strong>${totalItens}</strong>
+                </div>
+            </div>
+        `;
+    }
     
     renderizarLocacoesEscaneadas();
+    
+    // Iniciar scanner
+    console.log('📷 Iniciando scanner para locacao-plano...');
+    const readerEl = document.getElementById('reader-locacao');
+    if (!readerEl) {
+        console.error('❌ Elemento reader-locacao não encontrado!');
+        mostrarToast('Erro: scanner não encontrado', 'error');
+        return;
+    }
+    
+    await pararScanner();
     iniciarScanner('locacao-plano');
 }
 
@@ -2453,6 +2487,10 @@ function renderizarLocacoesEscaneadas() {
 }
 
 async function confirmarFinalizacao() {
+    console.log('🏁 confirmarFinalizacao chamado');
+    console.log('📍 Locações escaneadas:', locacoesEscaneadas);
+    console.log('📋 Plano atual:', planoAtual);
+    
     if (locacoesEscaneadas.length === 0) {
         mostrarToast('Escaneie pelo menos uma locação', 'error');
         return;
@@ -2462,30 +2500,20 @@ async function confirmarFinalizacao() {
         mostrarLoading(true);
         await pararScanner();
         
-        // 1. Primeiro alocar as localizações
-        const alocarResponse = await fetch(API_CONFIG.mobileUrl('plano/alocar-localizacoes'), {
+        // Salvar localizações diretamente na plano_locacoes
+        console.log('📍 Salvando localizações no banco...');
+        
+        const response = await fetch(API_CONFIG.mobileUrl('plano/salvar-localizacoes'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 plano_id: planoAtual,
-                localizacoes: locacoesEscaneadas.map(loc => ({ codigo: loc.codigo }))
-            })
-        });
-        
-        const alocarData = await alocarResponse.json();
-        console.log('📍 Resultado alocação:', alocarData);
-        
-        // 2. Então finalizar o plano
-        const endpoint = API_CONFIG.mobileUrl(`plano/${planoAtual}/finalizar`);
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                operador_nome: 'Mobile App'
+                localizacoes: locacoesEscaneadas.map(loc => loc.codigo)
             })
         });
         
         const data = await response.json();
+        console.log('📍 Resposta salvar localizações:', data);
         
         if (data.success) {
             mostrarToast('✅ Plano finalizado e armazenado com sucesso!', 'success');
@@ -2497,6 +2525,13 @@ async function confirmarFinalizacao() {
             
             // Voltar para lista de ordens
             await carregarOrdensProducao();
+            
+            // Mostrar tela de produção
+            const telaProducao = document.getElementById('tela-producao');
+            document.querySelectorAll('.tela').forEach(t => t.classList.remove('active'));
+            if (telaProducao) {
+                telaProducao.classList.add('active');
+            }
             mostrarPasso('passo-lista-ordens');
         } else {
             throw new Error(data.error || 'Erro ao finalizar plano');

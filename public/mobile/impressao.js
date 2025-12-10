@@ -6,8 +6,92 @@ let html5QrCode = null;
 let bluetoothPrinter = null; // Instância do printer Bluetooth
 let isNativeApp = false; // Flag para detectar se está rodando em Capacitor
 let impressorasDisponiveis = []; // Lista de impressoras encontradas
+let verificadorConexao = null; // Intervalo para verificar conexão
+let impressoraSelecionada = null; // Endereço da impressora selecionada (para reconexão)
 
 // ========== GERENCIAMENTO DE IMPRESSORA ==========
+
+// Carrega impressora salva do localStorage
+function carregarImpressoraSalva() {
+    try {
+        const salva = localStorage.getItem('impressora_bluetooth');
+        if (salva) {
+            impressoraSelecionada = JSON.parse(salva);
+            console.log('📱 Impressora salva encontrada:', impressoraSelecionada.name);
+            return impressoraSelecionada;
+        }
+    } catch (e) {
+        console.error('Erro ao carregar impressora salva:', e);
+    }
+    return null;
+}
+
+// Salva impressora selecionada no localStorage
+function salvarImpressora(dispositivo) {
+    try {
+        impressoraSelecionada = {
+            name: dispositivo.name,
+            address: dispositivo.address || dispositivo.id
+        };
+        localStorage.setItem('impressora_bluetooth', JSON.stringify(impressoraSelecionada));
+        console.log('💾 Impressora salva:', impressoraSelecionada.name);
+    } catch (e) {
+        console.error('Erro ao salvar impressora:', e);
+    }
+}
+
+// Inicia verificação periódica da conexão
+function iniciarVerificadorConexao() {
+    // Para verificador anterior se existir
+    if (verificadorConexao) {
+        clearInterval(verificadorConexao);
+    }
+    
+    // Verificar a cada 5 segundos
+    verificadorConexao = setInterval(() => {
+        verificarEReconectar();
+    }, 5000);
+    
+    // Verificar imediatamente
+    verificarEReconectar();
+    
+    console.log('🔄 Verificador de conexão iniciado (5s)');
+}
+
+// Para verificador quando sair da página
+function pararVerificadorConexao() {
+    if (verificadorConexao) {
+        clearInterval(verificadorConexao);
+        verificadorConexao = null;
+        console.log('⏹️ Verificador de conexão parado');
+    }
+}
+
+// Verifica conexão e tenta reconectar se necessário
+async function verificarEReconectar() {
+    if (!isNativeApp || !window.bluetoothPrinter) return;
+    
+    const estaConectada = window.bluetoothPrinter.isConnected;
+    
+    // Atualizar interface
+    atualizarStatusImpressora();
+    
+    // Se desconectou e temos uma impressora salva, tentar reconectar
+    if (!estaConectada && impressoraSelecionada) {
+        console.log('🔄 Conexão perdida, tentando reconectar a', impressoraSelecionada.name);
+        
+        try {
+            await window.bluetoothPrinter.connect(impressoraSelecionada.address);
+            window.bluetoothPrinter.deviceName = impressoraSelecionada.name;
+            console.log('✅ Reconexão bem sucedida!');
+            atualizarStatusImpressora();
+            mostrarMensagem('🔗 Reconectado a ' + impressoraSelecionada.name, 'success');
+        } catch (err) {
+            console.log('⚠️ Não foi possível reconectar:', err.message || err);
+            // Não mostrar erro para não irritar - vai tentar de novo em 5s
+        }
+    }
+}
 
 function atualizarStatusImpressora() {
     const nomeEl = document.getElementById('impressora-nome');
@@ -17,12 +101,18 @@ function atualizarStatusImpressora() {
     if (!nomeEl || !statusEl || !btnEl) return;
     
     if (window.bluetoothPrinter && window.bluetoothPrinter.isConnected) {
-        const nome = window.bluetoothPrinter.deviceName || 'Impressora Conectada';
+        const nome = window.bluetoothPrinter.deviceName || impressoraSelecionada?.name || 'Impressora Conectada';
         nomeEl.textContent = nome;
-        statusEl.innerHTML = '<span style="color: #10b981;">🟢 Conectada</span>';
+        statusEl.innerHTML = '<span style="color: #10b981;">🟢 Conectada e pronta</span>';
         btnEl.textContent = '🔄 Trocar';
         btnEl.classList.remove('btn-primary');
         btnEl.classList.add('btn-secondary');
+    } else if (impressoraSelecionada) {
+        nomeEl.textContent = impressoraSelecionada.name;
+        statusEl.innerHTML = '<span style="color: #f59e0b;">🟡 Reconectando...</span>';
+        btnEl.textContent = '🔌 Conectar';
+        btnEl.classList.remove('btn-secondary');
+        btnEl.classList.add('btn-primary');
     } else {
         nomeEl.textContent = 'Nenhuma impressora';
         statusEl.innerHTML = '<span style="color: #ef4444;">🔴 Desconectada</span>';
@@ -34,6 +124,8 @@ function atualizarStatusImpressora() {
 
 function abrirSeletorImpressora() {
     document.getElementById('modal-impressora').style.display = 'block';
+    // Buscar impressoras automaticamente ao abrir
+    buscarImpressoras();
 }
 
 function fecharSeletorImpressora() {
@@ -86,16 +178,19 @@ async function buscarImpressoras() {
                 </div>
             `;
         } else {
-            listaEl.innerHTML = impressorasDisponiveis.map((disp, idx) => `
-                <div class="printer-item" onclick="conectarImpressora(${idx})" style="display: flex; align-items: center; padding: 15px; margin: 10px 0; background: #f8f9fa; border-radius: 8px; cursor: pointer;">
+            listaEl.innerHTML = impressorasDisponiveis.map((disp, idx) => {
+                const isAtual = impressoraSelecionada && (disp.address === impressoraSelecionada.address || disp.id === impressoraSelecionada.address);
+                return `
+                <div class="printer-item" onclick="conectarImpressora(${idx})" style="display: flex; align-items: center; padding: 15px; margin: 10px 0; background: ${isAtual ? '#d1fae5' : '#f8f9fa'}; border-radius: 8px; cursor: pointer; border: ${isAtual ? '2px solid #10b981' : 'none'};">
                     <span style="font-size: 28px; margin-right: 12px;">🖨️</span>
                     <div style="flex: 1;">
                         <div style="font-weight: bold; color: #333;">${disp.name || 'Dispositivo sem nome'}</div>
                         <div style="font-size: 12px; color: #666;">${disp.address || disp.id || ''}</div>
+                        ${isAtual ? '<div style="font-size: 11px; color: #10b981; font-weight: bold;">✓ Selecionada</div>' : ''}
                     </div>
                     <span style="color: #3b82f6;">Conectar →</span>
                 </div>
-            `).join('');
+            `}).join('');
         }
         
     } catch (error) {
@@ -135,7 +230,10 @@ async function conectarImpressora(idx) {
         // Salvar nome do dispositivo para exibir
         window.bluetoothPrinter.deviceName = dispositivo.name;
         
-        mostrarMensagem('✅ Impressora conectada!', 'success');
+        // Salvar impressora para reconexão automática
+        salvarImpressora(dispositivo);
+        
+        mostrarMensagem('✅ Impressora conectada e salva!', 'success');
         fecharSeletorImpressora();
         atualizarStatusImpressora();
         
@@ -351,9 +449,28 @@ async function inicializarApp() {
                 bluetoothPrinter = window.bluetoothPrinter;
                 await bluetoothPrinter.init();
                 console.log('✅ Bluetooth Printer inicializado');
+                
+                // Carregar impressora salva
+                carregarImpressoraSalva();
+                
+                // Tentar conectar automaticamente se há impressora salva
+                if (impressoraSelecionada) {
+                    console.log('🔌 Tentando conectar automaticamente a:', impressoraSelecionada.name);
+                    try {
+                        await window.bluetoothPrinter.connect(impressoraSelecionada.address);
+                        window.bluetoothPrinter.deviceName = impressoraSelecionada.name;
+                        console.log('✅ Conectado automaticamente!');
+                    } catch (err) {
+                        console.log('⚠️ Não foi possível conectar automaticamente:', err.message || err);
+                    }
+                }
             } else {
                 console.warn('⚠️ bluetoothPrinter não encontrado');
             }
+            
+            // Iniciar verificador de conexão
+            iniciarVerificadorConexao();
+            
         } else {
             console.log('ℹ️ Rodando em PWA - Impressão via navegador');
             isNativeApp = false;
@@ -361,9 +478,6 @@ async function inicializarApp() {
         
         // Atualizar status da impressora no topo
         atualizarStatusImpressora();
-        
-        // Verificar conexão periodicamente
-        setInterval(atualizarStatusImpressora, 3000);
         
         // Renderizar fila de pendentes ao carregar
         renderizarFilaPendentes();
@@ -373,6 +487,11 @@ async function inicializarApp() {
         isNativeApp = false;
     }
 }
+
+// Parar verificador quando sair da página
+window.addEventListener('beforeunload', () => {
+    pararVerificadorConexao();
+});
 
 // Executar inicialização
 document.addEventListener('DOMContentLoaded', () => {
