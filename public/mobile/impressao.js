@@ -427,7 +427,7 @@ function gerarPreviewBobina(container) {
                 <div class="etiqueta-codigo">${dadosAtual.codigo_interno}</div>
                 <div class="etiqueta-produto">
                     ${dadosAtual.produto_codigo || ''}<br>
-                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}G
+                    ${dadosAtual.nome_cor || ''} ${dadosAtual.gramatura || ''}
                 </div>
                 <div class="etiqueta-metragem">${metragem}m</div>
                 ${largura ? `<div class="etiqueta-detalhe">Largura: ${largura}m</div>` : ''}
