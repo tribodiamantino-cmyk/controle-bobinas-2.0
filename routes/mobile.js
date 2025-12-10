@@ -1430,9 +1430,7 @@ router.post('/plano/salvar-localizacoes', async (req, res) => {
         await db.query(`
             UPDATE planos_corte
             SET status = 'finalizado',
-                locacoes_validadas = TRUE,
-                data_finalizacao = NOW(),
-                data_armazenamento = NOW()
+                data_finalizacao = NOW()
             WHERE id = ?
         `, [plano_id]);
         
