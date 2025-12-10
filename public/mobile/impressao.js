@@ -587,12 +587,12 @@ async function buscarPorCodigoDigitado() {
         if (codigo.startsWith('BOB-')) tipoDetectado = 'bobina';
         else if (codigo.startsWith('RET-')) tipoDetectado = 'retalho';
         else if (codigo.startsWith('COR-')) tipoDetectado = 'corte';
-        else if (codigo.startsWith('PLA-')) tipoDetectado = 'plano';
+        else if (codigo.startsWith('PLA-') || codigo.startsWith('BNN-')) tipoDetectado = 'plano';
         else if (codigo.match(/^\d+-[A-Z]+-\d+$/)) tipoDetectado = 'localizacao';
     }
     
     if (!tipoDetectado) {
-        mostrarMensagem('Código inválido! Use formato: BOB-0001, RET-0001, COR-0001-PLA-0123, PLA-0001 ou 0001-A-0001', 'error');
+        mostrarMensagem('Código inválido! Use formato: BOB-0001, RET-0001, COR-000001, PLA-0001 ou 0001-A-0001', 'error');
         return;
     }
     

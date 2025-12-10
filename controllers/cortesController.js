@@ -1,23 +1,22 @@
 const db = require('../config/database');
 
-// Gerar código único para corte: COR-2025-00001
+// Gerar código único para corte: COR-000001 (6 dígitos sequenciais)
 async function gerarCodigoCorte() {
-    const ano = new Date().getFullYear();
-    const prefixo = 'COR';
-    
     const [ultimoCodigo] = await db.query(
         `SELECT codigo_corte FROM cortes_realizados 
-         WHERE codigo_corte LIKE '${prefixo}-${ano}-%' 
+         WHERE codigo_corte LIKE 'COR-%' 
          ORDER BY id DESC LIMIT 1`
     );
     
     let numero = 1;
     if (ultimoCodigo.length > 0) {
-        const partes = ultimoCodigo[0].codigo_corte.split('-');
-        numero = parseInt(partes[2]) + 1;
+        const match = ultimoCodigo[0].codigo_corte.match(/COR-(\d+)/);
+        if (match) {
+            numero = parseInt(match[1]) + 1;
+        }
     }
     
-    return `${prefixo}-${ano}-${String(numero).padStart(5, '0')}`;
+    return `COR-${String(numero).padStart(6, '0')}`;
 }
 
 // Registrar novo corte

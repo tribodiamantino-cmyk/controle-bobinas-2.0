@@ -442,14 +442,7 @@ router.post('/validar-item', async (req, res) => {
             WHERE id = ?
         `, [item_id]);
         
-        // NOVO: Buscar código do plano para incluir no código do corte
-        const [planoInfo] = await connection.query(`
-            SELECT codigo_plano FROM planos_corte WHERE id = ?
-        `, [planoCorteId]);
-        
-        const codigoPlano = planoInfo[0].codigo_plano;
-        
-        // NOVO: Gerar código sequencial para o corte (COR-0001-PLA-0123)
+        // Gerar código sequencial simples para o corte (COR-000001)
         const [ultimoCodigo] = await connection.query(`
             SELECT codigo_corte FROM cortes_realizados 
             WHERE codigo_corte LIKE 'COR-%' 
@@ -458,14 +451,16 @@ router.post('/validar-item', async (req, res) => {
         
         let sequencial = 1;
         if (ultimoCodigo.length > 0) {
-            // Extrair número do formato COR-0001-PLA-0123
-            const partes = ultimoCodigo[0].codigo_corte.split('-');
-            sequencial = parseInt(partes[1]) + 1;
+            // Extrair número do formato COR-000001
+            const match = ultimoCodigo[0].codigo_corte.match(/COR-(\d+)/);
+            if (match) {
+                sequencial = parseInt(match[1]) + 1;
+            }
         }
         
-        const codigoCorte = `COR-${String(sequencial).padStart(4, '0')}-${codigoPlano}`;
+        const codigoCorte = `COR-${String(sequencial).padStart(6, '0')}`;
         
-        // NOVO: Criar registro em cortes_realizados
+        // Criar registro em cortes_realizados
         const [corteResult] = await connection.query(`
             INSERT INTO cortes_realizados 
             (codigo_corte, plano_corte_id, item_plano_corte_id, alocacao_corte_id,
