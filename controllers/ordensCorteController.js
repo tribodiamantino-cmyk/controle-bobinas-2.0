@@ -1159,7 +1159,7 @@ exports.excluirPlano = async (req, res) => {
         
         // Verificar se há cortes realizados neste plano
         const [cortesRealizados] = await db.query(`
-            SELECT cr.id, cr.codigo_corte, cr.metragem_cortada, cr.placa_origem
+            SELECT cr.id, cr.codigo_corte, cr.metragem_cortada
             FROM cortes_realizados cr
             WHERE cr.plano_corte_id = ?
         `, [id]);
@@ -1396,7 +1396,7 @@ exports.removerItemPlano = async (req, res) => {
         
         // Verificar se há cortes realizados para este item
         const [cortesRealizados] = await db.query(`
-            SELECT cr.id, cr.codigo_corte, cr.metragem_cortada, cr.placa_origem
+            SELECT cr.id, cr.codigo_corte, cr.metragem_cortada
             FROM cortes_realizados cr
             WHERE cr.item_plano_corte_id = ?
         `, [itemId]);

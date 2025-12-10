@@ -431,19 +431,40 @@ exports.converterCorteEmRetalho = async function(corteId) {
     // Gerar código do retalho
     const codigo_retalho = await gerarCodigoRetalho();
     
-    // Criar retalho com dados do corte
-    const [result] = await db.query(`
-        INSERT INTO retalhos 
-        (codigo_retalho, produto_id, metragem, placa, corte_origem_id, observacoes) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    `, [
-        codigo_retalho,
-        corte.produto_id,
-        corte.metragem_cortada,
-        corte.placa_origem,
-        corteId,
-        `Convertido do corte ${corte.codigo_corte}`
-    ]);
+    // Verificar se tabela retalhos tem as colunas novas (placa, corte_origem_id)
+    // Tentar inserir com todas as colunas, se falhar, inserir sem elas
+    let result;
+    try {
+        [result] = await db.query(`
+            INSERT INTO retalhos 
+            (codigo_retalho, produto_id, metragem, placa, corte_origem_id, observacoes) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [
+            codigo_retalho,
+            corte.produto_id,
+            corte.metragem_cortada,
+            corte.placa_origem || null,
+            corteId,
+            `Convertido do corte ${corte.codigo_corte}`
+        ]);
+    } catch (err) {
+        // Se falhar (colunas não existem ainda), inserir sem elas
+        if (err.code === 'ER_BAD_FIELD_ERROR') {
+            console.log('⚠️ Colunas placa/corte_origem_id não existem ainda, inserindo sem elas');
+            [result] = await db.query(`
+                INSERT INTO retalhos 
+                (codigo_retalho, produto_id, metragem, observacoes) 
+                VALUES (?, ?, ?, ?)
+            `, [
+                codigo_retalho,
+                corte.produto_id,
+                corte.metragem_cortada,
+                `Convertido do corte ${corte.codigo_corte}`
+            ]);
+        } else {
+            throw err;
+        }
+    }
     
     console.log(`✅ Corte ${corte.codigo_corte} convertido em retalho ${codigo_retalho}`);
     
@@ -451,7 +472,7 @@ exports.converterCorteEmRetalho = async function(corteId) {
         id: result.insertId,
         codigo_retalho: codigo_retalho,
         metragem: corte.metragem_cortada,
-        placa: corte.placa_origem,
+        placa: corte.placa_origem || null,
         corte_origem: corte.codigo_corte
     };
 };
