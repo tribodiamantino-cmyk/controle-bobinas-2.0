@@ -337,4 +337,62 @@ router.get('/debug-placa', async (req, res) => {
     }
 });
 
+/**
+ * ROTA ADMIN: Atualizar PLACA de uma bobina
+ * POST /api/admin/atualizar-placa
+ * Body: { codigo: "BOB-0001", placa: "ABC-123-XYZ" }
+ */
+router.post('/atualizar-placa', async (req, res) => {
+    try {
+        const { codigo, placa } = req.body;
+        
+        if (!codigo || !placa) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Código e PLACA são obrigatórios' 
+            });
+        }
+        
+        // Verificar se bobina existe
+        const [bobinas] = await db.query(
+            'SELECT id, codigo_interno, placa FROM bobinas WHERE codigo_interno = ?',
+            [codigo]
+        );
+        
+        if (bobinas.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: `Bobina ${codigo} não encontrada`
+            });
+        }
+        
+        const bobinaAntes = bobinas[0];
+        
+        // Atualizar PLACA
+        await db.query(
+            'UPDATE bobinas SET placa = ? WHERE codigo_interno = ?',
+            [placa, codigo]
+        );
+        
+        console.log(`✅ PLACA atualizada: ${codigo} -> ${placa}`);
+        
+        res.json({
+            success: true,
+            message: `✅ PLACA atualizada com sucesso!`,
+            data: {
+                codigo: codigo,
+                placa_antes: bobinaAntes.placa || 'NULL',
+                placa_depois: placa
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar PLACA:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
