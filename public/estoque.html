@@ -280,27 +280,24 @@
         </div>
     </div>
 
-    <!-- Modal de Cadastro Rápido de Produto -->
+    <!-- Modal de Cadastro Rápido de Produto (idêntico ao formulário de produtos.html) -->
     <div id="modal-cadastro-produto" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 700px;">
-            <h2>➕ Cadastrar Novo Produto</h2>
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; margin-bottom: 20px;">
+                <h2 style="margin: 0;">➕ Cadastrar Novo Produto</h2>
+                <button type="button" class="close" onclick="fecharModalCadastroProduto()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
             <form id="form-cadastro-rapido">
-                <div class="alert alert-info">
-                    <strong>Dados pré-preenchidos:</strong><br>
-                    Loja: <span id="quick-loja"></span> | 
-                    Código: <span id="quick-codigo"></span>
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <strong>📋 Dados herdados da entrada de bobina:</strong><br>
+                    <span style="font-size: 1.1rem;">
+                        🏪 Loja: <strong id="quick-loja"></strong> | 
+                        🔢 Código: <strong id="quick-codigo"></strong>
+                    </span>
                 </div>
 
+                <!-- Linha 1: Cor e Gramatura -->
                 <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label" for="quick-fabricante">Fabricante *</label>
-                        <select class="form-control" id="quick-fabricante" required>
-                            <option value="">Selecione...</option>
-                            <option value="Propex">Propex</option>
-                            <option value="Textiloeste">Textiloeste</option>
-                        </select>
-                    </div>
-
                     <div class="form-group">
                         <label class="form-label" for="quick-cor_id">Cor *</label>
                         <select class="form-control" id="quick-cor_id" required>
@@ -316,13 +313,38 @@
                     </div>
                 </div>
 
+                <!-- Linha 2: Fabricante e Tipo de Tecido -->
                 <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="quick-fabricante">Fabricante *</label>
+                        <select class="form-control" id="quick-fabricante" required>
+                            <option value="">Selecione...</option>
+                            <option value="Propex">Propex</option>
+                            <option value="Textiloeste">Textiloeste</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label" for="quick-tipo_tecido">Tipo de Tecido *</label>
                         <select class="form-control" id="quick-tipo_tecido" required onchange="toggleCamposTecidoRapido()">
                             <option value="Normal">Normal</option>
                             <option value="Bando Y">Bando Y</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- Campo de Metragem Confiável -->
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <div class="checkbox-group" style="display: flex; align-items: flex-start; gap: 10px;">
+                            <input type="checkbox" id="quick-metragem_confiavel" style="margin-top: 3px;">
+                            <label for="quick-metragem_confiavel" style="cursor: pointer;">
+                                <strong>✓ Metragem Confiável</strong>
+                                <small style="display: block; color: #666; margin-top: 4px;">
+                                    Marque se este produto possui metragens precisas do fornecedor (múltiplos exatos)
+                                </small>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -346,7 +368,8 @@
 
                     <div class="form-group">
                         <label class="form-label" for="quick-largura_final">Largura Final (cm) *</label>
-                        <input type="number" class="form-control" id="quick-largura_final" step="0.01" min="0" placeholder="Ex: 298.5">
+                        <input type="number" class="form-control" id="quick-largura_final" step="0.01" min="0" placeholder="Ex: 298.5" onchange="validarLarguraFinalRapido()">
+                        <small id="quick-erro-largura-final" style="color: red; display: none;">Largura final não pode ser maior que largura sem costura</small>
                     </div>
                 </div>
 
@@ -363,9 +386,9 @@
                     </div>
                 </div>
 
-                <div class="modal-actions">
+                <div class="modal-actions" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #dee2e6; display: flex; justify-content: flex-end; gap: 10px;">
                     <button type="button" class="btn btn-secondary" onclick="fecharModalCadastroProduto()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">✅ Salvar e Continuar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-salvar-produto">✅ Salvar e Continuar</button>
                 </div>
             </form>
         </div>

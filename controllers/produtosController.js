@@ -44,14 +44,14 @@ exports.criarProduto = async (req, res) => {
         return res.status(400).json({ success: false, error: 'Campos obrigatórios: loja, código, cor, gramatura e fabricante' });
     }
 
-    // Validar formato do código (CTV-0001 ou BN-0001)
+    // Validar formato do código (CTV-00001 ou BN-00001 - 5 dígitos)
     const prefixoEsperado = loja === 'Cortinave' ? 'CTV' : 'BN';
-    const regexCodigo = new RegExp(`^${prefixoEsperado}-\\d{4}$`);
+    const regexCodigo = new RegExp(`^${prefixoEsperado}-\\d{5}$`);
     
     if (!regexCodigo.test(codigo)) {
         return res.status(400).json({ 
             success: false, 
-            error: `Código inválido! Formato esperado: ${prefixoEsperado}-0001 (4 dígitos numéricos)` 
+            error: `Código inválido! Formato esperado: ${prefixoEsperado}-00001 (5 dígitos numéricos)` 
         });
     }
 

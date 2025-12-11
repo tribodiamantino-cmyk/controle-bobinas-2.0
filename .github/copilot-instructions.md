@@ -1,1155 +1,547 @@
-# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions
+# Controle de Bobinas 2.0 - Developer Guide
 
+> **Documento de referência para desenvolvedores e agentes de IA**  
+> Versão: 2.4.0 | Última atualização: 11/12/2025
 
+---
 
-## Visão Geral do Projeto
+## 📋 Índice
 
-Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobinas e retalhos com QR codes.
+1. [Visão Geral](#visão-geral)
+2. [Stack Tecnológico](#stack-tecnológico)
+3. [Estrutura do Projeto](#estrutura-do-projeto)
+4. [Banco de Dados](#banco-de-dados)
+5. [Padrões de Código](#padrões-de-código)
+6. [Sistema de QR Codes](#sistema-de-qr-codes)
+7. [Mobile/Android](#mobileandroid)
+8. [Deploy](#deploy)
+9. [Versionamento](#versionamento)
+10. [Documentação de Referência](#documentação-de-referência)
+11. [Tarefas Comuns](#tarefas-comuns)
 
-## Visão Geral do Projeto
+---
 
-## Stack Tecnológica
+## Visão Geral
 
-- **Backend**: Node.js + ExpressSistema de gestão de estoque para lojas de tecidos, focado em controle de bobinas e retalhos com QR codes.
+### O que é o Sistema?
 
-- **Database**: MySQL (Railway)
+Sistema de **gestão de estoque de bobinas de lona** para fabricação de cortinas de aviário. Desenvolvido para duas empresas:
 
-- **Frontend**: HTML/CSS/JavaScript puro## Visão Geral do Projeto
+| Empresa | Cidade | Prefixo de Código |
+|---------|--------|-------------------|
+| **Cortinave** | Palotina/PR | `CTV` ou `PLA` |
+| **BN** | Cianorte/PR | `BN` ou `CIA` |
 
-- **Mobile**: Capacitor (Android)
-
-- **Deploy**: Railway## Stack Tecnológica
-
-
-
-## Estrutura do Banco de Dados- **Backend**: Node.js + ExpressSistema de gestão de estoque para lojas de tecidos, focado em controle de bobinas e retalhos com QR codes.
-
-
-
-### Tabela `produtos`- **Database**: MySQL (Railway)
-
-- Cadastro base de produtos (tecidos)
-
-- Campos: codigo_interno, descricao, **fabricante**, largura, gramatura, cor- **Frontend**: HTML/CSS/JavaScript puro## Visão Geral do Projeto
-
-- É a **única** tabela que contém `fabricante`
-
-- **Mobile**: Capacitor (Android)
-
-### Tabela `bobinas`
-
-- Estoque de bobinas inteiras- **Deploy**: Railway## Stack Tecnológica
-
-- FK: produto_id → produtos
-
-- Campo `loja` é DENORMALIZADO (cópia de produtos.loja para performance)
-
-- Campo `locacao`: VARCHAR, formato `0000-X-0000` (ex: 1-A-1, 12-B-34)
-
-- **NÃO** tem campo `fabricante` - buscar via JOIN com produtos## Estrutura do Banco de Dados- **Backend**: Node.js + ExpressSistema de gestão de estoque para lojas de tecidos, focado em controle de bobinas e retalhos com QR codes.
-
-
-
-### Tabela `retalhos`
-
-- Pedaços de bobinas cortadas
-
-- FK: produto_id → produtos### Tabela `produtos`- **Database**: MySQL (Railway)
-
-- Campo `locacao`: VARCHAR, formato `0000-X-0000`
-
-- **NÃO** tem campos `fabricante` ou `loja` - buscar via JOIN com produtos- Cadastro base de produtos (tecidos)
-
-
-
-### Formato de Locação- Campos: codigo_interno, descricao, **fabricante**, largura, gramatura, cor- **Frontend**: HTML/CSS/JavaScript puro## ⚠️ DOCUMENTAÇÃO OBRIGATÓRIA
-
-- Padrão: `CORREDOR-PRATELEIRA-POSICAO`
-
-- Regex: `/^[1-9]\d{0,3}-[A-Z]-[1-9]\d{0,3}$/`- É a **única** tabela que contém `fabricante`
-
-- Exemplos válidos: 1-A-1, 12-B-34, 9999-Z-9999
-
-- Exemplos inválidos: 0-A-1, 1-a-1, 01-A-01- **Mobile**: Capacitor (Android)
-
-
-
-### Status de Items### Tabela `bobinas`
-
-- Items com `metragem = 0` recebem `status = 'Esgotado'`
-
-- Items esgotados são mantidos para histórico mas ocultos das listagens normais- Estoque de bobinas inteiras- **Deploy**: Railway## Stack Tecnológica
-
-- Filtrar com `WHERE status != 'Esgotado'` ou `WHERE metragem > 0`
-
-- FK: produto_id → produtos
-
-## Padrões de Código
-
-- Campo `loja` é DENORMALIZADO (cópia de produtos.loja para performance)
-
-### Queries com fabricante
-
-```sql- Campo `locacao`: VARCHAR, formato `0000-X-0000` (ex: 1-A-1, 12-B-34)
-
--- CORRETO: buscar fabricante via JOIN
-
-SELECT b.*, p.fabricante, p.descricao - **NÃO** tem campo `fabricante` - buscar via JOIN com produtos## Estrutura do Banco de Dados- **Backend**: Node.js + Express
-
-FROM bobinas b 
-
-JOIN produtos p ON b.produto_id = p.id
-
-
-
--- ERRADO: tentar buscar de bobinas diretamente### Tabela `retalhos`
-
-SELECT b.fabricante FROM bobinas b  -- ERRO: coluna não existe!
-
-```- Pedaços de bobinas cortadas
-
-
-
-### Queries com locação- FK: produto_id → produtos### Tabela `produtos`- **Database**: MySQL (Railway)
-
-```sql
-
--- CORRETO: usar campo locacao- Campo `locacao`: VARCHAR, formato `0000-X-0000`
-
-SELECT * FROM bobinas WHERE locacao = '1-A-1'
-
-- **NÃO** tem campos `fabricante` ou `loja` - buscar via JOIN com produtos- Cadastro base de produtos (tecidos)
-
--- ERRADO: usar localizacao_atual ou locacao_id
-
-SELECT * FROM bobinas WHERE localizacao_atual = '1-A-1'  -- Campo não existe!
+### Conceito Central
 
 ```
-
-### Formato de Locação- Campos: codigo_interno, descricao, **fabricante**, largura, gramatura, cor- **Frontend**: HTML/CSS/JavaScript puro**ANTES de escrever qualquer código, consulte os documentos em `/docs/`:**## ⚠️ DOCUMENTAÇÃO OBRIGATÓRIA## System Overview
-
-## URLs de Produção
-
-- API: https://controle-bobinas-20-production.up.railway.app- Padrão: `CORREDOR-PRATELEIRA-POSICAO`
-
-- Health: /api/health
-
-- Regex: `/^[1-9]\d{0,3}-[A-Z]-[1-9]\d{0,3}$/`- É a **única** tabela que contém `fabricante`
-
-## Convenções de Commit
-
-- feat: nova funcionalidade- Exemplos válidos: 1-A-1, 12-B-34, 9999-Z-9999
-
-- fix: correção de bug
-
-- docs: documentação- Exemplos inválidos: 0-A-1, 1-a-1, 01-A-01- **Mobile**: Capacitor (Android)
-
-- refactor: refatoração
-
-- chore: tarefas de manutenção
-
-
-
-## Arquivos Importantes### Status de Items### Tabela `bobinas`
-
-- `server.js`: Entry point
-
-- `config/database.js`: Conexão MySQL- Items com `metragem = 0` recebem `status = 'Esgotado'`
-
-- `config/version.js`: **VERSÃO DO SISTEMA** (fonte única de verdade)
-
-- `migrations/`: Scripts de migração- Items esgotados são mantidos para histórico mas ocultos das listagens normais- Estoque de bobinas inteiras- **Deploy**: Railway
-
-- `docs/PADRONIZACAO_BANCO.md`: Documentação completa do schema
-
-- Filtrar com `WHERE status != 'Esgotado'` ou `WHERE metragem > 0`
-
----
-
-- FK: produto_id → produtos
-
-## 🔢 Versionamento Semântico (SemVer)
-
-## Padrões de Código
-
-**Formato:** `MAJOR.MINOR.PATCH` (ex: 2.4.0)
-
-- Campo `loja` é DENORMALIZADO (cópia de produtos.loja para performance)
-
-### Quando incrementar cada número:
-
-### Queries com fabricante
-
-| Posição | Quando Usar | Exemplo |
-
-|---------|-------------|---------|```sql- Campo `locacao`: VARCHAR, formato `0000-X-0000` (ex: 1-A-1, 12-B-34)
-
-| **MAJOR** (X.0.0) | Mudanças que **quebram compatibilidade** ou **redesign significativo** | 2.0.0 → 3.0.0 |
-
-| **MINOR** (0.X.0) | **Novas funcionalidades** que não quebram o existente | 2.3.0 → 2.4.0 |-- CORRETO: buscar fabricante via JOIN
-
-| **PATCH** (0.0.X) | **Correções de bugs** e pequenos ajustes | 2.4.0 → 2.4.1 |
-
-SELECT b.*, p.fabricante, p.descricao - **NÃO** tem campo `fabricante` - buscar via JOIN com produtos## Estrutura do Banco de Dados| Documento | Quando Consultar |
-
-### Exemplos práticos:
-
-- Fix de bug no fabricante → **PATCH** (2.4.0 → 2.4.1)FROM bobinas b 
-
-- Padronização do banco (locacao) → **MINOR** (2.3.1 → 2.4.0)
-
-- Nova Central de Etiquetas → **MINOR** (2.2.0 → 2.3.0)JOIN produtos p ON b.produto_id = p.id
-
-- Redesign total da UI → **MAJOR** (2.x.x → 3.0.0)
-
-- Migração para TypeScript → **MAJOR** (2.x.x → 3.0.0)
-
-
-
-### Regra de Ouro:-- ERRADO: tentar buscar de bobinas diretamente### Tabela `retalhos`
-
-> **"Quando em dúvida, é MINOR. MAJOR só quando realmente muda tudo."**
-
-SELECT b.fabricante FROM bobinas b  -- ERRO: coluna não existe!
-
-### Processo de Deploy:
-
-1. Atualizar `config/version.js` com nova versão```- Pedaços de bobinas cortadas
-
-2. Atualizar `CHANGELOG.md` com as mudanças
-
-3. Commit com mensagem seguindo convenção
-
-4. Push para main → Deploy automático no Railway
-
-### Queries com locação- FK: produto_id → produtos### Tabela `produtos`|-----------|-----------------|
-
-**⚠️ AVISAR O USUÁRIO** quando a mudança justificar incremento de MAJOR.
-
-```sql
-
----
-
--- CORRETO: usar campo locacao- Campo `locacao`: VARCHAR, formato `0000-X-0000`
-
-## 📋 ROADMAP e Tarefas Futuras
-
-SELECT * FROM bobinas WHERE locacao = '1-A-1'
-
-**⚠️ IMPORTANTE:** Quando o usuário sugerir algo e pedir para "deixar pra depois" ou "fazer no futuro":
-
-- **NÃO** tem campos `fabricante` ou `loja` - buscar via JOIN com produtos- Cadastro base de produtos (tecidos)
-
-1. **Adicionar no `ROADMAP.md`** na seção apropriada:
-
-   - **Tech Debt** → Para melhorias técnicas/refatorações-- ERRADO: usar localizacao_atual ou locacao_id
-
-   - **Backlog de Ideias** → Para novas funcionalidades
-
-2. Usar formato: `- [ ] **Título** - Descrição breve`SELECT * FROM bobinas WHERE localizacao_atual = '1-A-1'  -- Campo não existe!
-
-3. Quando concluir uma tarefa, marcar como `[x]`
-
+PRODUTO (abstrato)  →  BOBINA (física)  →  PLANO DE CORTE  →  CORTES  →  CARREGAMENTO
+       ↓                     ↓                                    ↓
+  Especificação         Rolo no estoque                      RETALHO (sobra)
+  do tecido             com metragem
 ```
 
-**Isso garante que nada seja esquecido entre sessões!**
+**Distinção Crítica:**
+- `produto` = especificação abstrata (cor, gramatura, largura, fabricante)
+- `bobina` = rolo físico com metragem específica
+- **Um produto → muitas bobinas**
 
-### Formato de Locação- Campos: codigo_interno, descricao, **fabricante**, largura, gramatura, cor| `docs/ARQUITETURA.md` | Padrões de código, banco, API, estrutura |**ANTES de escrever qualquer código, consulte os documentos em `/docs/`:**Fabric roll inventory management system for Cortinave & BN (poultry tarp manufacturers). Tracks **physical bobinas** (rolls) containing **logical produtos** (fabric specs), manages **planos de corte** (cut plans) with automatic allocation, and includes **native Android app** with Bluetooth thermal printing.
+### URLs de Produção
 
----
-
-## URLs de Produção
-
-## 🖥️ Dashboard (index-web.html)
-
-- API: https://controle-bobinas-20-production.up.railway.app- Padrão: `CORREDOR-PRATELEIRA-POSICAO`
-
-**⚠️ IMPORTANTE:** O dashboard em `/index-web.html` deve **sempre refletir o status real** do projeto:
-
-- Health: /api/health
-
-### Ao criar nova funcionalidade:
-
-1. **Adicionar card** na seção "Funcionalidades Disponíveis" se tiver página HTML- Regex: `/^[1-9]\d{0,3}-[A-Z]-[1-9]\d{0,3}$/`- É a **única** tabela que contém `fabricante`
-
-2. **Atualizar fase** no roadmap se aplicável
-
-3. **Atualizar `config/version.js`** com changelog## Convenções de Commit
-
-
-
-### Cards devem ter:- feat: nova funcionalidade- Exemplos válidos: 1-A-1, 12-B-34, 9999-Z-9999
-
-- Apenas funcionalidades com página HTML existente
-
-- Link correto para a página- fix: correção de bug
-
-- Descrição clara do que faz
-
-- docs: documentação- Exemplos inválidos: 0-A-1, 1-a-1, 01-A-01| `docs/PADRONIZACAO_CODIGOS.md` | Criar/manipular códigos (BOB, RET, COR, PDC, etc) |
-
-### Funcionalidades atuais (com página):
-
-- ⚙️ Configurações → `/configuracoes.html`- refactor: refatoração
-
-- 📦 Produtos → `/produtos.html`
-
-- 📦 Estoque → `/estoque.html`- chore: tarefas de manutenção
-
-- ✂️ Ordens de Corte → `/ordens.html`
-
-- 📱 Mobile PWA → `/mobile/`
-
-- 📋 Obras Padrão → `/templates.html`
-
-- 🧵 Retalhos → `/retalhos.html`## Arquivos Importantes### Status de Items### Tabela `bobinas`
-
-- 🏷️ Central de Etiquetas → `/etiquetas.html`
-
-- `server.js`: Entry point
+| Ambiente | URL |
+|----------|-----|
+| **API** | https://controle-bobinas-20-production.up.railway.app |
+| **Health Check** | /api/health |
 
 ---
 
-- `config/database.js`: Conexão MySQL- Items com `metragem = 0` recebem `status = 'Esgotado'`
+## Stack Tecnológico
 
-## Documentação de Referência
-
-- `docs/PADRONIZACAO_BANCO.md` - Schema e regras de campos- `config/version.js`: **VERSÃO DO SISTEMA** (fonte única de verdade)
-
-- `docs/SISTEMA_VALIDACAO_RESERVAS.md` - Sistema de metragem reservada
-
-- `docs/SISTEMA_CORTES_QR.md` - Sistema de QR codes- `migrations/`: Scripts de migração- Items esgotados são mantidos para histórico mas ocultos das listagens normais- Estoque de bobinas inteiras| `docs/ESPECIFICACAO_ETIQUETAS.md` | Gerar etiquetas, impressão |
-
-- `ROADMAP.md` - Planejamento e tarefas futuras
-
-- `CHANGELOG.md` - Histórico de versões- `docs/PADRONIZACAO_BANCO.md`: Documentação completa do schema
-
-
-- Filtrar com `WHERE status != 'Esgotado'` ou `WHERE metragem > 0`
+| Camada | Tecnologia | Observações |
+|--------|------------|-------------|
+| **Backend** | Node.js + Express | Sem ORM, sem TypeScript |
+| **Database** | MySQL 8.x | Hospedado no Railway |
+| **Frontend Desktop** | HTML + CSS + JS Vanilla | Bootstrap 5, DataTables, SweetAlert2 |
+| **Mobile** | Capacitor 7 + JS Vanilla | APK Android nativo |
+| **Impressão** | Bluetooth térmica M58-LL | Via `cordova-plugin-bluetooth-serial` |
+| **Deploy** | Railway | Deploy manual (sem auto-deploy) |
 
 ---
 
-- FK: produto_id → produtos
-
-## 🔢 Versionamento Semântico (SemVer)
-
-## Padrões de Código
-
-**Formato:** `MAJOR.MINOR.PATCH` (ex: 2.4.0)
-
-- Campo `loja` é DENORMALIZADO (cópia de produtos.loja para performance)| `docs/SISTEMA_VALIDACAO_RESERVAS.md` | Mexer em alocações, metragem_reservada |
-
-### Quando incrementar cada número:
-
-### Queries com fabricante
-
-| Posição | Quando Usar | Exemplo |
-
-|---------|-------------|---------|```sql- Campo `locacao`: VARCHAR, formato `0000-X-0000` (ex: 1-A-1, 12-B-34)
-
-| **MAJOR** (X.0.0) | Mudanças que **quebram compatibilidade** ou **redesign significativo** | 2.0.0 → 3.0.0 |
-
-| **MINOR** (0.X.0) | **Novas funcionalidades** que não quebram o existente | 2.3.0 → 2.4.0 |-- CORRETO: buscar fabricante via JOIN
-
-| **PATCH** (0.0.X) | **Correções de bugs** e pequenos ajustes | 2.4.0 → 2.4.1 |
-
-SELECT b.*, p.fabricante, p.descricao - **NÃO** tem campo `fabricante` - buscar via JOIN com produtos| `docs/SISTEMA_CORTES_QR.md` | Sistema de cortes, QR codes || Documento | Quando Consultar |**Critical Distinction**: A `produto` is an abstract fabric specification (color, weight, width). A `bobina` is a physical roll containing that product with specific metragem (meters). One produto → many bobinas.
-
-### Exemplos práticos:
-
-- Fix de bug no fabricante → **PATCH** (2.4.0 → 2.4.1)FROM bobinas b 
-
-- Padronização do banco (locacao) → **MINOR** (2.3.1 → 2.4.0)
-
-- Nova Central de Etiquetas → **MINOR** (2.2.0 → 2.3.0)JOIN produtos p ON b.produto_id = p.id
-
-- Redesign total da UI → **MAJOR** (2.x.x → 3.0.0)
-
-- Migração para TypeScript → **MAJOR** (2.x.x → 3.0.0)
-
-
-
-### Regra de Ouro:-- ERRADO: tentar buscar de bobinas diretamente### Tabela `retalhos`| `docs/FUNCIONALIDADES.md` | Entender fluxos e regras de negócio |
-
-> **"Quando em dúvida, é MINOR. MAJOR só quando realmente muda tudo."**
-
-SELECT b.fabricante FROM bobinas b  -- ERRO: coluna não existe!
-
-### Processo de Deploy:
-
-1. Atualizar `config/version.js` com nova versão```- Pedaços de bobinas cortadas
-
-2. Atualizar `CHANGELOG.md` com as mudanças
-
-3. Commit com mensagem seguindo convenção
-
-4. Push para main → Deploy automático no Railway
-
-### Queries com locação- FK: produto_id → produtos|-----------|-----------------|
-
-**⚠️ AVISAR O USUÁRIO** quando a mudança justificar incremento de MAJOR.
-
-```sql
-
----
-
--- CORRETO: usar campo locacao- Campo `locacao`: VARCHAR, formato `0000-X-0000`
-
-## 📋 ROADMAP e Tarefas Futuras
-
-SELECT * FROM bobinas WHERE locacao = '1-A-1'
-
-**⚠️ IMPORTANTE:** Quando o usuário sugerir algo e pedir para "deixar pra depois" ou "fazer no futuro":
-
-- **NÃO** tem campos `fabricante` ou `loja` - buscar via JOIN com produtos---
-
-1. **Adicionar no `ROADMAP.md`** na seção apropriada:
-
-   - **Tech Debt** → Para melhorias técnicas/refatorações-- ERRADO: usar localizacao_atual ou locacao_id
-
-   - **Backlog de Ideias** → Para novas funcionalidades
-
-2. Usar formato: `- [ ] **Título** - Descrição breve`SELECT * FROM bobinas WHERE localizacao_atual = '1-A-1'  -- Campo não existe!
-
-3. Quando concluir uma tarefa, marcar como `[x]`
+## Estrutura do Projeto
 
 ```
-
-**Isso garante que nada seja esquecido entre sessões!**
-
-### Formato de Locação| `docs/ARQUITETURA.md` | Padrões de código, banco, API, estrutura |## Architecture
-
----
-
-## URLs de Produção
-
-## Documentação de Referência
-
-- `docs/PADRONIZACAO_BANCO.md` - Schema e regras de campos- API: https://controle-bobinas-20-production.up.railway.app- Padrão: `CORREDOR-PRATELEIRA-POSICAO`
-
-- `docs/SISTEMA_VALIDACAO_RESERVAS.md` - Sistema de metragem reservada
-
-- `docs/SISTEMA_CORTES_QR.md` - Sistema de QR codes- Health: /api/health
-
-- `ROADMAP.md` - Planejamento e tarefas futuras
-
-- `CHANGELOG.md` - Histórico de versões- Regex: `/^[1-9]\d{0,3}-[A-Z]-[1-9]\d{0,3}$/`## System Overview
-
-
-## Convenções de Commit
-
-- feat: nova funcionalidade- Exemplos válidos: 1-A-1, 12-B-34, 9999-Z-9999
-
-- fix: correção de bug
-
-- docs: documentação- Exemplos inválidos: 0-A-1, 1-a-1, 01-A-01| `docs/PADRONIZACAO_CODIGOS.md` | Criar/manipular códigos (BOB, RET, COR, PDC, etc) |
-
-- refactor: refatoração
-
-- chore: tarefas de manutenção
-
-
-
-## Arquivos Importantes### Status de ItemsSistema de gestão de estoque de bobinas de lona para **Cortinave (Palotina/PLA)** e **BN (Cianorte/CIA)**.
-
-- `server.js`: Entry point
-
-- `config/database.js`: Conexão MySQL- Items com `metragem = 0` recebem `status = 'Esgotado'`
-
-- `migrations/`: Scripts de migração
-
-- `docs/PADRONIZACAO_BANCO.md`: Documentação completa do schema- Items esgotados são mantidos para histórico mas ocultos das listagens normais| `docs/ESPECIFICACAO_ETIQUETAS.md` | Gerar etiquetas, impressão |- **Backend**: Node.js + Express + MySQL, deployed on Railway (manual deploys only)
-
-
-
----- Filtrar com `WHERE status != 'Esgotado'` ou `WHERE metragem > 0`
-
-
-
-## 📋 ROADMAP e Tarefas Futuras**Fluxo Principal:**
-
-
-
-**⚠️ IMPORTANTE:** Quando o usuário sugerir algo e pedir para "deixar pra depois" ou "fazer no futuro":## Padrões de Código
-
-
-
-1. **Adicionar no `ROADMAP.md`** na seção apropriada:```| `docs/SISTEMA_VALIDACAO_RESERVAS.md` | Mexer em alocações, metragem_reservada |- **Pattern**: Traditional MVC with routes → controllers → direct DB queries (no ORM, no TypeScript)
-
-   - **Tech Debt** → Para melhorias técnicas/refatorações
-
-   - **Backlog de Ideias** → Para novas funcionalidades### Queries com fabricante
-
-2. Usar formato: `- [ ] **Título** - Descrição breve`
-
-3. Quando concluir uma tarefa, marcar como `[x]````sqlProduto (spec) → Bobina (física) → Plano de Corte → Cortes → Carregamento
-
-
-
-**Isso garante que nada seja esquecido entre sessões!**-- CORRETO: buscar fabricante via JOIN
-
-
-
----SELECT b.*, p.fabricante, p.descricao                       ↓| `docs/SISTEMA_CORTES_QR.md` | Sistema de cortes, QR codes |- **Database**: Connection pool via `config/database.js` with Railway-specific env vars (`MYSQLHOST`, `MYSQLUSER`, etc.)
-
-
-
-## Documentação de ReferênciaFROM bobinas b 
-
-- `docs/PADRONIZACAO_BANCO.md` - Schema e regras de campos
-
-- `docs/SISTEMA_VALIDACAO_RESERVAS.md` - Sistema de metragem reservadaJOIN produtos p ON b.produto_id = p.id                   Retalho (sobra)
-
-- `docs/SISTEMA_CORTES_QR.md` - Sistema de QR codes
-
-- `ROADMAP.md` - Planejamento e tarefas futuras
-
-- `CHANGELOG.md` - Histórico de versões
-
--- ERRADO: tentar buscar de bobinas diretamente```- **Frontend**: 
-
-SELECT b.fabricante FROM bobinas b  -- ERRO: coluna não existe!
-
+controle-bobinas-2.0/
+├── .github/
+│   └── copilot-instructions.md   # Este arquivo
+├── android/                       # Projeto Android (Capacitor)
+├── config/
+│   ├── database.js               # Pool de conexão MySQL
+│   └── version.js                # ⭐ VERSÃO DO SISTEMA (fonte única)
+├── controllers/                   # Lógica de negócio
+│   ├── bobinasController.js
+│   ├── produtosController.js
+│   ├── ordensCorteController.js
+│   ├── cortesController.js
+│   ├── qrcodesController.js
+│   └── ...
+├── database/
+│   └── schema.sql                # Referência (migrations são a verdade)
+├── docs/                          # 📚 Documentação técnica
+├── middleware/
+│   ├── validarReservas.js        # Validação automática de reservas
+│   └── uploadFotos.js            # Upload com compressão (Sharp)
+├── migrations/                    # Migrações de banco (execução automática)
+├── public/
+│   ├── css/, js/                 # Assets frontend
+│   ├── mobile/                   # App mobile (Capacitor)
+│   └── *.html                    # Páginas desktop
+├── routes/                        # Rotas Express
+├── uploads/                       # Arquivos enviados (fotos de contraprova)
+├── server.js                      # Entry point
+├── package.json
+├── CHANGELOG.md                   # Histórico de versões
+└── ROADMAP.md                     # Planejamento futuro
 ```
 
-
-
-### Queries com locação**Distinção Crítica:** ---  - Desktop: Vanilla JS with server-side rendered HTML in `public/` (no build step)
-
-```sql
-
--- CORRETO: usar campo locacao- `produto` = especificação abstrata (cor, gramatura, largura)
-
-SELECT * FROM bobinas WHERE locacao = '1-A-1'
-
-- `bobina` = rolo físico com metragem específica  - Mobile: Capacitor v8 + Vanilla JS in `public/mobile/` → Android APK with native features
-
--- ERRADO: usar localizacao_atual ou locacao_id
-
-SELECT * FROM bobinas WHERE localizacao_atual = '1-A-1'  -- Campo não existe!- Um produto → muitas bobinas
-
-```
-
-## System Overview- **External Services**: Bluetooth thermal printer (M58-LL) via `cordova-plugin-bluetooth-serial`
-
-## URLs de Produção
-
-- API: https://controle-bobinas-20-production.up.railway.app---
-
-- Health: /api/health
-
-
-
-## Convenções de Commit
-
-- feat: nova funcionalidade## Stack Tecnológico
-
-- fix: correção de bug
-
-- docs: documentaçãoSistema de gestão de estoque de bobinas de lona para **Cortinave (Palotina/PLA)** e **BN (Cianorte/CIA)**.## Database Schema & Business Logic
-
-- refactor: refatoração
-
-- chore: tarefas de manutenção| Camada | Tecnologia |
-
-
-
-## Arquivos Importantes|--------|------------|
-
-- `server.js`: Entry point
-
-- `config/database.js`: Conexão MySQL| **Backend** | Node.js + Express + MySQL (sem ORM, sem TypeScript) |
-
-- `migrations/`: Scripts de migração
-
-- `docs/PADRONIZACAO_BANCO.md`: Documentação completa do schema| **Frontend Desktop** | HTML + CSS + JS Vanilla + Bootstrap 5 |**Fluxo Principal:**### Core Tables
-
-
-| **Mobile** | Capacitor 7 + JS Vanilla → APK Android |
-
-| **Deploy** | Railway (manual) |``````
-
-| **Impressão** | Elgin L42 Pro Full (USB) via servidor local |
-
-Produto (spec) → Bobina (física) → Plano de Corte → Cortes → Carregamentoprodutos (specifications)
-
 ---
-
-                      ↓  ├─ bobinas (physical rolls with metragem_atual/reservada)
-
-## Estrutura de Pastas
-
-                   Retalho (sobra)  └─ retalhos (remnants from cuts)
-
-```
-
-controle-bobinas-2.0/```
-
-├── config/database.js        # Conexão MySQL
-
-├── controllers/              # Lógica de negócioplanos_corte (cut plans: planejamento → em_producao → finalizado)
-
-├── routes/                   # Rotas Express
-
-├── middleware/               # Validações, uploads**Distinção Crítica:**   ├─ itens_plano_corte (items to cut)
-
-├── migrations/               # Migrações de banco
-
-├── public/                   # Frontend desktop- `produto` = especificação abstrata (cor, gramatura, largura)  ├─ alocacoes_corte (which bobina/retalho provides material)
-
-│   └── mobile/              # App mobile (Capacitor)
-
-├── docs/                     # 📚 DOCUMENTAÇÃO- `bobina` = rolo físico com metragem específica  └─ cortes_realizados (individual cuts with QR codes and photos)
-
-├── server.js                 # Entry point
-
-├── README.md                 # Intro- Um produto → muitas bobinas
-
-├── CHANGELOG.md              # Versões
-
-└── ROADMAP.md               # Planejamentolocacoes (warehouse locations: A1-B1-C1, A2-B2-C2, etc.)
-
-```
-
----  └─ plano_locacoes (storage locations for finalized plans)
-
----
-
-
-
-## Padrões de Código
-
-## Stack Tecnológicocarregamentos (loading processes for shipping)
-
-### Controllers (Backend)
-
-  └─ carregamentos_itens (audit trail of validated cuts)
-
-```javascript
-
-// ✅ CORRETO| Camada | Tecnologia |```
-
-const criar = async (req, res) => {
-
-    try {|--------|------------|
-
-        const { campo } = req.body;
-
-        | **Backend** | Node.js + Express + MySQL (sem ORM, sem TypeScript) |### QR Code System (NEW in v2.2.0)
-
-        // Validação
-
-        if (!campo) {| **Frontend Desktop** | HTML + CSS + JS Vanilla + Bootstrap 5 |**Critical Features**: Individual cut tracking with photo contraprova, origin validation, and loading verification.
-
-            return res.json({ success: false, error: 'Campo obrigatório' });
-
-        }| **Mobile** | Capacitor 7 + JS Vanilla → APK Android |
-
-        
-
-        // Query SEMPRE parametrizada| **Deploy** | Railway (manual) |- **Codes Generated**:
-
-        const [result] = await db.query(
-
-            'INSERT INTO tabela (campo) VALUES (?)',| **Impressão** | Elgin L42 Pro Full (USB) via servidor local |  - `BOB-{id}` for bobinas (legacy)
-
-            [campo]
-
-        );  - `RET-{id}` for retalhos (legacy)
-
-        
-
-        console.log('✅ Registro criado:', result.insertId);---  - `COR-{YEAR}-{SEQ}` for cortes (e.g., COR-2025-00001) - NEW
-
-        res.json({ success: true, data: { id: result.insertId } });
-
-          - `LOC-{id}` for locacoes - NEW
-
-    } catch (error) {
-
-        console.error('❌ Erro:', error);## Estrutura de Pastas  - `CAR-{YEAR}-{SEQ}` for carregamentos - NEW
-
-        res.json({ success: false, error: error.message });
-
-    }
-
-};
-
-``````- **Controllers**: `qrcodesController.js`, `cortesController.js`, `locacoesController.js`
-
-
-
-### Respostas de APIcontrole-bobinas-2.0/- **Routes**: `/api/qrcodes`, `/api/mobile/corte`, `/api/locacoes`, `/api/mobile/carregamento`
-
-
-
-```javascript├── config/database.js        # Conexão MySQL- **Photo Upload**: `middleware/uploadFotos.js` with multer + sharp compression (5MB limit, JPEG 80%, 1200px max)
-
-// Sucesso
-
-res.json({ success: true, data: resultado });├── controllers/              # Lógica de negócio- **See**: `SISTEMA_CORTES_QR.md` for complete documentation
-
-
-
-// Erro├── routes/                   # Rotas Express
-
-res.json({ success: false, error: 'Mensagem' });
-
-```├── middleware/               # Validações, uploads**Key Flows**:
-
-
-
-### Emojis de Log├── migrations/               # Migrações de banco1. **Validation**: Mobile scans bobina QR → validates against expected origin → proceeds to cut
-
-
-
-| Emoji | Uso |├── public/                   # Frontend desktop2. **Cut Registration**: Operator inputs metragem + uploads medidor photo → system generates unique COR code
-
-|-------|-----|
-
-| ✅ | Sucesso |│   └── mobile/              # App mobile (Capacitor)3. **Finalization**: When all items cut → scan warehouse location QRs → mark plan as finalizado
-
-| ❌ | Erro |
-
-| ⚠️ | Aviso |├── docs/                     # 📚 DOCUMENTAÇÃO4. **Loading**: Scan cut QRs to validate → green/red feedback → finalizes when 100% validated
-
-| 🔄 | Processando |
-
-├── server.js                 # Entry point
-
----
-
-├── README.md                 # Intro### Reserved Metragem System
 
 ## Banco de Dados
 
-├── CHANGELOG.md              # Versões**Critical**: `metragem_reservada` in bobinas/retalhos MUST match active allocations in `alocacoes_corte` for plans with `status='em_producao'`. 
+### ⚠️ Regras Críticas
 
-### Convenções
+#### 1. Campo `fabricante`
 
-└── ROADMAP.md               # Planejamento
+```sql
+-- ✅ CORRETO: buscar via JOIN com produtos
+SELECT b.*, p.fabricante, p.descricao 
+FROM bobinas b 
+JOIN produtos p ON b.produto_id = p.id;
+
+-- ❌ ERRADO: bobinas NÃO tem fabricante
+SELECT b.fabricante FROM bobinas b;  -- ERRO: coluna não existe!
+```
+
+#### 2. Campo `loja` em bobinas
+
+- É **desnormalizado** (cópia de `produtos.loja` para performance)
+- Bobinas NÃO migram entre lojas
+- Representa "snapshot" do momento da entrada
+
+#### 3. Campo `locacao`
+
+```
+Formato: 0000-X-0000 (ÁREA-CORREDOR-POSIÇÃO)
+Regex:   /^\d{4}-[A-Z]-\d{4}$/
+Tipo:    VARCHAR(12)
+
+Exemplos válidos:   0001-A-0001, 0150-B-0025
+Exemplos inválidos: 1-A-1, 0000-A-0001, 0001-a-0001
+```
+
+#### 4. Campo `metragem_reservada`
+
+```
+⚠️ NUNCA fazer UPDATE manual em metragem_reservada!
+   → Controlada por TRIGGERS do banco
+   → Sincroniza automaticamente com alocacoes_corte
+   → Ver: docs/SISTEMA_VALIDACAO_RESERVAS.md
+```
+
+#### 5. Items Esgotados
+
+```sql
+-- Items com metragem = 0 recebem status = 'Esgotado'
+-- São mantidos para histórico mas ocultos das listagens
+
+-- Query padrão para listagens:
+SELECT * FROM bobinas WHERE status != 'Esgotado';
+SELECT * FROM retalhos WHERE status != 'Esgotado';
+```
+
+### Tabelas Principais
+
+```
+produtos (especificações)
+├── bobinas (rolos físicos com metragem_atual/reservada)
+│   └── retalhos (sobras de cortes)
+└── planos_corte (ordens de produção)
+    ├── itens_plano_corte (o que cortar)
+    ├── alocacoes_corte (de onde cortar)
+    └── cortes_realizados (cortes com QR e fotos)
+
+locacoes (posições no armazém)
+└── plano_locacoes (onde planos finalizados estão guardados)
+
+carregamentos (processos de envio)
+└── carregamentos_itens (auditoria de cortes validados)
+```
+
+### Convenções de Nomenclatura
 
 | Elemento | Convenção | Exemplo |
-
-|----------|-----------|---------|```- **Orphaned reserves** = disaster (material appears unavailable but isn't actually allocated)
-
+|----------|-----------|---------|
 | Tabelas | snake_case, plural | `planos_corte` |
+| Colunas | snake_case | `metragem_atual` |
+| PKs | `id` (AUTO_INCREMENT) | `id` |
+| FKs | `{tabela_singular}_id` | `produto_id` |
+| Metragem | `DECIMAL(10,2)` | `150.00` |
+| Status | `ENUM(...)` | `'Disponível'` |
 
-| Colunas | snake_case | `metragem_atual` |- **Prevention**: Database triggers in `database/migrations/006_add_triggers_reservas.js` automatically sync reserves on allocation delete/update
+### Migrações
 
-| FKs | `{singular}_id` | `produto_id` |
-
-| Metragem | `DECIMAL(10,2)` | 150.00 |---- **Validation**: `middleware/validarReservas.js` runs on startup to detect and fix inconsistencies
-
-
-
-### Tabelas Principais- **See**: `SISTEMA_VALIDACAO_RESERVAS.md` for complete multi-layer solution
-
-
-
-```## Padrões de Código
-
-produtos → bobinas → retalhos
-
-              ↓When modifying allocation logic in `controllers/ordensCorteController.js`:
-
-         planos_corte → itens_plano_corte
-
-                     → alocacoes_corte### Controllers (Backend)1. Never manually UPDATE metragem_reservada (triggers handle it)
-
-                     → cortes_realizados
-
-```2. If deleting alocacoes_corte, ensure plano status logic is correct
-
-
-
-### Migrações```javascript3. Test with validation middleware to verify reserves match allocations
-
-
-
-```javascript// ✅ CORRETO
-
+```javascript
 // migrations/0XX_descricao.js
-
-exports.up = async function(db) {const criar = async (req, res) => {## Migrations
-
-    await db.query(`ALTER TABLE ...`);
-
-    console.log('✅ Migration aplicada');    try {
-
+exports.up = async function(db) {
+    await db.query(`ALTER TABLE tabela ADD COLUMN novo_campo VARCHAR(50)`);
+    console.log('✅ Migration 0XX: Descrição');
 };
 
-```        const { campo } = req.body;Auto-run on server start via `server.js:runMigrations()`. Manual run: `npm run migrate`
+exports.down = async function(db) {
+    await db.query(`ALTER TABLE tabela DROP COLUMN novo_campo`);
+};
+```
 
-
-
-Executam automaticamente no startup.        
-
-
-
----        // Validação**Pattern**: Each migration exports `up(db)` and optional `down(db)`. Tracked in `migrations` table (not duplicated in `/database/migrations/`).
-
-
-
-## Códigos do Sistema        if (!campo) {
-
-
-
-**⚠️ SEMPRE consultar `docs/PADRONIZACAO_CODIGOS.md`**            return res.json({ success: false, error: 'Campo obrigatório' });```javascript
-
-
-
-| Entidade | Formato | Exemplo |        }// migrations/007_example.js
-
-|----------|---------|---------|
-
-| Produto | `{LOJA}-{00000}` | `PLA-00123` |        exports.up = async function(db) {
-
-| Bobina | `BOB-{LOJA}-{000000}` | `BOB-PLA-000001` |
-
-| Retalho | `RET-{LOJA}-{000000}` | `RET-CIA-000042` |        // Query SEMPRE parametrizada    await db.query(`ALTER TABLE ...`);
-
-| Plano | `PDC-{LOJA}-{000}` | `PDC-PLA-001` |
-
-| Corte | `COR-{LOJA}-{PDC}-{00}` | `COR-PLA-001-01` |        const [result] = await db.query(    console.log('✓ Migration complete');
-
-| Locação | `{0000}-{X}-{0000}` | `0001-A-0025` |
-
-            'INSERT INTO tabela (campo) VALUES (?)',};
-
-**Lojas:** `PLA` = Cortinave/Palotina, `CIA` = BN/Cianorte
-
-            [campo]```
+**Execução:** Automática no startup via `server.js:runMigrations()`
 
 ---
 
+## Padrões de Código
+
+### Controllers (Backend)
+
+```javascript
+// ✅ Padrão do projeto
+const criar = async (req, res) => {
+    try {
+        const { campo } = req.body;
+        
+        // 1. Validação
+        if (!campo) {
+            return res.json({ success: false, error: 'Campo obrigatório' });
+        }
+        
+        // 2. Query SEMPRE parametrizada
+        const [result] = await db.query(
+            'INSERT INTO tabela (campo) VALUES (?)',
+            [campo]
         );
-
-## Medidas
-
-        ## Coding Conventions
-
-**⚠️ SEMPRE consultar `docs/PADRONIZACAO_CODIGOS.md`**
-
+        
+        // 3. Log com emoji
         console.log('✅ Registro criado:', result.insertId);
-
-| Tipo | Unidade | Exemplo |
-
-|------|---------|---------|        res.json({ success: true, data: { id: result.insertId } });### Routes & Controllers
-
-| Largura | cm | `190cm` |
-
-| Comprimento | m | `150,00m` |        - Routes pass through to controllers: `router.post('/', controller.criarBobina)`
-
-| Bando Y | LMxLYxLYcm | `220x80x80cm` |
-
-    } catch (error) {- Controllers handle validation, business logic, and direct SQL queries
-
----
-
-        console.error('❌ Erro:', error);- **Always** use parameterized queries: `db.query(sql, [param1, param2])`
-
-## Etiquetas
-
-        res.json({ success: false, error: error.message });- Return format: `res.json({ success: true, data: result })` or `{ success: false, error: msg }`
-
-**⚠️ SEMPRE consultar `docs/ESPECIFICACAO_ETIQUETAS.md`**
-
+        
+        // 4. Resposta padronizada
+        res.json({ success: true, data: { id: result.insertId } });
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        res.json({ success: false, error: error.message });
     }
+};
+```
 
-- Tamanho: 60mm x 30mm
+### Respostas de API
 
-- Barcode: Code 128};### ID Generation
+```javascript
+// Sucesso
+res.json({ success: true, data: resultado });
 
-- Impressora: Elgin L42 Pro Full
+// Erro
+res.json({ success: false, error: 'Mensagem de erro' });
 
-```Bobinas get auto-generated `codigo_interno`: `{CTV|BN}-{YEAR}-{5-digit-sequential}`
+// Lista
+res.json({ success: true, data: items, total: items.length });
+```
 
----
+### Emojis de Log
 
-- See `bobinasController.js:gerarCodigoInterno()` for pattern
+| Emoji | Uso | Exemplo |
+|-------|-----|---------|
+| ✅ | Sucesso | `console.log('✅ Bobina criada')` |
+| ❌ | Erro | `console.error('❌ Erro:', error)` |
+| ⚠️ | Aviso | `console.warn('⚠️ Metragem baixa')` |
+| 🔄 | Processando | `console.log('🔄 Sincronizando...')` |
 
-## Sistema de Reservas
+### Rotas
 
-### Respostas de API- Query last code for year, increment sequence number
+```javascript
+// routes/recurso.js
+const express = require('express');
+const router = express.Router();
+const controller = require('../controllers/recursoController');
 
-**⚠️ SEMPRE consultar `docs/SISTEMA_VALIDACAO_RESERVAS.md`**
+router.get('/', controller.listar);
+router.get('/:id', controller.buscarPorId);
+router.post('/', controller.criar);
+router.put('/:id', controller.atualizar);
+router.delete('/:id', controller.excluir);
 
-
-
-- `metragem_reservada` é controlada por **triggers** do banco
-
-- NUNCA fazer UPDATE manual em metragem_reservada```javascript### Error Handling
-
-- Triggers sincronizam automaticamente com `alocacoes_corte`
-
-// Sucesso- Log to console with emoji prefixes: `console.log('✅ Success')`, `console.error('❌ Error:')`
-
----
-
-res.json({ success: true, data: resultado });- Don't throw on startup failures (database unavailable, migration errors) - log and continue
-
-## Deploy
-
-- See `middleware/validarReservas.js` for graceful degradation pattern
-
-1. Commitar alterações
-
-2. Push para `main`// Erro
-
-3. Railway Dashboard → Deploy manual
-
-res.json({ success: false, error: 'Mensagem' });## Railway Deployment
-
-**Ver:** `docs/CONFIGURAR_RAILWAY.md`
-
+module.exports = router;
 ```
 
 ---
 
-- **Production**: Manual deploys only (auto-deploy disabled per `CONFIGURAR_RAILWAY.md`)
+## Sistema de QR Codes
 
-## Mobile/Android
+### Códigos Gerados
 
-### Emojis de Log- **Config**: `railway.json` + `nixpacks.json` (Nixpacks builder)
-
-- Código em `public/mobile/`
-
-- API config em `api-config.js`- **Env Vars**: Railway auto-provides `MYSQLHOST`, `MYSQLUSER`, etc. for MySQL service
-
-- Build: `npm run android:build`
-
-| Emoji | Uso |- **Health Check**: `GET /api/health` returns `{ status: 'OK', timestamp }`
-
-**Ver:** `docs/BUILD_APK.md`, `docs/SETUP_ANDROID_ENV.md`
-
-|-------|-----|
-
----
-
-| ✅ | Sucesso |To deploy: Push to `main` branch, then manually trigger in Railway dashboard.
-
-## Tarefas Comuns
-
-| ❌ | Erro |
-
-### Nova Rota
-
-1. Controller em `controllers/{recurso}Controller.js`| ⚠️ | Aviso |## Mobile PWA
-
-2. Rota em `routes/{recurso}.js`
-
-3. Registrar em `server.js`| 🔄 | Processando |
-
-
-
-### Nova MigrationLocated in `public/mobile/` with:
-
-1. Criar `migrations/0XX_descricao.js`
-
-2. Reiniciar servidor (executa automático)---- `service-worker.js`: Cache-first for assets, network-first for API calls
-
-
-
-### Build APK- `manifest.json`: PWA configuration for Android install
-
-```powershell
-
-npm run android:sync## Banco de Dados- Strategy: Offline-capable interface for shop floor with QR code scanning (see `PLANEJAMENTO_MOBILE.md`)
-
-npm run android:build
-
-```
-
-
-
----### Convenções## Key Files
-
-
-
-## Documentação
-
-
-
-Ao implementar features:| Elemento | Convenção | Exemplo |- `ROADMAP.md`: Full system requirements and phased development plan
-
-- Atualizar `CHANGELOG.md` para mudanças visíveis
-
-- Atualizar `ROADMAP.md` se mudar planejamento|----------|-----------|---------|- `SISTEMA_VALIDACAO_RESERVAS.md`: Critical reserved metragem architecture
-
-- Criar doc em `/docs/` para decisões técnicas complexas
-
-| Tabelas | snake_case, plural | `planos_corte` |- `SISTEMA_CORTES_QR.md`: Complete QR code system documentation (NEW v2.2.0)
-
-| Colunas | snake_case | `metragem_atual` |- `ROADMAP_SISTEMA_CORTES_QR.md`: QR system implementation roadmap (NEW v2.2.0)
-
-| FKs | `{singular}_id` | `produto_id` |- `database/schema.sql`: Complete table definitions (for reference, migrations are source of truth)
-
-| Metragem | `DECIMAL(10,2)` | 150.00 |- `server.js`: Entry point with middleware setup, migration runner, and route registration
-
-
-
-### Tabelas Principais## Common Tasks
-
-
-
-```**Add new route**: 
-
-produtos → bobinas → retalhos1. Create controller method in `controllers/{resource}Controller.js`
-
-              ↓2. Add route in `routes/{resource}.js`
-
-         planos_corte → itens_plano_corte3. Register route in `server.js` (if new resource)
-
-                     → alocacoes_corte
-
-                     → cortes_realizados**Add migration**:
-
-```1. Create `migrations/0XX_description.js` with `exports.up`
-
-2. Restart server or run `npm run migrate`
-
-### Migrações3. Verify in `migrations` table
-
-
-
-```javascript**Debug reserve inconsistencies**:
-
-// migrations/0XX_descricao.js1. Check `middleware/validarReservas.js` startup logs
-
-exports.up = async function(db) {2. Verify triggers exist: `SELECT * FROM information_schema.TRIGGERS`
-
-    await db.query(`ALTER TABLE ...`);3. Manually validate: Compare SUM(metragem_alocada) from alocacoes_corte to metragem_reservada in bobinas
-
-    console.log('✅ Migration aplicada');
-
-};**Build Android APK**:
-
-``````powershell
-
-npm run android:sync    # Sync web assets to Capacitor
-
-Executam automaticamente no startup.npm run android:build   # Build debug APK (in android/app/build/outputs/apk/debug/)
-
-npm run android:release # Build release APK (requires keystore config)
-
----```
-
-- APK connects to server via `public/mobile/api-config.js` (hardcoded URL)
-
-## Códigos do Sistema- Bluetooth printing: `public/mobile/bluetooth-printer.js` + `cordova-plugin-bluetooth-serial`
-
-- Version in `capacitor.config.json` format: `2.2.5-YYYYMMDD-HHMM`
-
-**⚠️ SEMPRE consultar `docs/PADRONIZACAO_CODIGOS.md`**
-
-**Test workflows**:
-
-| Entidade | Formato | Exemplo |- No automated tests (manual testing only)
-
-|----------|---------|---------|- See `GUIA_TESTES_SISTEMA_COMPLETO.md` for comprehensive test checklist
-
-| Produto | `{LOJA}-{00000}` | `PLA-00123` |- Use `teste-qrcodes.html` for QR code scanning simulation
-
-| Bobina | `BOB-{LOJA}-{000000}` | `BOB-PLA-000001` |- Debug logs: Emoji prefixes (✅ success, ❌ error, ⚠️ warning, 🔄 processing)
-
+| Entidade | Formato | Exemplo |
+|----------|---------|---------|
+| Produto | `{LOJA}-{00000}` | `CTV-00123` |
+| Bobina | `BOB-{LOJA}-{000000}` | `BOB-PLA-000001` |
 | Retalho | `RET-{LOJA}-{000000}` | `RET-CIA-000042` |
+| Plano | `PDC-{LOJA}-{000}` | `PDC-PLA-001` |
+| Corte | `COR-{ANO}-{00000}` | `COR-2025-00001` |
+| Locação | `LOC-{id}` | `LOC-5` |
+| Carregamento | `CAR-{ANO}-{00000}` | `CAR-2025-00001` |
 
-| Plano | `PDC-{LOJA}-{000}` | `PDC-PLA-001` |## Documentation Standards
+### Fluxo de Cortes (Mobile)
 
-| Corte | `COR-{LOJA}-{PDC}-{00}` | `COR-PLA-001-01` |
+```
+1. Operador abre plano em produção
+2. Escaneia QR da bobina/retalho → Validação de origem
+3. Informa metragem cortada
+4. Tira foto do medidor (contraprova)
+5. Sistema gera código COR-XXXX-XXXXX
+6. Imprime etiqueta do corte
+7. Quando tudo cortado → Escaneia locações de armazenamento
+8. Finaliza plano
+```
 
-| Locação | `{0000}-{X}-{0000}` | `0001-A-0025` |Project uses extensive MD documentation - when adding features, update:
+### Endpoints Principais
 
-- `ROADMAP.md` if changing planned features
+```
+GET  /api/qrcodes/bobina/:id      # QR de bobina
+GET  /api/qrcodes/retalho/:id     # QR de retalho
+GET  /api/qrcodes/corte/:codigo   # QR de corte
+POST /api/mobile/corte/registrar  # Registra novo corte
+POST /api/mobile/validar-qr       # Valida origem antes de cortar
+```
 
-**Lojas:** `PLA` = Cortinave/Palotina, `CIA` = BN/Cianorte- `CHANGELOG.md` for user-facing changes
-
-- Create `{FEATURE}_SISTEMA.md` for complex technical decisions (follow `SISTEMA_VALIDACAO_RESERVAS.md` pattern)
-
----
-
-**Key docs by topic**:
-
-## Medidas- Database reserves: `SISTEMA_VALIDACAO_RESERVAS.md`
-
-- QR system: `SISTEMA_CORTES_QR.md` + `ROADMAP_SISTEMA_CORTES_QR.md`
-
-**⚠️ SEMPRE consultar `docs/PADRONIZACAO_CODIGOS.md`**- Android setup: `SETUP_ANDROID_ENV.md` + `BUILD_APK.md`
-
-- Railway deploy: `CONFIGURAR_RAILWAY.md` + `FLUXO_DEPLOY_MANUAL.md`
-
-| Tipo | Unidade | Exemplo |- Mobile PWA: `PLANEJAMENTO_MOBILE.md`
-
-|------|---------|---------|
-| Largura | cm | `190cm` |
-| Comprimento | m | `150,00m` |
-| Bando Y | LMxLYxLYcm | `220x80x80cm` |
+**Documentação completa:** `docs/SISTEMA_CORTES_QR.md`
 
 ---
 
-## Etiquetas
+## MobileAndroid
 
-**⚠️ SEMPRE consultar `docs/ESPECIFICACAO_ETIQUETAS.md`**
+### Estrutura
 
-- Tamanho: 60mm x 30mm
-- Barcode: Code 128
-- Impressora: Elgin L42 Pro Full
-
----
-
-## Sistema de Reservas
-
-**⚠️ SEMPRE consultar `docs/SISTEMA_VALIDACAO_RESERVAS.md`**
-
-- `metragem_reservada` é controlada por **triggers** do banco
-- NUNCA fazer UPDATE manual em metragem_reservada
-- Triggers sincronizam automaticamente com `alocacoes_corte`
-
----
-
-## Deploy
-
-1. Commitar alterações
-2. Push para `main`
-3. Railway Dashboard → Deploy manual
-
-**Ver:** `docs/CONFIGURAR_RAILWAY.md`
-
----
-
-## Mobile/Android
-
-- Código em `public/mobile/`
-- API config em `api-config.js`
-- Build: `npm run android:build`
-
-**Ver:** `docs/BUILD_APK.md`, `docs/SETUP_ANDROID_ENV.md`
-
----
-
-## Tarefas Comuns
-
-### Nova Rota
-1. Controller em `controllers/{recurso}Controller.js`
-2. Rota em `routes/{recurso}.js`
-3. Registrar em `server.js`
-
-### Nova Migration
-1. Criar `migrations/0XX_descricao.js`
-2. Reiniciar servidor (executa automático)
+```
+public/mobile/
+├── index.html           # Menu principal
+├── api-config.js        # URL da API (hardcoded)
+├── bluetooth-printer.js # Impressão térmica
+├── service-worker.js    # Cache offline (PWA)
+└── manifest.json        # Config PWA
+```
 
 ### Build APK
+
 ```powershell
+# Sincronizar assets web para Capacitor
 npm run android:sync
+
+# Build debug APK
 npm run android:build
+# Output: android/app/build/outputs/apk/debug/app-debug.apk
+
+# Build release APK (requer keystore)
+npm run android:release
+```
+
+### Configuração da API
+
+```javascript
+// public/mobile/api-config.js
+const API_BASE_URL = 'https://controle-bobinas-20-production.up.railway.app';
+```
+
+**Documentação:** `docs/BUILD_APK.md`, `docs/SETUP_ANDROID_ENV.md`
+
+---
+
+## Deploy
+
+### Railway (Produção)
+
+1. Fazer commit das alterações
+2. Push para branch `main`
+3. Acessar Railway Dashboard
+4. Clicar em "Deploy" manualmente
+
+**⚠️ Auto-deploy está DESABILITADO por segurança**
+
+### Variáveis de Ambiente (Railway)
+
+```
+MYSQLHOST     # Host do MySQL (auto-fornecido)
+MYSQLUSER     # Usuário (auto-fornecido)
+MYSQLPASSWORD # Senha (auto-fornecido)
+MYSQLDATABASE # Nome do banco (auto-fornecido)
+MYSQLPORT     # Porta (auto-fornecido)
+PORT          # Porta da aplicação (auto-fornecido)
+```
+
+**Documentação:** `docs/CONFIGURAR_RAILWAY.md`
+
+---
+
+## Versionamento
+
+### Formato SemVer
+
+```
+MAJOR.MINOR.PATCH (ex: 2.4.0)
+```
+
+| Posição | Quando Incrementar | Exemplo |
+|---------|-------------------|---------|
+| **MAJOR** | Quebra compatibilidade ou redesign | 2.0.0 → 3.0.0 |
+| **MINOR** | Nova funcionalidade | 2.3.0 → 2.4.0 |
+| **PATCH** | Correção de bug | 2.4.0 → 2.4.1 |
+
+### Exemplos Práticos
+
+- Fix de bug no fabricante → **PATCH** (2.4.0 → 2.4.1)
+- Nova Central de Etiquetas → **MINOR** (2.3.0 → 2.4.0)
+- Redesign total da UI → **MAJOR** (2.x.x → 3.0.0)
+- Migração para TypeScript → **MAJOR** (2.x.x → 3.0.0)
+
+### Processo de Release
+
+1. Atualizar `config/version.js`
+2. Atualizar `CHANGELOG.md`
+3. Commit: `feat: descrição` ou `fix: descrição`
+4. Push para `main`
+5. Deploy manual no Railway
+
+### Arquivo de Versão
+
+```javascript
+// config/version.js - FONTE ÚNICA DE VERDADE
+module.exports = {
+    version: '2.4.0',
+    buildDate: '11/12/2025',
+    summary: 'Padronização do Banco de Dados',
+    status: 'stable'
+};
 ```
 
 ---
 
-## Documentação
+## Documentação de Referência
 
-Ao implementar features:
-- Atualizar `CHANGELOG.md` para mudanças visíveis
-- Atualizar `ROADMAP.md` se mudar planejamento
-- Criar doc em `/docs/` para decisões técnicas complexas
+### Consultar ANTES de Implementar
+
+| Documento | Quando Consultar |
+|-----------|------------------|
+| `docs/ARQUITETURA.md` | Padrões de código, banco, API |
+| `docs/PADRONIZACAO_BANCO.md` | Schema completo e regras de campos |
+| `docs/PADRONIZACAO_CODIGOS.md` | Formatos de códigos (BOB, RET, COR, PDC) |
+| `docs/ESPECIFICACAO_ETIQUETAS.md` | Layout de etiquetas para impressão |
+| `docs/SISTEMA_VALIDACAO_RESERVAS.md` | Metragem reservada e triggers |
+| `docs/SISTEMA_CORTES_QR.md` | Fluxo completo de cortes com QR |
+| `docs/FUNCIONALIDADES.md` | Regras de negócio e fluxos |
+
+### Arquivos de Planejamento
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `ROADMAP.md` | Planejamento e fases futuras |
+| `CHANGELOG.md` | Histórico de todas as versões |
+
+---
+
+## Tarefas Comuns
+
+### Criar Nova Rota
+
+```
+1. Criar controller: controllers/{recurso}Controller.js
+2. Criar rota: routes/{recurso}.js
+3. Registrar em server.js: app.use('/api/{recurso}', require('./routes/{recurso}'))
+```
+
+### Criar Nova Migration
+
+```
+1. Criar arquivo: migrations/0XX_descricao.js
+2. Implementar exports.up() e opcional exports.down()
+3. Reiniciar servidor (executa automático)
+```
+
+### Adicionar Campo no Banco
+
+```javascript
+// migrations/0XX_add_campo_tabela.js
+exports.up = async function(db) {
+    await db.query(`
+        ALTER TABLE tabela 
+        ADD COLUMN novo_campo VARCHAR(100) DEFAULT NULL
+    `);
+    console.log('✅ Migration 0XX: Campo adicionado');
+};
+```
+
+### Debug de Reservas Inconsistentes
+
+```
+1. Ver logs de startup: middleware/validarReservas.js
+2. Verificar triggers: SELECT * FROM information_schema.TRIGGERS
+3. Comparar manualmente: SUM(metragem_alocada) vs metragem_reservada
+4. Executar limpeza: POST /api/ordens-corte/admin/limpar-reservas
+```
+
+### Build e Teste Mobile
+
+```powershell
+npm run android:sync    # Sincroniza assets
+npm run android:build   # Gera APK debug
+# Instalar APK no dispositivo e testar
+```
+
+---
+
+## Convenções de Commit
+
+```
+feat:     Nova funcionalidade
+fix:      Correção de bug
+docs:     Alteração em documentação
+refactor: Refatoração de código
+chore:    Tarefas de manutenção
+style:    Formatação (sem mudança de lógica)
+test:     Adição/correção de testes
+```
+
+**Exemplos:**
+
+```
+feat: adiciona central de etiquetas unificada
+fix: corrige busca de fabricante em impressão de bobina
+docs: atualiza documentação de QR codes
+refactor: extrai lógica de validação para middleware
+```
+
+---
+
+## Lembretes Importantes
+
+1. **Queries sempre parametrizadas** - Nunca concatenar strings SQL
+2. **fabricante está em produtos** - Sempre fazer JOIN
+3. **metragem_reservada é automática** - Nunca UPDATE manual
+4. **Testar localmente antes do deploy** - Railway tem deploy manual
+5. **Atualizar CHANGELOG.md** - Para mudanças visíveis ao usuário
+6. **Consultar /docs/** - Antes de implementar features complexas
+
+---
+
+## Suporte
+
+- **Testes manuais:** `docs/GUIA_TESTES_SISTEMA_COMPLETO.md`
+- **Simulador QR:** `public/teste-qrcodes.html`
+- **Health check:** `GET /api/health`
+
+---
+
+*Documento mantido pela equipe de desenvolvimento. Última revisão: Dezembro 2025*

@@ -314,9 +314,7 @@ function abrirModalCadastroProduto() {
     // Verificar se os elementos existem
     const modalEl = document.getElementById('modal-cadastro-produto');
     if (!modalEl) {
-        // Modal não existe no DOM, vamos criar
-        mostrarAlerta('Redirecionando para página de cadastro de produtos...', 'info');
-        window.open(`/produtos.html?codigo=${codigoNumerico}&loja=${loja}`, '_blank');
+        mostrarAlerta('Modal de cadastro não encontrado!', 'danger');
         return;
     }
     
@@ -327,14 +325,46 @@ function abrirModalCadastroProduto() {
     if (quickLoja) quickLoja.textContent = loja;
     if (quickCodigo) quickCodigo.textContent = codigoCompleto;
     
-    // Mostrar modal
+    // Resetar formulário
+    document.getElementById('form-cadastro-rapido').reset();
+    
+    // Resetar campos para estado inicial (Tecido Normal)
+    document.getElementById('quick-tipo_tecido').value = 'Normal';
+    toggleCamposTecidoRapido();
+    
+    // Limpar erro de largura
+    const erroLargura = document.getElementById('quick-erro-largura-final');
+    if (erroLargura) erroLargura.style.display = 'none';
+    
+    // Mostrar modal por cima do modal de bobina
     modalEl.style.display = 'flex';
+    modalEl.style.zIndex = '1100'; // Maior que o modal de bobina
+    
+    console.log('✅ Modal de cadastro de produto aberto');
 }
 
 // Fechar modal de cadastro de produto
 function fecharModalCadastroProduto() {
-    document.getElementById('modal-cadastro-produto').style.display = 'none';
+    const modalEl = document.getElementById('modal-cadastro-produto');
+    if (modalEl) {
+        modalEl.style.display = 'none';
+    }
     document.getElementById('form-cadastro-rapido').reset();
+}
+
+// Validar largura final no cadastro rápido
+function validarLarguraFinalRapido() {
+    const larguraSemCostura = parseFloat(document.getElementById('quick-largura_sem_costura').value) || 0;
+    const larguraFinal = parseFloat(document.getElementById('quick-largura_final').value) || 0;
+    const erroEl = document.getElementById('quick-erro-largura-final');
+    
+    if (larguraFinal > larguraSemCostura && larguraSemCostura > 0) {
+        erroEl.style.display = 'block';
+        return false;
+    } else {
+        erroEl.style.display = 'none';
+        return true;
+    }
 }
 
 // Toggle campos do cadastro rápido
@@ -370,7 +400,7 @@ function toggleCamposTecidoRapido() {
     }
 }
 
-// Cadastrar produto rapidamente
+// Cadastrar produto rapidamente (idêntico ao formulário de produtos.html)
 async function cadastrarProdutoRapido(e) {
     e.preventDefault();
     
@@ -380,27 +410,75 @@ async function cadastrarProdutoRapido(e) {
     const codigoCompleto = `${prefixo}-${codigoNumerico}`;
     const fabricante = document.getElementById('quick-fabricante').value;
     const tipoTecido = document.getElementById('quick-tipo_tecido').value;
+    const metConf = document.getElementById('quick-metragem_confiavel');
+    const metConfiavel = metConf ? metConf.checked : false;
+    
+    // Validações
+    if (!fabricante) {
+        mostrarAlerta('Selecione o fabricante', 'warning');
+        return;
+    }
+    
+    const corId = document.getElementById('quick-cor_id').value;
+    const gramaturaId = document.getElementById('quick-gramatura_id').value;
+    
+    if (!corId || !gramaturaId) {
+        mostrarAlerta('Selecione cor e gramatura', 'warning');
+        return;
+    }
     
     const produto = {
         loja: loja,
         codigo: codigoCompleto,
-        cor_id: parseInt(document.getElementById('quick-cor_id').value),
-        gramatura_id: parseInt(document.getElementById('quick-gramatura_id').value),
+        cor_id: parseInt(corId),
+        gramatura_id: parseInt(gramaturaId),
         fabricante: fabricante,
-        tipo_tecido: tipoTecido
+        tipo_tecido: tipoTecido,
+        metragem_confiavel: metConfiavel
     };
     
     // Adicionar campos específicos conforme o tipo
     if (tipoTecido === 'Bando Y') {
-        produto.largura_maior = parseFloat(document.getElementById('quick-largura_maior').value);
-        produto.largura_y = parseFloat(document.getElementById('quick-largura_y').value);
+        const larguraMaior = document.getElementById('quick-largura_maior').value;
+        const larguraY = document.getElementById('quick-largura_y').value;
+        
+        if (!larguraMaior || !larguraY) {
+            mostrarAlerta('Para Bando Y, informe Largura Maior e Largura Y', 'warning');
+            return;
+        }
+        
+        produto.largura_maior = parseFloat(larguraMaior);
+        produto.largura_y = parseFloat(larguraY);
     } else {
-        produto.largura_sem_costura = parseFloat(document.getElementById('quick-largura_sem_costura').value);
-        produto.tipo_bainha = document.getElementById('quick-tipo_bainha').value;
-        produto.largura_final = parseFloat(document.getElementById('quick-largura_final').value);
+        const larguraSemCostura = document.getElementById('quick-largura_sem_costura').value;
+        const tipoBainha = document.getElementById('quick-tipo_bainha').value;
+        const larguraFinal = document.getElementById('quick-largura_final').value;
+        
+        if (!larguraSemCostura || !tipoBainha || !larguraFinal) {
+            mostrarAlerta('Informe Largura sem costura, Tipo de bainha e Largura final', 'warning');
+            return;
+        }
+        
+        // Validar largura final não pode ser maior que sem costura
+        if (parseFloat(larguraFinal) > parseFloat(larguraSemCostura)) {
+            mostrarAlerta('Largura final não pode ser maior que largura sem costura', 'warning');
+            return;
+        }
+        
+        produto.largura_sem_costura = parseFloat(larguraSemCostura);
+        produto.tipo_bainha = tipoBainha;
+        produto.largura_final = parseFloat(larguraFinal);
     }
     
+    // Desabilitar botão durante o envio
+    const btnSalvar = document.getElementById('btn-salvar-produto');
+    const btnTextOriginal = btnSalvar.innerHTML;
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '⏳ Salvando...';
+    
     try {
+        console.log('📤 Enviando produto:', JSON.stringify(produto, null, 2));
+        
         const response = await fetch('/api/produtos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -409,19 +487,28 @@ async function cadastrarProdutoRapido(e) {
         
         const data = await response.json();
         
-        if (response.ok) {
-            mostrarAlerta('Produto cadastrado com sucesso!', 'success');
+        if (data.success || response.ok) {
+            console.log('✅ Produto cadastrado com sucesso:', data);
+            mostrarAlerta('✅ Produto cadastrado com sucesso!', 'success');
+            
+            // Fechar modal de cadastro
             fecharModalCadastroProduto();
             
-            // Buscar produto novamente
+            // Buscar produto automaticamente para preencher no modal de bobina
             await buscarProduto();
+            
         } else {
+            console.error('❌ Erro ao cadastrar produto:', data.error);
             mostrarAlerta(data.error || 'Erro ao cadastrar produto', 'danger');
         }
         
     } catch (error) {
-        console.error('Erro ao cadastrar produto:', error);
+        console.error('❌ Erro ao cadastrar produto:', error);
         mostrarAlerta('Erro ao cadastrar produto: ' + error.message, 'danger');
+    } finally {
+        // Reabilitar botão
+        btnSalvar.disabled = false;
+        btnSalvar.innerHTML = btnTextOriginal;
     }
 }
 

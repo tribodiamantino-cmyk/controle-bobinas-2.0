@@ -418,6 +418,8 @@ Com isso, já dá para usar no dia a dia!
 ### Documentação
 - [x] **Criar PADRONIZACAO_BANCO.md** - Documentação completa do schema (v2.4.0)
 - [x] **Corrigir copilot-instructions.md** - Arquivo estava corrompido
+- [x] **Modal de Cadastro Rápido de Produto (Estoque)** - Permitir cadastrar produto novo durante entrada de bobina
+- [ ] **Clonar Modal de Cadastro Rápido para Retalhos** - Mesma funcionalidade na aba Retalhos (aguardando validação do Estoque)
 
 ---
 
