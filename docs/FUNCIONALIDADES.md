@@ -60,7 +60,7 @@ gramatura, bainha)       metragem específica       específico
 **Campos principais:**
 | Campo | Descrição | Exemplo |
 |-------|-----------|---------|
-| Código | Identificador único | `PLA-00123` |
+| Código | Identificador único (5 dígitos) | `CTV-00123`, `BN-00001` |
 | Loja | Empresa dona | Cortinave, BN |
 | Cor | Combinação de cores | Preta/Prata |
 | Gramatura | Peso do tecido | 190gr |
@@ -68,6 +68,10 @@ gramatura, bainha)       metragem específica       específico
 | Tipo Bainha | Acabamento | Cano/Cano |
 | Fabricante | Fornecedor | PROPEX, SANSUY |
 | Tipo Tecido | Normal ou especial | Normal, Bando Y |
+
+**Formato do código:**
+- Cortinave: `CTV-XXXXX` (5 dígitos numéricos)
+- BN: `BN-XXXXX` (5 dígitos numéricos)
 
 **Funcionalidades:**
 - ✅ Criar produto
@@ -103,6 +107,8 @@ gramatura, bainha)       metragem específica       específico
 - ✅ Ver histórico de cortes
 - ✅ Gerar etiqueta com código de barras
 - ✅ Atualizar placa
+- ✅ Transformar em retalho (exclui bobina, herda placa e localização)
+- ✅ Prefixo automático do código (CTV-/BN-) baseado na loja
 
 **Cálculo de disponibilidade:**
 ```
@@ -264,6 +270,59 @@ planejamento → em_producao → finalizado
 - ✅ Obras padrão (templates de pedido)
 
 **Tela:** `configuracoes.html`
+
+---
+
+### 9. Central de Etiquetas
+
+**O que é:** Tela unificada para impressão de etiquetas de todos os tipos.
+
+**Abas disponíveis:**
+| Aba | O que imprime | Código |
+|-----|---------------|--------|
+| Bobinas | Etiquetas de bobinas em estoque | `BOB-XXX-XXXXXX` |
+| Retalhos | Etiquetas de retalhos | `RET-XXX-XXXXXX` |
+| Cortes | Etiquetas de cortes realizados | `COR-XXXX-XXXXX` |
+| Locações | Etiquetas de posições no estoque | `0001-A-0001` |
+| Histórico | Log de impressões com status | - |
+
+**Funcionalidades:**
+- ✅ Filtrar por NF, loja, status
+- ✅ Selecionar múltiplos itens para impressão em lote
+- ✅ Preview da etiqueta antes de imprimir
+- ✅ Gerador de range de locações (ex: 0001-A-0001 até 0001-A-0050)
+- ✅ Modo Teste (preview visual sem impressão)
+- ✅ Histórico com status (impresso/pendente/erro)
+- ✅ Reimprimir etiquetas do histórico
+
+**Modo Teste:**
+Ativa/desativa pelo switch no topo da página. Quando ativo, ao invés de imprimir, abre uma janela com preview visual da etiqueta.
+
+**Tela:** `etiquetas.html`
+
+---
+
+### 10. Histórico de Movimentações
+
+**O que é:** Rastreabilidade completa do ciclo de vida de bobinas e retalhos por produto.
+
+**Eventos registrados:**
+| Evento | Descrição |
+|--------|-----------|
+| `bobina_entrada` | Nova bobina cadastrada |
+| `bobina_corte` | Metragem cortada de bobina |
+| `bobina_transformada` | Bobina virou retalho |
+| `bobina_excluida` | Bobina removida do sistema |
+| `retalho_criado` | Novo retalho gerado |
+| `retalho_corte` | Metragem cortada de retalho |
+| `retalho_excluido` | Retalho removido |
+
+**Benefícios:**
+- 🔍 Rastrear origem de qualquer corte
+- 📊 Dados de volume de uso por produto
+- 📜 Auditoria completa de movimentações
+
+**API:** `GET /api/historico/produto/:id`
 
 ---
 

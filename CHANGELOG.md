@@ -4,6 +4,45 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [2.3.0] - 2025-12-11
+
+### ✨ Novidades Principais
+
+#### 🏷️ Central de Etiquetas
+- **Nova tela unificada** `/etiquetas.html` para impressão de todos os tipos de etiquetas
+- **5 abas**: Bobinas, Retalhos, Cortes, Locações e Histórico de Impressão
+- **Impressão em lote** com seleção múltipla
+- **Gerador de range** de locações (ex: 0001-A-0001 até 0001-A-0050)
+- **Modo Teste** para preview visual sem impressão física
+- **Histórico de impressão** integrado com status e reimprimir
+
+#### 📊 Histórico de Movimentações
+- **Nova tabela** `historico_movimentacoes` para rastreabilidade completa
+- **API** `/api/historico/produto/:id` para consulta de movimentações
+- Registra: entradas, cortes, transformações, exclusões de bobinas/retalhos
+
+#### 🔄 Melhorias no Estoque
+- **Prefixo automático** CTV-/BN- baseado na loja selecionada
+- **Campo código** aceita apenas 5 dígitos numéricos
+- **Botão Cadastrar Novo Produto** corrigido (adicionado campo fabricante)
+- **Transformar em Retalho** agora exclui a bobina (ao invés de marcar)
+- Retalho herda **placa** e **localização** da bobina origem
+
+#### 📦 Produtos
+- **Código aumentado** para 5 dígitos (era 4)
+- Preview do código final com prefixo da loja
+
+### 🗄️ Banco de Dados
+
+#### Nova Migration
+- **033**: `historico_movimentacoes` - Rastreabilidade por produto
+
+### 📚 Documentação
+- Atualizado `FUNCIONALIDADES.md` com novos módulos
+- Seções de Central de Etiquetas e Histórico de Movimentações
+
+---
+
 ## [2.2.0] - 2025-01-XX
 
 ### ✨ Novidades Principais
