@@ -2809,14 +2809,14 @@ async function carregarPlanosFinalizados() {
                         <span style="font-weight: 600; color: ${c.carregado ? '#059669' : '#374151'};">
                             ${c.carregado ? '✅' : '📦'} ${c.codigo_corte}
                         </span>
-                        <span style="color: #6b7280;">${c.metragem_cortada}m ${c.nome_cor || ''}</span>
+                        <span style="color: #6b7280;">${c.metragem_cortada}m</span>
                     </div>
                 `).join('')
                 : '<p style="color: #9ca3af; font-size: 12px; margin: 0;">Nenhum corte</p>';
             
             return `
                 <div class="ordem-card ${carregamentoConcluido ? 'ordem-sem-itens' : ''}">
-                    <div class="ordem-header" onclick="${!carregamentoConcluido ? `iniciarNovoCarregamento(${plano.plano_id}, '${plano.codigo_plano}', ${plano.total_cortes})` : ''}">
+                    <div class="ordem-header">
                         <span class="ordem-numero">${plano.codigo_plano}</span>
                         <span class="ordem-status ${carregamentoConcluido ? 'status-concluida' : 'status-finalizado'}">
                             ${carregamentoConcluido ? '✅ Carregado' : '📦 Pronto'}
@@ -2848,9 +2848,9 @@ async function carregarPlanosFinalizados() {
                             }
                         </div>
                     ` : `
-                        <div style="background: #dbeafe; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 13px; color: #1e40af; cursor: pointer;" onclick="iniciarNovoCarregamento(${plano.plano_id}, '${plano.codigo_plano}', ${plano.total_cortes})">
-                            👆 Toque para iniciar carregamento
-                        </div>
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px;" onclick="iniciarNovoCarregamento(${plano.plano_id}, '${plano.codigo_plano}', ${plano.total_cortes})">
+                            � Iniciar Carregamento
+                        </button>
                     `}
                 </div>
             `;

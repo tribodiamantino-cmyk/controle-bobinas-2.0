@@ -746,6 +746,7 @@ router.post('/plano/:plano_id/finalizar', async (req, res) => {
 // Listar planos finalizados (prontos para carregar)
 router.get('/carregamento/planos-finalizados', async (req, res) => {
     try {
+        // Query principal com cortes já incluídos via GROUP_CONCAT
         const [planos] = await db.query(`
             SELECT 
                 pc.id as plano_id,
@@ -758,7 +759,11 @@ router.get('/carregamento/planos-finalizados', async (req, res) => {
                 COUNT(DISTINCT CASE WHEN cr.carregado = TRUE THEN cr.id END) as cortes_carregados,
                 GROUP_CONCAT(DISTINCT pl.codigo_locacao ORDER BY pl.ordem_scan SEPARATOR ', ') as locacoes,
                 MAX(c.id) as carregamento_id,
-                MAX(c.status) as status_carregamento
+                MAX(c.status) as status_carregamento,
+                GROUP_CONCAT(
+                    DISTINCT CONCAT(cr.codigo_corte, '|', cr.metragem_cortada, '|', IFNULL(cr.carregado, 0))
+                    ORDER BY cr.codigo_corte SEPARATOR ';'
+                ) as cortes_raw
             FROM planos_corte pc
             LEFT JOIN cortes_realizados cr ON cr.plano_corte_id = pc.id
             LEFT JOIN plano_locacoes pl ON pl.plano_corte_id = pc.id
@@ -769,33 +774,25 @@ router.get('/carregamento/planos-finalizados', async (req, res) => {
             ORDER BY pc.data_finalizacao DESC
         `);
         
-        // Buscar cortes de cada plano
-        const planosComCortes = await Promise.all(planos.map(async (p) => {
-            const [cortes] = await db.query(`
-                SELECT 
-                    cr.id,
-                    cr.codigo_corte,
-                    cr.metragem_cortada,
-                    cr.carregado,
-                    pr.codigo as produto_codigo,
-                    cc.nome_cor
-                FROM cortes_realizados cr
-                JOIN produtos pr ON pr.id = cr.produto_id
-                LEFT JOIN configuracoes_cores cc ON pr.cor_id = cc.id
-                WHERE cr.plano_corte_id = ?
-                ORDER BY cr.codigo_corte
-            `, [p.plano_id]);
+        // Parsear cortes do GROUP_CONCAT
+        const planosFormatados = planos.map(p => {
+            const cortes = p.cortes_raw ? p.cortes_raw.split(';').map(c => {
+                const [codigo_corte, metragem_cortada, carregado] = c.split('|');
+                return { codigo_corte, metragem_cortada, carregado: carregado === '1' };
+            }) : [];
             
             return {
                 ...p,
+                cortes_raw: undefined, // remover campo temporário
                 percentual: p.total_cortes > 0 ? Math.round((p.cortes_carregados / p.total_cortes) * 100) : 0,
                 status_carregamento: p.status_carregamento || 'pendente',
-                cortes: cortes
+                cortes
             };
-        }));
+        });
         
-        res.json({ success: true, data: planosComCortes });
+        res.json({ success: true, data: planosFormatados });
     } catch (error) {
+        console.error('❌ Erro planos-finalizados:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
