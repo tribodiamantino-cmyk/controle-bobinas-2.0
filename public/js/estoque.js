@@ -405,11 +405,25 @@ async function cadastrarProdutoRapido(e) {
     e.preventDefault();
     
     // Pegar valores do modal de bobina (que está aberto por trás)
-    const loja = document.getElementById('loja').value;
-    const codigoNumerico = document.getElementById('codigo').value;
+    const modalBobina = document.getElementById('modalNovaBobina');
+    if (!modalBobina) {
+        mostrarAlerta('Erro: modal de bobina não encontrado.', 'danger');
+        return;
+    }
+    
+    const lojaEl = modalBobina.querySelector('#loja');
+    const codigoEl = modalBobina.querySelector('#codigo');
+    
+    if (!lojaEl || !codigoEl) {
+        mostrarAlerta('Erro: campos de loja/código não encontrados.', 'danger');
+        return;
+    }
+    
+    const loja = lojaEl.value;
+    const codigoNumerico = codigoEl.value;
     
     if (!loja || !codigoNumerico) {
-        mostrarAlerta('Erro: dados da bobina não encontrados. Feche e reabra o modal.', 'danger');
+        mostrarAlerta('Erro: preencha loja e código antes de cadastrar o produto.', 'warning');
         return;
     }
     
