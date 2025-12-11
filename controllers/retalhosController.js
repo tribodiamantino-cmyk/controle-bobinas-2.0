@@ -1,21 +1,28 @@
 const db = require('../config/database');
 
-// Gerar código QR único para retalho (formato: RET-0001)
-async function gerarCodigoRetalho() {
+// Gerar código QR único para retalho (formato: RET-{LOJA}-{SEQUENCIAL})
+// Conforme PADRONIZACAO_CODIGOS.md
+async function gerarCodigoRetalho(loja) {
+    // Determinar prefixo da loja
+    const prefixoLoja = loja === 'Cortinave' ? 'PLA' : 'CIA';
+    
+    // Buscar último código RET (sequencial global, independente da loja)
     const [rows] = await db.query(
         `SELECT codigo_retalho FROM retalhos 
-         WHERE codigo_retalho LIKE 'RET-%' 
+         WHERE codigo_retalho LIKE 'RET-%-%' 
          ORDER BY id DESC LIMIT 1`
     );
     
     let proximoNumero = 1;
     if (rows.length > 0) {
         const ultimoCodigo = rows[0].codigo_retalho;
-        const numeroAtual = parseInt(ultimoCodigo.split('-')[1]);
+        // Formato: RET-XXX-000001, pegar o último grupo de números
+        const partes = ultimoCodigo.split('-');
+        const numeroAtual = parseInt(partes[2]);
         proximoNumero = numeroAtual + 1;
     }
     
-    return `RET-${proximoNumero.toString().padStart(4, '0')}`;
+    return `RET-${prefixoLoja}-${proximoNumero.toString().padStart(6, '0')}`;
 }
 
 // Criar retalho manualmente
@@ -30,8 +37,15 @@ exports.criarRetalho = async (req, res) => {
             });
         }
         
+        // Buscar loja do produto para gerar código correto
+        const [produtos] = await db.query('SELECT loja FROM produtos WHERE id = ?', [produto_id]);
+        if (produtos.length === 0) {
+            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
+        }
+        const loja = produtos[0].loja;
+        
         // Gerar código único
-        const codigo_retalho = await gerarCodigoRetalho();
+        const codigo_retalho = await gerarCodigoRetalho(loja);
         
         // Inserir retalho
         const [result] = await db.query(
@@ -121,8 +135,8 @@ exports.converterBobinaEmRetalho = async (req, res) => {
             });
         }
         
-        // Gerar código do retalho
-        const codigo_retalho = await gerarCodigoRetalho();
+        // Gerar código do retalho (a loja já está disponível na variável bobina)
+        const codigo_retalho = await gerarCodigoRetalho(bobina.loja);
         
         // Criar retalho com a metragem atual da bobina (herdando placa e locacao)
         const [result] = await db.query(
@@ -520,8 +534,12 @@ exports.converterCorteEmRetalho = async function(corteId) {
     
     const corte = cortes[0];
     
+    // Buscar loja do produto
+    const [produtos] = await db.query('SELECT loja FROM produtos WHERE id = ?', [corte.produto_id]);
+    const loja = produtos[0]?.loja || 'Cortinave';
+    
     // Gerar código do retalho
-    const codigo_retalho = await gerarCodigoRetalho();
+    const codigo_retalho = await gerarCodigoRetalho(loja);
     
     // Verificar se tabela retalhos tem as colunas novas (placa, corte_origem_id)
     // Tentar inserir com todas as colunas, se falhar, inserir sem elas
