@@ -159,17 +159,19 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         const codigo_retalho = await gerarCodigoRetalho(bobina.loja);
         console.log('✅ Código gerado:', codigo_retalho);
         
-        // Criar retalho SIMPLES (só os campos essenciais)
+        // Criar retalho HERDANDO A PLACA da bobina (para fins de garantia)
         console.log('💾 Inserindo retalho no banco...');
+        console.log('   Placa herdada:', bobina.placa || 'Sem placa');
         const [result] = await connection.query(
             `INSERT INTO retalhos 
-            (codigo_retalho, produto_id, metragem, bobina_origem_id, observacoes) 
-            VALUES (?, ?, ?, ?, ?)`,
+            (codigo_retalho, produto_id, metragem, bobina_origem_id, placa, observacoes) 
+            VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 codigo_retalho, 
                 bobina.produto_id, 
                 bobina.metragem_atual,
                 bobina_id,
+                bobina.placa || null, // HERDA PLACA da bobina
                 `Convertido da bobina ${bobina.codigo_interno}`
             ]
         );
