@@ -96,7 +96,84 @@ retalhos:
 
 ---
 
-## 📍 Campo `locacao` - Padronização
+## � Tabelas de Ordens/Planos de Corte
+
+### `planos_corte` (Ordem de Produção)
+
+Plano de corte com múltiplos itens a serem cortados.
+
+```sql
+planos_corte:
+  id                  INT PRIMARY KEY AUTO_INCREMENT
+  codigo_plano        VARCHAR(50) UNIQUE          -- Ex: "PDC-PLA-001"
+  loja                ENUM('Cortinave','BN')
+  cliente             VARCHAR(200)
+  obra                VARCHAR(200)
+  status              ENUM('rascunho','pendente','em_producao','finalizado','cancelado')
+  data_criacao        TIMESTAMP
+  data_finalizacao    TIMESTAMP NULL
+  observacoes         TEXT
+```
+
+### `itens_plano_corte` (O Que Cortar)
+
+Cada item do plano de corte especifica produto e metragem.
+
+```sql
+itens_plano_corte:
+  id                  INT PRIMARY KEY AUTO_INCREMENT
+  plano_corte_id      INT FK → planos_corte       -- ⭐ FK para plano
+  produto_id          INT FK → produtos
+  metragem_necessaria DECIMAL(10,2) NOT NULL
+  quantidade          INT DEFAULT 1
+  observacoes         TEXT
+```
+
+### `alocacoes_corte` (De Onde Cortar)
+
+Vincula item do plano a uma bobina ou retalho específico.
+
+```sql
+alocacoes_corte:
+  id                  INT PRIMARY KEY AUTO_INCREMENT
+  item_plano_corte_id INT FK → itens_plano_corte  -- ⭐ FK para item (NÃO para plano!)
+  tipo_origem         ENUM('bobina','retalho')
+  bobina_id           INT FK → bobinas NULL
+  retalho_id          INT FK → retalhos NULL
+  metragem_alocada    DECIMAL(10,2) NOT NULL
+```
+
+### `cortes_realizados` (Registro de Corte Físico)
+
+Quando o corte é efetivamente realizado.
+
+```sql
+cortes_realizados:
+  id                  INT PRIMARY KEY AUTO_INCREMENT
+  codigo_corte        VARCHAR(50) UNIQUE          -- Ex: "COR-2025-00001"
+  plano_corte_id      INT FK → planos_corte
+  item_plano_corte_id INT FK → itens_plano_corte
+  alocacao_corte_id   INT FK → alocacoes_corte
+  metragem_cortada    DECIMAL(10,2)
+  foto_medidor        VARCHAR(255)                -- Path da contraprova
+  data_corte          TIMESTAMP
+```
+
+### ⚠️ Relacionamento Importante
+
+```
+planos_corte (1)
+    └──→ itens_plano_corte (N)      -- plano_corte_id
+            └──→ alocacoes_corte (N)  -- item_plano_corte_id
+                    └──→ cortes_realizados (1)
+
+⚠️ ATENÇÃO: alocacoes_corte NÃO tem FK direta para planos_corte!
+   Para chegar ao plano, deve passar por itens_plano_corte.
+```
+
+---
+
+## �📍 Campo `locacao` - Padronização
 
 ### Formato
 

@@ -141,23 +141,18 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         console.log('📦 Bobina encontrada:', bobina.codigo_interno);
         console.log('   Produto ID:', bobina.produto_id);
         console.log('   Metragem:', bobina.metragem_atual);
+        console.log('   Metragem Reservada:', bobina.metragem_reservada);
         console.log('   Loja:', bobina.loja);
         
-        // Verificar se bobina tem alocações em planos em produção
-        // JOIN através de itens_plano_corte pois alocacoes_corte não tem link direto com planos_corte
-        const [alocacoes] = await connection.query(
-            `SELECT COUNT(*) as count FROM alocacoes_corte ac
-             JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
-             JOIN planos_corte pc ON pc.id = ipc.plano_corte_id
-             WHERE ac.bobina_id = ? AND pc.status = 'em_producao'`,
-            [bobina_id]
-        );
-        
-        if (alocacoes[0].count > 0) {
+        // Verificar se bobina tem metragem reservada (forma simples de checar se está em uso)
+        // Conforme PADRONIZACAO_BANCO.md: metragem_reservada indica uso em planos
+        const metragemReservada = parseFloat(bobina.metragem_reservada || 0);
+        if (metragemReservada > 0) {
             await connection.rollback();
+            console.log('❌ Bobina com metragem reservada:', metragemReservada);
             return res.status(400).json({
                 success: false,
-                error: 'Bobina possui alocações em planos de corte ativos. Finalize ou cancele os planos antes de converter.'
+                error: `Bobina possui ${metragemReservada.toFixed(2)}m reservados em planos de corte. Finalize ou cancele os planos antes de converter.`
             });
         }
         
