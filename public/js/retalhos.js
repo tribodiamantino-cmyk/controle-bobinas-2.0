@@ -433,106 +433,10 @@ async function excluirRetalho(retalhoId) {
 }
 
 // ========== IMPRIMIR ETIQUETA ==========
+// Usa o módulo ImpressaoEtiquetas (impressao-etiquetas.js)
+// Especificações: docs/ESPECIFICACAO_ETIQUETAS.md
 function abrirModalImprimirEtiqueta(retalhoId) {
-    const retalho = retalhosCache.find(r => r.id === retalhoId);
-    
-    if (!retalho) {
-        showNotification('Retalho não encontrado', 'error');
-        return;
-    }
-    
-    retalhoParaImprimir = retalho;
-    
-    // Gerar preview da etiqueta
-    const preview = document.getElementById('previewEtiqueta');
-    preview.innerHTML = `
-        <div style="text-align: center; font-family: Arial, sans-serif;">
-            <div id="qrcodePreview" style="margin: 10px auto;"></div>
-            <div style="font-size: 14px; font-weight: bold; margin-top: 10px;">
-                ${retalho.codigo_retalho || '-'}
-            </div>
-            <div style="font-size: 12px; margin-top: 5px;">
-                ${retalho.codigo || ''} - ${retalho.nome_cor || ''} ${retalho.gramatura || ''}g/m²
-            </div>
-            <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">
-                ${parseFloat(retalho.metragem || 0).toFixed(2)}m
-            </div>
-        </div>
-    `;
-    
-    // Gerar QR Code
-    const qrDiv = document.getElementById('qrcodePreview');
-    qrDiv.innerHTML = '';
-    QRCode.toCanvas(retalho.qr_code || `R-${retalho.id}`, {
-        width: 150,
-        margin: 1
-    }, (error, canvas) => {
-        if (error) {
-            console.error('Erro ao gerar QR Code:', error);
-            qrDiv.innerHTML = '<p style="color: red;">Erro ao gerar QR Code</p>';
-        } else {
-            qrDiv.appendChild(canvas);
-        }
-    });
-    
-    document.getElementById('modalImprimirEtiqueta').style.display = 'flex';
-}
-
-function fecharModalImprimirEtiqueta() {
-    document.getElementById('modalImprimirEtiqueta').style.display = 'none';
-    retalhoParaImprimir = null;
-}
-
-function confirmarImpressaoEtiqueta() {
-    if (!retalhoParaImprimir) return;
-    
-    // Criar janela de impressão
-    const printWindow = window.open('', '', 'width=400,height=600');
-    
-    const r = retalhoParaImprimir;
-    
-    printWindow.document.write(`
-        <html>
-        <head>
-            <title>Etiqueta - ${r.codigo_retalho}</title>
-            <style>
-                @media print {
-                    @page { margin: 0; size: 57mm auto; }
-                    body { margin: 0; padding: 0; }
-                }
-                body {
-                    font-family: Arial, sans-serif;
-                    text-align: center;
-                    padding: 5mm;
-                    width: 57mm;
-                }
-                .qrcode { margin: 3mm auto; }
-                .codigo { font-size: 14px; font-weight: bold; margin-top: 2mm; }
-                .produto { font-size: 11px; margin-top: 1mm; }
-                .metragem { font-size: 16px; font-weight: bold; margin-top: 2mm; }
-            </style>
-        </head>
-        <body>
-            <div id="qrcode" class="qrcode"></div>
-            <div class="codigo">${r.codigo_retalho || '-'}</div>
-            <div class="produto">${r.codigo || ''} - ${r.nome_cor || ''} ${r.gramatura || ''}g/m²</div>
-            <div class="metragem">${parseFloat(r.metragem || 0).toFixed(2)}m</div>
-            <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-            <script>
-                QRCode.toCanvas(document.getElementById('qrcode'), '${r.qr_code || `R-${r.id}`}', {
-                    width: 120,
-                    margin: 1
-                }, function() {
-                    window.print();
-                    window.close();
-                });
-            </script>
-        </body>
-        </html>
-    `);
-    
-    printWindow.document.close();
-    fecharModalImprimirEtiqueta();
+    ImpressaoEtiquetas.abrirModal('retalho', retalhoId);
 }
 
 // ========== NOTIFICAÇÕES ==========

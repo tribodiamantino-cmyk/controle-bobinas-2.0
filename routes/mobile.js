@@ -746,7 +746,7 @@ router.post('/plano/:plano_id/finalizar', async (req, res) => {
 // Listar planos finalizados (prontos para carregar)
 router.get('/carregamento/planos-finalizados', async (req, res) => {
     try {
-        // Query principal com cortes já incluídos via GROUP_CONCAT
+        // Query simplificada - sem cortes detalhados
         const [planos] = await db.query(`
             SELECT 
                 pc.id as plano_id,
@@ -755,40 +755,26 @@ router.get('/carregamento/planos-finalizados', async (req, res) => {
                 pc.aviario,
                 pc.status,
                 pc.data_finalizacao,
-                COUNT(DISTINCT cr.id) as total_cortes,
-                COUNT(DISTINCT CASE WHEN cr.carregado = TRUE THEN cr.id END) as cortes_carregados,
-                GROUP_CONCAT(DISTINCT pl.codigo_locacao ORDER BY pl.ordem_scan SEPARATOR ', ') as locacoes,
-                MAX(c.id) as carregamento_id,
-                MAX(c.status) as status_carregamento,
-                GROUP_CONCAT(
-                    DISTINCT CONCAT(cr.codigo_corte, '|', cr.metragem_cortada, '|', IFNULL(cr.carregado, 0))
-                    ORDER BY cr.codigo_corte SEPARATOR ';'
-                ) as cortes_raw
+                (SELECT COUNT(*) FROM cortes_realizados WHERE plano_corte_id = pc.id) as total_cortes,
+                (SELECT COUNT(*) FROM cortes_realizados WHERE plano_corte_id = pc.id AND carregado = TRUE) as cortes_carregados,
+                (SELECT GROUP_CONCAT(codigo_locacao ORDER BY ordem_scan SEPARATOR ', ') FROM plano_locacoes WHERE plano_corte_id = pc.id) as locacoes,
+                (SELECT id FROM carregamentos WHERE plano_corte_id = pc.id AND status != 'cancelado' LIMIT 1) as carregamento_id,
+                (SELECT status FROM carregamentos WHERE plano_corte_id = pc.id AND status != 'cancelado' LIMIT 1) as status_carregamento
             FROM planos_corte pc
-            LEFT JOIN cortes_realizados cr ON cr.plano_corte_id = pc.id
-            LEFT JOIN plano_locacoes pl ON pl.plano_corte_id = pc.id
-            LEFT JOIN carregamentos c ON c.plano_corte_id = pc.id AND c.status != 'cancelado'
             WHERE pc.status = 'finalizado'
-            GROUP BY pc.id, pc.codigo_plano, pc.cliente, pc.aviario, pc.status, pc.data_finalizacao
-            HAVING total_cortes > 0
             ORDER BY pc.data_finalizacao DESC
         `);
         
-        // Parsear cortes do GROUP_CONCAT
-        const planosFormatados = planos.map(p => {
-            const cortes = p.cortes_raw ? p.cortes_raw.split(';').map(c => {
-                const [codigo_corte, metragem_cortada, carregado] = c.split('|');
-                return { codigo_corte, metragem_cortada, carregado: carregado === '1' };
-            }) : [];
-            
-            return {
-                ...p,
-                cortes_raw: undefined, // remover campo temporário
-                percentual: p.total_cortes > 0 ? Math.round((p.cortes_carregados / p.total_cortes) * 100) : 0,
-                status_carregamento: p.status_carregamento || 'pendente',
-                cortes
-            };
-        });
+        // Filtrar apenas os que têm cortes
+        const planosComCortes = planos.filter(p => p.total_cortes > 0);
+        
+        // Formatar resposta
+        const planosFormatados = planosComCortes.map(p => ({
+            ...p,
+            percentual: p.total_cortes > 0 ? Math.round((p.cortes_carregados / p.total_cortes) * 100) : 0,
+            status_carregamento: p.status_carregamento || 'pendente',
+            cortes: [] // Vazio por enquanto - será carregado sob demanda
+        }));
         
         res.json({ success: true, data: planosFormatados });
     } catch (error) {
@@ -931,6 +917,72 @@ router.post('/carregamento/finalizar', async (req, res) => {
         res.json({ 
             success: true, 
             carregamento: carregamento[0]
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Buscar cortes de um plano (para carregamento)
+router.get('/carregamento/cortes-plano/:planoId', async (req, res) => {
+    try {
+        const { planoId } = req.params;
+        
+        const [cortes] = await db.query(`
+            SELECT 
+                cr.id,
+                cr.codigo_corte,
+                cr.metragem_cortada,
+                cr.carregado,
+                cr.data_carregamento,
+                p.codigo as produto_codigo,
+                p.descricao as produto_descricao,
+                c.nome_cor
+            FROM cortes_realizados cr
+            JOIN produtos p ON p.id = cr.produto_id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            WHERE cr.plano_corte_id = ?
+            ORDER BY cr.codigo_corte
+        `, [planoId]);
+        
+        res.json({ success: true, cortes });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Buscar cortes de um carregamento existente
+router.get('/carregamento/:id/cortes', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Buscar carregamento para pegar plano_corte_id
+        const [carr] = await db.query('SELECT * FROM carregamentos WHERE id = ?', [id]);
+        if (!carr.length) {
+            return res.json({ success: false, error: 'Carregamento não encontrado' });
+        }
+        
+        const [cortes] = await db.query(`
+            SELECT 
+                cr.id,
+                cr.codigo_corte,
+                cr.metragem_cortada,
+                cr.carregado,
+                cr.data_carregamento,
+                p.codigo as produto_codigo,
+                p.descricao as produto_descricao,
+                c.nome_cor
+            FROM cortes_realizados cr
+            JOIN produtos p ON p.id = cr.produto_id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            WHERE cr.plano_corte_id = ?
+            ORDER BY cr.codigo_corte
+        `, [carr[0].plano_corte_id]);
+        
+        res.json({ 
+            success: true, 
+            cortes,
+            carregamento: carr[0]
         });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

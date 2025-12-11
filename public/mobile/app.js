@@ -144,6 +144,139 @@ if (MODO_TESTE) {
     });
 }
 
+// ========== UTILITÁRIOS À PROVA DE ERROS ==========
+
+// Desabilitar botão durante processamento (evita duplo clique)
+function desabilitarBotao(btn, textoLoading = 'Aguarde...') {
+    if (!btn) return;
+    btn._textoOriginal = btn.innerHTML;
+    btn.innerHTML = `⏳ ${textoLoading}`;
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+}
+
+function habilitarBotao(btn) {
+    if (!btn) return;
+    btn.innerHTML = btn._textoOriginal || btn.innerHTML;
+    btn.classList.remove('btn-loading');
+    btn.disabled = false;
+}
+
+// Wrapper para chamadas de API com retry automático
+async function fetchComRetry(url, options = {}, tentativas = 3) {
+    let ultimoErro;
+    
+    for (let i = 0; i < tentativas; i++) {
+        try {
+            const response = await fetch(url, {
+                ...options,
+                // Timeout de 15 segundos
+                signal: AbortSignal.timeout(15000)
+            });
+            return response;
+        } catch (error) {
+            ultimoErro = error;
+            console.warn(`⚠️ Tentativa ${i + 1}/${tentativas} falhou:`, error.message);
+            
+            // Esperar antes de tentar novamente (backoff exponencial)
+            if (i < tentativas - 1) {
+                await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+            }
+        }
+    }
+    
+    throw ultimoErro;
+}
+
+// Traduzir erros técnicos para linguagem simples
+function traduzirErro(error) {
+    const msg = error?.message?.toLowerCase() || String(error).toLowerCase();
+    
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
+        return '📶 Sem conexão com a internet. Verifique seu WiFi e tente novamente.';
+    }
+    if (msg.includes('timeout') || msg.includes('aborted')) {
+        return '⏱️ Servidor demorou muito para responder. Tente novamente.';
+    }
+    if (msg.includes('404')) {
+        return '🔍 Recurso não encontrado no servidor.';
+    }
+    if (msg.includes('500') || msg.includes('internal')) {
+        return '🔧 Erro no servidor. Tente novamente em alguns segundos.';
+    }
+    if (msg.includes('401') || msg.includes('403')) {
+        return '🔒 Acesso não autorizado. Reabra o aplicativo.';
+    }
+    if (msg.includes('json')) {
+        return '📋 Erro ao processar dados. Tente novamente.';
+    }
+    
+    // Se não identificou, retornar mensagem genérica amigável
+    return '❌ Algo deu errado. Tente novamente ou contate o suporte.';
+}
+
+// Confirmação com 2 passos para ações críticas
+async function confirmarAcaoCritica(titulo, mensagem, textoBotao = 'Confirmar') {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); display: flex; justify-content: center;
+            align-items: center; z-index: 10001; padding: 20px;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 16px; padding: 24px; max-width: 350px; width: 100%; text-align: center;">
+                <div style="font-size: 3.5rem; margin-bottom: 15px;">⚠️</div>
+                <h3 style="color: #b45309; margin-bottom: 10px; font-size: 1.25rem;">${titulo}</h3>
+                <p style="color: #666; margin-bottom: 20px; font-size: 1rem; line-height: 1.5;">${mensagem}</p>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button id="btn-confirmar-critico" style="padding: 16px; background: #dc2626; color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer;">
+                        ✅ ${textoBotao}
+                    </button>
+                    <button id="btn-cancelar-critico" style="padding: 14px; background: #e5e7eb; color: #374151; border: none; border-radius: 10px; font-size: 1rem; cursor: pointer;">
+                        ← Cancelar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Desabilitar botão confirmar por 1.5s (evita clique acidental)
+        const btnConfirmar = modal.querySelector('#btn-confirmar-critico');
+        const btnCancelar = modal.querySelector('#btn-cancelar-critico');
+        
+        btnConfirmar.disabled = true;
+        btnConfirmar.style.opacity = '0.5';
+        btnConfirmar.innerHTML = '⏳ Aguarde 2s...';
+        
+        setTimeout(() => {
+            btnConfirmar.disabled = false;
+            btnConfirmar.style.opacity = '1';
+            btnConfirmar.innerHTML = `✅ ${textoBotao}`;
+        }, 2000);
+        
+        btnConfirmar.onclick = () => {
+            modal.remove();
+            resolve(true);
+        };
+        
+        btnCancelar.onclick = () => {
+            modal.remove();
+            resolve(false);
+        };
+    });
+}
+
+// Vibrar dispositivo (feedback tátil)
+function vibrar(padrao = 100) {
+    if (navigator.vibrate) {
+        navigator.vibrate(padrao);
+    }
+}
+
 // ========== CHECK API STATUS ==========
 async function checkApiStatus() {
     try {
@@ -265,7 +398,7 @@ async function carregarOrdensProducao() {
             : API_CONFIG.mobileUrl('ordens-producao');
         
         console.log('🔍 Buscando ordens de:', endpoint);
-        const response = await fetch(endpoint);
+        const response = await fetchComRetry(endpoint);
         
         // Verificar se resposta é JSON válido
         const contentType = response.headers.get('content-type');
@@ -299,7 +432,7 @@ async function carregarOrdensProducao() {
         }
     } catch (error) {
         console.error('Erro ao carregar ordens:', error);
-        mostrarToast('Erro ao carregar ordens em produção', 'error');
+        mostrarToast(traduzirErro(error), 'error');
     } finally {
         mostrarLoading(false);
     }
@@ -664,7 +797,7 @@ async function processarValidacao(codigoEscaneado) {
         
         console.log('🔧 Buscando origem ID:', origemId, 'em:', endpoint);
             
-        const response = await fetch(endpoint);
+        const response = await fetchComRetry(endpoint);
         const data = await response.json();
         
         if (data.success) {
@@ -676,7 +809,7 @@ async function processarValidacao(codigoEscaneado) {
         }
     } catch (error) {
         console.error('Erro ao carregar origem:', error);
-        mostrarToast('Erro ao carregar dados', 'error');
+        mostrarToast(traduzirErro(error), 'error');
         cancelarValidacao();
     } finally {
         mostrarLoading(false);
@@ -806,6 +939,10 @@ function removerFotoValidacao() {
 async function confirmarValidacao(event) {
     event.preventDefault();
     
+    // Pegar botão de submit e desabilitar
+    const btnSubmit = event.target.querySelector('button[type="submit"]');
+    desabilitarBotao(btnSubmit, 'Processando...');
+    
     console.log('📋 confirmarValidacao chamado');
     console.log('📋 bobinaAtual:', bobinaAtual);
     console.log('📋 itemValidando:', itemValidando);
@@ -814,6 +951,7 @@ async function confirmarValidacao(event) {
     if (!bobinaAtual) {
         console.error('❌ bobinaAtual é null/undefined');
         mostrarToast('❌ Erro: Bobina não identificada. Escaneie novamente.', 'error');
+        habilitarBotao(btnSubmit);
         voltarParaItens();
         return;
     }
@@ -822,6 +960,7 @@ async function confirmarValidacao(event) {
     if (!metragemCortadaInput) {
         console.error('❌ Campo metragem-validacao não encontrado');
         mostrarToast('❌ Erro no formulário. Tente novamente.', 'error');
+        habilitarBotao(btnSubmit);
         return;
     }
     
@@ -836,17 +975,20 @@ async function confirmarValidacao(event) {
     // Validar foto obrigatória
     if (!fotoInput || !fotoInput.files[0]) {
         mostrarToast('📸 Por favor, tire uma foto do medidor', 'error');
+        habilitarBotao(btnSubmit);
         return;
     }
     
     // Validar metragem
     if (metragemCortada > metragemAtual) {
         mostrarToast('Metragem cortada não pode ser maior que a disponível', 'error');
+        habilitarBotao(btnSubmit);
         return;
     }
     
     if (metragemCortada <= 0) {
         mostrarToast('Metragem deve ser maior que zero', 'error');
+        habilitarBotao(btnSubmit);
         return;
     }
     
@@ -860,7 +1002,7 @@ async function confirmarValidacao(event) {
             const formData = new FormData();
             formData.append('foto', fotoInput.files[0]);
             
-            const uploadResponse = await fetch(API_CONFIG.mobileUrl('upload-foto-medidor'), {
+            const uploadResponse = await fetchComRetry(API_CONFIG.mobileUrl('upload-foto-medidor'), {
                 method: 'POST',
                 body: formData
             });
@@ -894,7 +1036,7 @@ async function confirmarValidacao(event) {
         const endpoint = MODO_TESTE 
             ? API_CONFIG.mobileUrl('teste/validar-item') 
             : API_CONFIG.mobileUrl('validar-item');
-        const response = await fetch(endpoint, {
+        const response = await fetchComRetry(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -912,6 +1054,9 @@ async function confirmarValidacao(event) {
         const data = await response.json();
         
         if (data.success) {
+            // Vibrar sucesso
+            vibrar(100);
+            
             // No modo teste, marcar item como validado localmente
             if (MODO_TESTE) {
                 const itemId = itemValidando.alocacao_id || itemValidando.item_id;
@@ -1075,7 +1220,7 @@ async function confirmarValidacao(event) {
         }
     } catch (error) {
         console.error('Erro ao validar item:', error);
-        mostrarToast(error.message || 'Erro ao validar item', 'error');
+        mostrarToast(traduzirErro(error), 'error');
     } finally {
         mostrarLoading(false);
     }
@@ -1303,7 +1448,7 @@ async function processarLocalizacao(codigoLocalizacao) {
             ? API_CONFIG.mobileUrl('atualizar-localizacao-retalho')
             : API_CONFIG.mobileUrl('atualizar-localizacao-bobina');
             
-        const response = await fetch(endpoint, {
+        const response = await fetchComRetry(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1316,6 +1461,7 @@ async function processarLocalizacao(codigoLocalizacao) {
         
         if (data.success) {
             mostrarToast(`✅ Bobina guardada em ${codigoLocalizacao}`, 'success');
+            vibrar('sucesso');
             
             // Limpar estado
             bobinaAtual = null;
@@ -1338,7 +1484,8 @@ async function processarLocalizacao(codigoLocalizacao) {
         }
     } catch (error) {
         console.error('Erro ao processar localização:', error);
-        mostrarToast(error.message || 'Erro ao guardar bobina', 'error');
+        mostrarToast(traduzirErro(error), 'error');
+        vibrar('erro');
     } finally {
         mostrarLoading(false);
     }
@@ -1505,7 +1652,7 @@ async function finalizarAlocacaoPlano() {
     try {
         mostrarLoading(true);
         
-        const response = await fetch(API_CONFIG.mobileUrl('plano/alocar-localizacoes'), {
+        const response = await fetchComRetry(API_CONFIG.mobileUrl('plano/alocar-localizacoes'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1518,6 +1665,7 @@ async function finalizarAlocacaoPlano() {
         
         if (data.success) {
             mostrarToast(`✅ Plano guardado em ${locacoesEscaneadas.length} localização(ões)!`, 'success');
+            vibrar('sucesso');
             
             // Limpar estado
             planoAguardandoAlocacao = null;
@@ -1532,7 +1680,8 @@ async function finalizarAlocacaoPlano() {
         }
     } catch (error) {
         console.error('Erro ao finalizar alocação:', error);
-        mostrarToast(error.message || 'Erro ao alocar plano', 'error');
+        mostrarToast(traduzirErro(error), 'error');
+        vibrar('erro');
     } finally {
         mostrarLoading(false);
     }
@@ -1748,7 +1897,7 @@ async function carregarBobina(bobinaId, tipo) {
         const endpoint = MODO_TESTE 
             ? API_CONFIG.mobileUrl(`teste/bobina/${bobinaId}`) 
             : API_CONFIG.mobileUrl(`bobina/${bobinaId}`);
-        const response = await fetch(endpoint);
+        const response = await fetchComRetry(endpoint);
         const data = await response.json();
         
         if (data.success) {
@@ -1764,7 +1913,7 @@ async function carregarBobina(bobinaId, tipo) {
         }
     } catch (error) {
         console.error('Erro ao carregar bobina:', error);
-        mostrarToast('Erro ao carregar dados da bobina', 'error');
+        mostrarToast(traduzirErro(error), 'error');
         if (tipo === 'corte') {
             voltarScannerCorte();
         } else {
@@ -1782,7 +1931,7 @@ async function carregarRetalho(retalhoId) {
     mostrarLoading(true);
     
     try {
-        const response = await fetch(API_CONFIG.mobileUrl(`retalho/${retalhoId}`));
+        const response = await fetchComRetry(API_CONFIG.mobileUrl(`retalho/${retalhoId}`));
         const data = await response.json();
         
         if (data.success) {
@@ -1793,7 +1942,7 @@ async function carregarRetalho(retalhoId) {
         }
     } catch (error) {
         console.error('Erro ao carregar retalho:', error);
-        mostrarToast('Erro ao carregar dados do retalho', 'error');
+        mostrarToast(traduzirErro(error), 'error');
         voltarScannerConsulta();
     } finally {
         mostrarLoading(false);
@@ -1928,7 +2077,7 @@ async function salvarCorte(event) {
     mostrarLoading(true);
     
     try {
-        const response = await fetch(API_CONFIG.mobileUrl('corte'), {
+        const response = await fetchComRetry(API_CONFIG.mobileUrl('corte'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1944,6 +2093,7 @@ async function salvarCorte(event) {
         
         if (data.success) {
             mostrarToast('✅ Corte registrado com sucesso!', 'success');
+            vibrar('sucesso');
             document.getElementById('form-corte').reset();
             
             // Voltar ao menu após 2 segundos
@@ -1955,7 +2105,7 @@ async function salvarCorte(event) {
         }
     } catch (error) {
         console.error('Erro ao salvar corte:', error);
-        mostrarToast('Erro ao salvar corte', 'error');
+        mostrarToast(traduzirErro(error), 'error');
     } finally {
         mostrarLoading(false);
     }
@@ -2143,7 +2293,7 @@ async function abrirValidarBobina(planoId, itemId, alocacaoId) {
     // Buscar info do item
     try {
         mostrarLoading(true);
-        const response = await fetch(API_CONFIG.mobileUrl(`plano/${planoId}`));
+        const response = await fetchComRetry(API_CONFIG.mobileUrl(`plano/${planoId}`));
         const data = await response.json();
         
         if (!data.success) throw new Error(data.error);
@@ -2159,7 +2309,7 @@ async function abrirValidarBobina(planoId, itemId, alocacaoId) {
         
         iniciarScanner('validar-bobina');
     } catch (error) {
-        mostrarToast('Erro ao carregar item: ' + error.message, 'error');
+        mostrarToast(traduzirErro(error), 'error');
         voltarProducao();
     } finally {
         mostrarLoading(false);
@@ -2178,7 +2328,7 @@ async function processarValidacaoBobina(qrData) {
     try {
         mostrarLoading(true);
         
-        const response = await fetch(API_CONFIG.mobileUrl('validar-qr-bobina'), {
+        const response = await fetchComRetry(API_CONFIG.mobileUrl('validar-qr-bobina'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2201,6 +2351,7 @@ async function processarValidacaoBobina(qrData) {
             `;
             document.getElementById('validacao-resultado').classList.remove('hidden', 'erro');
             document.getElementById('validacao-resultado').classList.add('sucesso');
+            vibrar('sucesso');
         } else {
             // Validação FALHOU
             document.getElementById('validacao-resultado').innerHTML = `
@@ -2214,9 +2365,10 @@ async function processarValidacaoBobina(qrData) {
             `;
             document.getElementById('validacao-resultado').classList.remove('hidden', 'sucesso');
             document.getElementById('validacao-resultado').classList.add('erro');
+            vibrar('erro');
         }
     } catch (error) {
-        mostrarToast('Erro na validação: ' + error.message, 'error');
+        mostrarToast(traduzirErro(error), 'error');
     } finally {
         mostrarLoading(false);
     }
@@ -2232,7 +2384,8 @@ async function irParaRegistrarCorte() {
     
     // Buscar info da alocação
     try {
-        const response = await fetch(API_CONFIG.mobileUrl(`plano/${planoAtual}`));
+        mostrarLoading(true);
+        const response = await fetchComRetry(API_CONFIG.mobileUrl(`plano/${planoAtual}`));
         const data = await response.json();
         const item = data.data.itens.find(i => i.item_id === itemAtual);
         const alocacao = item.alocacoes.find(a => a.id === alocacaoAtual);
@@ -2251,7 +2404,9 @@ async function irParaRegistrarCorte() {
         document.getElementById('metragem-corte').max = restante;
         
     } catch (error) {
-        mostrarToast('Erro ao carregar dados: ' + error.message, 'error');
+        mostrarToast(traduzirErro(error), 'error');
+    } finally {
+        mostrarLoading(false);
     }
 }
 
@@ -2776,7 +2931,7 @@ async function carregarPlanosFinalizados() {
     try {
         mostrarLoading(true);
         
-        const response = await fetch(API_CONFIG.mobileUrl('carregamento/planos-finalizados'));
+        const response = await fetchComRetry(API_CONFIG.mobileUrl('carregamento/planos-finalizados'));
         const data = await response.json();
         
         if (!data.success) throw new Error(data.error);
@@ -2801,25 +2956,14 @@ async function carregarPlanosFinalizados() {
             // Campos do backend: carregamento_id, status_carregamento
             const temCarregamento = plano.carregamento_id !== null;
             const carregamentoConcluido = plano.status_carregamento === 'concluido';
-            
-            // Renderizar lista de cortes
-            const cortesHtml = plano.cortes && plano.cortes.length > 0 
-                ? plano.cortes.map(c => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: ${c.carregado ? '#d1fae5' : '#f3f4f6'}; border-radius: 4px; margin-bottom: 4px; font-size: 12px;">
-                        <span style="font-weight: 600; color: ${c.carregado ? '#059669' : '#374151'};">
-                            ${c.carregado ? '✅' : '📦'} ${c.codigo_corte}
-                        </span>
-                        <span style="color: #6b7280;">${c.metragem_cortada}m</span>
-                    </div>
-                `).join('')
-                : '<p style="color: #9ca3af; font-size: 12px; margin: 0;">Nenhum corte</p>';
+            const emAndamento = temCarregamento && !carregamentoConcluido;
             
             return `
-                <div class="ordem-card ${carregamentoConcluido ? 'ordem-sem-itens' : ''}">
+                <div class="ordem-card ${carregamentoConcluido ? 'ordem-sem-itens' : ''}" id="card-plano-${plano.plano_id}">
                     <div class="ordem-header">
                         <span class="ordem-numero">${plano.codigo_plano}</span>
                         <span class="ordem-status ${carregamentoConcluido ? 'status-concluida' : 'status-finalizado'}">
-                            ${carregamentoConcluido ? '✅ Carregado' : '📦 Pronto'}
+                            ${carregamentoConcluido ? '✅ Carregado' : emAndamento ? '⏳ Em andamento' : '📦 Pronto'}
                         </span>
                     </div>
                     <div class="ordem-info">
@@ -2832,24 +2976,69 @@ async function carregarPlanosFinalizados() {
                         </div>
                     ` : ''}
                     
-                    <!-- Lista de Cortes -->
-                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
-                        <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">
-                            ✂️ Cortes nesta carga:
-                        </div>
-                        ${cortesHtml}
-                    </div>
-                    
-                    ${temCarregamento ? `
-                        <div style="background: ${carregamentoConcluido ? '#d1fae5' : '#fef3c7'}; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 13px;">
-                            ${carregamentoConcluido 
-                                ? `✅ Carregado (${plano.cortes_carregados}/${plano.total_cortes})`
-                                : `⏳ Em andamento (${plano.cortes_carregados}/${plano.total_cortes})`
-                            }
+                    ${carregamentoConcluido ? `
+                        <div style="background: #d1fae5; padding: 10px; border-radius: 6px; margin-top: 10px; text-align: center;">
+                            <span style="font-size: 20px;">✅</span>
+                            <div style="font-weight: 600; color: #059669;">Carregamento Concluído</div>
+                            <small style="color: #047857;">${plano.cortes_carregados}/${plano.total_cortes} cortes validados</small>
                         </div>
                     ` : `
-                        <button class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px;" onclick="iniciarNovoCarregamento(${plano.plano_id}, '${plano.codigo_plano}', ${plano.total_cortes})">
-                            � Iniciar Carregamento
+                        <!-- Área expandível do carregamento -->
+                        <div id="carregamento-expandido-${plano.plano_id}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 2px solid #e5e7eb;">
+                            
+                            <!-- Progresso -->
+                            <div style="margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                                    <span style="font-weight: 600;">📊 Progresso:</span>
+                                    <span id="progresso-texto-${plano.plano_id}" style="font-weight: bold; color: #059669;">${plano.cortes_carregados || 0} / ${plano.total_cortes}</span>
+                                </div>
+                                <div style="background: #e5e7eb; border-radius: 999px; height: 10px; overflow: hidden;">
+                                    <div id="progresso-fill-${plano.plano_id}" style="background: linear-gradient(90deg, #10b981, #34d399); height: 100%; width: ${((plano.cortes_carregados || 0) / plano.total_cortes * 100)}%; transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Lista de TODOS os cortes do plano -->
+                            <div style="margin-bottom: 12px;">
+                                <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #374151;">
+                                    📦 Cortes deste plano:
+                                </div>
+                                <div id="lista-cortes-${plano.plano_id}" style="max-height: 200px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 8px;">
+                                    <div style="text-align: center; padding: 20px; color: #9ca3af;">
+                                        Carregando...
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Scanner QR -->
+                            <div style="margin-bottom: 12px;">
+                                <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #374151;">
+                                    📷 Escanear QR Code:
+                                </div>
+                                <div id="scanner-wrapper-${plano.plano_id}" style="position: relative; background: #000; border-radius: 12px; overflow: hidden;">
+                                    <div id="reader-carregamento-${plano.plano_id}" style="width: 100%;"></div>
+                                </div>
+                                <p style="text-align: center; font-size: 11px; color: #6b7280; margin: 6px 0 0;">
+                                    Posicione o QR Code na câmera
+                                </p>
+                            </div>
+                            
+                            <!-- Feedback do scan -->
+                            <div id="feedback-scan-${plano.plano_id}" style="display: none; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 12px; font-weight: 600;"></div>
+                            
+                            <!-- Botões -->
+                            <div style="display: flex; gap: 8px; margin-top: 12px;">
+                                <button class="btn btn-secondary" style="flex: 1; padding: 12px; font-size: 14px;" onclick="fecharCarregamentoCard(${plano.plano_id})">
+                                    ❌ Fechar
+                                </button>
+                                <button id="btn-finalizar-${plano.plano_id}" class="btn btn-success" style="flex: 1; padding: 12px; font-size: 14px; opacity: 0.5;" disabled onclick="finalizarCarregamentoCard(${plano.plano_id})">
+                                    ✅ Finalizar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Botão para expandir -->
+                        <button id="btn-carregar-${plano.plano_id}" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px;" onclick="expandirCarregamento(${plano.plano_id}, '${plano.codigo_plano}', ${plano.total_cortes}, ${plano.carregamento_id || 'null'})">
+                            ${emAndamento ? '⏳ Continuar Carregamento' : '🚚 Carregar'}
                         </button>
                     `}
                 </div>
@@ -2858,7 +3047,7 @@ async function carregarPlanosFinalizados() {
         
     } catch (error) {
         console.error('Erro ao carregar planos:', error);
-        mostrarToast('Erro ao carregar planos: ' + error.message, 'error');
+        mostrarToast(traduzirErro(error), 'error');
     } finally {
         mostrarLoading(false);
     }
@@ -2868,177 +3057,431 @@ async function carregarPlanosFinalizados() {
 let carregamentoEmAndamento = null;
 let scannerCarregamento = null;
 
-async function iniciarNovoCarregamento(planoId, codigoPlano, totalCortes) {
+// Armazena dados de carregamentos ativos por plano
+let carregamentosAtivos = {};
+
+// ========== CARREGAMENTO INLINE (DENTRO DO CARD) ==========
+
+async function expandirCarregamento(planoId, codigoPlano, totalCortes, carregamentoIdExistente) {
     try {
+        // Esconder botão e mostrar área expandida
+        document.getElementById(`btn-carregar-${planoId}`).style.display = 'none';
+        document.getElementById(`carregamento-expandido-${planoId}`).style.display = 'block';
+        
         mostrarLoading(true);
         
-        const response = await fetch(API_CONFIG.mobileUrl('carregamento/iniciar'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                plano_id: planoId,
-                operador_nome: 'Operador Mobile' // Pode pedir nome depois
-            })
-        });
+        let carregamentoId = carregamentoIdExistente;
+        let todosCortes = [];
         
-        const data = await response.json();
-        console.log('📦 Resposta carregamento/iniciar:', data);
-        
-        if (!data.success) {
-            // Se já existe carregamento em andamento, continuar com ele
-            if (data.carregamento_id) {
-                mostrarToast('Continuando carregamento em andamento...', 'info');
-                return;
+        // Se não tem carregamento, criar um
+        if (!carregamentoId) {
+            const response = await fetchComRetry(API_CONFIG.mobileUrl('carregamento/iniciar'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    plano_id: planoId,
+                    operador_nome: 'Operador Mobile'
+                })
+            });
+            
+            const data = await response.json();
+            console.log('📦 Carregamento criado:', data);
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Erro ao iniciar carregamento');
             }
-            throw new Error(data.error);
+            
+            carregamentoId = data.carregamento.id;
+            todosCortes = data.cortes || [];
+        } else {
+            // Buscar cortes do carregamento existente
+            const response = await fetchComRetry(API_CONFIG.mobileUrl(`carregamento/${carregamentoId}/cortes`));
+            const data = await response.json();
+            if (data.success) {
+                todosCortes = data.cortes || [];
+            }
         }
         
-        // Backend retorna { carregamento: {...}, cortes: [...] }
-        carregamentoEmAndamento = {
-            ...data.carregamento,
-            codigo_plano: codigoPlano,
-            cortes: data.cortes || []
+        // Armazenar dados do carregamento ativo
+        carregamentosAtivos[planoId] = {
+            carregamentoId: carregamentoId,
+            codigoPlano: codigoPlano,
+            totalCortes: totalCortes,
+            todosCortes: todosCortes,
+            scanner: null
         };
-        cortesValidados = [];
         
-        // Exibir tela de validação
-        await mostrarTela('tela-validacao-carregamento');
+        // Renderizar lista de cortes (todos, com status visual)
+        renderizarListaCortesCard(planoId);
+        atualizarProgressoCard(planoId);
         
-        // Renderizar info do carregamento
-        document.getElementById('carregamento-info').innerHTML = `
-            <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
-                <h3 style="margin: 0 0 10px 0; color: #0c4a6e;">
-                    ${carregamentoEmAndamento.codigo_carregamento}
-                </h3>
-                <div style="font-size: 14px; color: #075985;">
-                    <div>📋 Plano: <strong>${codigoPlano}</strong></div>
-                    <div>📦 Total de cortes: <strong>${carregamentoEmAndamento.total_cortes}</strong></div>
-                </div>
-            </div>
-        `;
-        
-        atualizarProgressoCarregamento();
-        iniciarScannerCarregamento();
+        // Iniciar scanner após um pequeno delay para garantir que o DOM está pronto
+        setTimeout(() => {
+            iniciarScannerCard(planoId);
+        }, 300);
         
     } catch (error) {
-        console.error('Erro ao iniciar carregamento:', error);
-        mostrarToast('Erro: ' + error.message, 'error');
+        console.error('Erro ao expandir carregamento:', error);
+        mostrarToast(traduzirErro(error), 'error');
+        // Reverter UI
+        document.getElementById(`btn-carregar-${planoId}`).style.display = 'block';
+        document.getElementById(`carregamento-expandido-${planoId}`).style.display = 'none';
     } finally {
         mostrarLoading(false);
     }
 }
 
-function iniciarScannerCarregamento() {
-    const readerElement = document.getElementById('reader-carregamento');
+function fecharCarregamentoCard(planoId) {
+    // Parar scanner
+    const dados = carregamentosAtivos[planoId];
+    if (dados && dados.scanner) {
+        dados.scanner.stop().catch(() => {});
+    }
+    
+    // Esconder área expandida e mostrar botão
+    document.getElementById(`carregamento-expandido-${planoId}`).style.display = 'none';
+    
+    const btnCarregar = document.getElementById(`btn-carregar-${planoId}`);
+    if (btnCarregar) {
+        btnCarregar.style.display = 'block';
+        // Atualizar texto do botão se já tem progresso
+        const carregados = dados?.todosCortes?.filter(c => c.carregado).length || 0;
+        if (carregados > 0) {
+            btnCarregar.innerHTML = `⏳ Continuar (${carregados}/${dados.totalCortes})`;
+        }
+    }
+    
+    delete carregamentosAtivos[planoId];
+}
+
+function iniciarScannerCard(planoId) {
+    const readerId = `reader-carregamento-${planoId}`;
+    const readerElement = document.getElementById(readerId);
     
     if (!readerElement) {
-        console.error('Elemento reader-carregamento não encontrado');
+        console.error('Elemento scanner não encontrado:', readerId);
         return;
     }
     
-    scannerCarregamento = new Html5Qrcode("reader-carregamento");
+    // Verificar se já existe scanner ativo
+    const dados = carregamentosAtivos[planoId];
+    if (dados && dados.scanner) {
+        console.log('Scanner já ativo para plano:', planoId);
+        return;
+    }
     
-    scannerCarregamento.start(
+    const scanner = new Html5Qrcode(readerId);
+    carregamentosAtivos[planoId].scanner = scanner;
+    
+    // Configuração melhorada do scanner
+    const config = {
+        fps: 10,
+        qrbox: { width: 220, height: 220 },
+        aspectRatio: 1.0,
+        disableFlip: false
+    };
+    
+    scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        config,
         async (decodedText) => {
-            console.log('📱 QR escaneado no carregamento:', decodedText);
-            await processarScanCarregamento(decodedText);
+            console.log('📱 QR escaneado:', decodedText);
+            
+            // Pausar scanner brevemente para evitar leituras duplicadas
+            await scanner.pause(true);
+            
+            await processarScanCarregamentoCard(planoId, decodedText);
+            
+            // Retomar scanner após processar
+            setTimeout(() => {
+                if (carregamentosAtivos[planoId]?.scanner) {
+                    scanner.resume();
+                }
+            }, 1500);
+        },
+        (errorMessage) => {
+            // Ignorar erros de leitura contínua (normal)
         }
     ).catch(err => {
-        console.error('Erro ao iniciar scanner de carregamento:', err);
-        mostrarToast('Erro ao acessar câmera', 'error');
+        console.error('Erro ao iniciar scanner:', err);
+        // Mostrar botão manual para tentar novamente
+        const container = document.getElementById(`scanner-wrapper-${planoId}`);
+        if (container) {
+            container.innerHTML = `
+                <div style="padding: 30px; text-align: center; background: #fee2e2; border-radius: 8px;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">📷</div>
+                    <p style="color: #dc2626; margin-bottom: 10px;">Erro ao acessar câmera</p>
+                    <button class="btn btn-primary" onclick="tentarNovamenteScannerCard(${planoId})">
+                        🔄 Tentar Novamente
+                    </button>
+                </div>
+            `;
+        }
     });
 }
 
-async function processarScanCarregamento(codigoCorte) {
+function tentarNovamenteScannerCard(planoId) {
+    const readerId = `reader-carregamento-${planoId}`;
+    const container = document.getElementById(`scanner-wrapper-${planoId}`);
+    
+    // Recriar elemento do scanner
+    if (container) {
+        container.innerHTML = `<div id="${readerId}" style="width: 100%;"></div>`;
+    }
+    
+    // Limpar scanner antigo
+    if (carregamentosAtivos[planoId]?.scanner) {
+        carregamentosAtivos[planoId].scanner = null;
+    }
+    
+    // Tentar iniciar novamente
+    setTimeout(() => {
+        iniciarScannerCard(planoId);
+    }, 300);
+}
+
+async function processarScanCarregamentoCard(planoId, codigoCorte) {
+    const dados = carregamentosAtivos[planoId];
+    if (!dados) return;
+    
+    const feedbackDiv = document.getElementById(`feedback-scan-${planoId}`);
+    
     try {
-        const feedbackDiv = document.getElementById('feedback-scan');
-        
-        // Validar corte no backend
-        const response = await fetch(API_CONFIG.mobileUrl('carregamento/validar-corte'), {
+        // Usar endpoint correto de validação (sem retry - scan deve ser rápido)
+        const response = await fetch(API_CONFIG.mobileUrl('carregamento/validar-scan'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                carregamento_id: carregamentoEmAndamento.id,
+                carregamento_id: dados.carregamentoId,
                 codigo_corte: codigoCorte
             })
         });
         
         const data = await response.json();
         
-        // Feedback visual
-        feedbackDiv.classList.remove('hidden');
+        // Mostrar feedback
+        feedbackDiv.style.display = 'block';
         
-        if (data.success && data.validacao === 'valido') {
+        if (data.success && data.valido) {
             // VERDE - Corte válido
             feedbackDiv.style.background = '#10b981';
             feedbackDiv.style.color = 'white';
             feedbackDiv.innerHTML = `
-                <div style="font-size: 24px; margin-bottom: 8px;">✅</div>
-                <div style="font-size: 16px; font-weight: bold;">${data.data.corte.codigo_corte}</div>
-                <div style="font-size: 14px;">${data.data.corte.metragem_cortada}m - ${data.data.corte.produto_codigo}</div>
-                <div style="font-size: 12px; margin-top: 5px; opacity: 0.9;">
-                    Corte ${data.data.ordem_scan} | ${data.data.progresso.percentual}% completo
-                </div>
+                <div style="font-size: 28px;">✅</div>
+                <div style="font-weight: bold; font-size: 16px;">${data.corte.codigo_corte}</div>
+                <div style="font-size: 13px;">${data.corte.metragem_cortada}m</div>
+                <div style="font-size: 11px; margin-top: 4px; opacity: 0.9;">${data.progresso.carregados}/${data.progresso.total} carregados</div>
             `;
             
-            // Adicionar à lista local
-            cortesValidados.push(data.data.corte);
-            renderizarCortesValidados();
-            atualizarProgressoCarregamento();
-            
-            // Atualizar contador do carregamento
-            carregamentoEmAndamento.cortes_carregados = data.data.progresso.carregados;
-            
-            // Verificar se completo
-            if (data.data.completo) {
-                setTimeout(() => {
-                    if (confirm('✅ Todos os cortes foram validados! Finalizar carregamento?')) {
-                        finalizarCarregamentoAtual();
-                    }
-                }, 1000);
+            // Atualizar corte na lista local
+            const corteIndex = dados.todosCortes.findIndex(c => c.codigo_corte === codigoCorte);
+            if (corteIndex >= 0) {
+                dados.todosCortes[corteIndex].carregado = true;
             }
             
-        } else if (data.validacao === 'duplicado') {
-            // AMARELO - Já escaneado
-            feedbackDiv.style.background = '#f59e0b';
-            feedbackDiv.style.color = 'white';
-            feedbackDiv.innerHTML = `
-                <div style="font-size: 24px; margin-bottom: 8px;">⚠️</div>
-                <div style="font-size: 14px;">${data.error}</div>
-            `;
+            // Re-renderizar lista e progresso
+            renderizarListaCortesCard(planoId);
+            atualizarProgressoCard(planoId);
             
-        } else if (data.validacao === 'plano_errado') {
-            // LARANJA - Plano errado
-            feedbackDiv.style.background = '#f97316';
-            feedbackDiv.style.color = 'white';
-            feedbackDiv.innerHTML = `
-                <div style="font-size: 24px; margin-bottom: 8px;">❌</div>
-                <div style="font-size: 14px;">Corte de outro plano!</div>
-                <div style="font-size: 12px; margin-top: 5px;">${codigoCorte}</div>
-            `;
+            // Vibração de sucesso
+            if (navigator.vibrate) navigator.vibrate(100);
+            
+            // Verificar se completo
+            if (data.progresso.carregados >= data.progresso.total) {
+                setTimeout(() => {
+                    feedbackDiv.innerHTML = `
+                        <div style="font-size: 32px;">🎉</div>
+                        <div style="font-weight: bold; font-size: 16px;">Todos os cortes carregados!</div>
+                        <div style="font-size: 13px;">Clique em Finalizar</div>
+                    `;
+                    feedbackDiv.style.background = '#059669';
+                    
+                    // Habilitar botão finalizar
+                    const btnFinalizar = document.getElementById(`btn-finalizar-${planoId}`);
+                    if (btnFinalizar) {
+                        btnFinalizar.disabled = false;
+                        btnFinalizar.style.opacity = '1';
+                    }
+                }, 500);
+            }
             
         } else {
-            // VERMELHO - Inválido
+            // VERMELHO - Erro
             feedbackDiv.style.background = '#ef4444';
             feedbackDiv.style.color = 'white';
+            
+            let mensagem = data.erro || 'Corte inválido';
+            let icone = '❌';
+            
+            if (mensagem.includes('já foi carregado')) {
+                feedbackDiv.style.background = '#f59e0b'; // Amarelo para duplicado
+                icone = '⚠️';
+                mensagem = 'Já carregado!';
+            }
+            
             feedbackDiv.innerHTML = `
-                <div style="font-size: 24px; margin-bottom: 8px;">❌</div>
-                <div style="font-size: 14px;">${data.error || 'Corte não encontrado'}</div>
+                <div style="font-size: 28px;">${icone}</div>
+                <div style="font-weight: bold; font-size: 14px;">${mensagem}</div>
+                <div style="font-size: 11px; opacity: 0.9;">${codigoCorte}</div>
             `;
+            
+            // Vibração de erro
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         }
         
-        // Remover feedback após 2 segundos
+        // Esconder feedback após 2.5s
         setTimeout(() => {
-            feedbackDiv.classList.add('hidden');
-        }, 2000);
+            feedbackDiv.style.display = 'none';
+        }, 2500);
         
     } catch (error) {
-        console.error('Erro ao processar scan:', error);
-        mostrarToast('Erro ao validar corte', 'error');
+        console.error('Erro ao validar corte:', error);
+        feedbackDiv.style.display = 'block';
+        feedbackDiv.style.background = '#ef4444';
+        feedbackDiv.style.color = 'white';
+        feedbackDiv.innerHTML = `<div>❌ ${traduzirErro(error)}</div>`;
+        vibrar('erro');
+        setTimeout(() => { feedbackDiv.style.display = 'none'; }, 2000);
     }
 }
+
+// Renderiza TODOS os cortes do plano com status visual (carregado = verde, pendente = cinza)
+function renderizarListaCortesCard(planoId) {
+    const dados = carregamentosAtivos[planoId];
+    if (!dados) return;
+    
+    const container = document.getElementById(`lista-cortes-${planoId}`);
+    if (!container) return;
+    
+    const cortes = dados.todosCortes || [];
+    
+    if (cortes.length === 0) {
+        container.innerHTML = '<p style="color: #9ca3af; font-size: 12px; text-align: center; padding: 15px;">Nenhum corte encontrado</p>';
+        return;
+    }
+    
+    // Ordenar: pendentes primeiro, depois carregados
+    const cortesOrdenados = [...cortes].sort((a, b) => {
+        if (a.carregado === b.carregado) return 0;
+        return a.carregado ? 1 : -1;
+    });
+    
+    container.innerHTML = cortesOrdenados.map(corte => {
+        const isCarregado = corte.carregado;
+        
+        return `
+            <div style="
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                padding: 10px 12px; 
+                background: ${isCarregado ? '#d1fae5' : '#ffffff'}; 
+                border: 2px solid ${isCarregado ? '#10b981' : '#e5e7eb'};
+                border-radius: 8px; 
+                margin-bottom: 6px;
+                transition: all 0.3s ease;
+            ">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 18px;">${isCarregado ? '✅' : '📦'}</span>
+                    <div>
+                        <div style="font-weight: 600; font-size: 13px; color: ${isCarregado ? '#059669' : '#374151'};">
+                            ${corte.codigo_corte}
+                        </div>
+                        <div style="font-size: 11px; color: ${isCarregado ? '#047857' : '#6b7280'};">
+                            ${corte.produto_codigo || ''} ${corte.nome_cor ? '• ' + corte.nome_cor : ''}
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: bold; font-size: 14px; color: ${isCarregado ? '#059669' : '#374151'};">
+                        ${corte.metragem_cortada}m
+                    </div>
+                    <div style="font-size: 10px; color: ${isCarregado ? '#10b981' : '#9ca3af'};">
+                        ${isCarregado ? '✓ Carregado' : 'Pendente'}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function atualizarProgressoCard(planoId) {
+    const dados = carregamentosAtivos[planoId];
+    if (!dados) return;
+    
+    const carregados = dados.todosCortes?.filter(c => c.carregado).length || 0;
+    const total = dados.totalCortes;
+    const percentual = Math.round((carregados / total) * 100);
+    
+    const textoEl = document.getElementById(`progresso-texto-${planoId}`);
+    const fillEl = document.getElementById(`progresso-fill-${planoId}`);
+    
+    if (textoEl) textoEl.textContent = `${carregados} / ${total}`;
+    if (fillEl) fillEl.style.width = `${percentual}%`;
+    
+    // Habilitar botão finalizar se completo
+    if (carregados >= total) {
+        const btnFinalizar = document.getElementById(`btn-finalizar-${planoId}`);
+        if (btnFinalizar) {
+            btnFinalizar.disabled = false;
+            btnFinalizar.style.opacity = '1';
+        }
+    }
+}
+
+async function finalizarCarregamentoCard(planoId) {
+    const dados = carregamentosAtivos[planoId];
+    if (!dados) return;
+    
+    // Confirmação em 2 passos
+    const confirmar = await confirmarAcaoCritica(
+        'Finalizar Carregamento?',
+        'Esta ação marcará todos os cortes como carregados e não poderá ser desfeita.',
+        'Sim, Finalizar'
+    );
+    
+    if (!confirmar) return;
+    
+    // Desabilitar botão
+    const btnFinalizar = document.getElementById(`btn-finalizar-${planoId}`);
+    desabilitarBotao(btnFinalizar, 'Finalizando...');
+    
+    try {
+        mostrarLoading(true);
+        
+        // Parar scanner
+        if (dados.scanner) {
+            await dados.scanner.stop().catch(() => {});
+        }
+        
+        const response = await fetchComRetry(API_CONFIG.mobileUrl('carregamento/finalizar'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ carregamento_id: dados.carregamentoId })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) throw new Error(data.error);
+        
+        // Vibrar sucesso
+        vibrar([100, 50, 100]);
+        mostrarToast('✅ Carregamento finalizado com sucesso!', 'success');
+        
+        // Recarregar lista
+        delete carregamentosAtivos[planoId];
+        await carregarPlanosFinalizados();
+        
+    } catch (error) {
+        console.error('Erro ao finalizar:', error);
+        mostrarToast(traduzirErro(error), 'error');
+        habilitarBotao(btnFinalizar);
+    } finally {
+        mostrarLoading(false);
+    }
+}
+
+// ========== CARREGAMENTO - FUNÇÕES DE SUPORTE ==========
 
 function renderizarCortesValidados() {
     const container = document.getElementById('lista-validados');
@@ -3054,7 +3497,7 @@ function renderizarCortesValidados() {
             <div style="flex: 1;">
                 <div style="font-weight: bold; font-size: 14px;">${corte.codigo_corte}</div>
                 <div style="font-size: 12px; color: #666;">
-                    ${corte.metragem_cortada}m - ${corte.produto_codigo}
+                    ${corte.metragem_cortada}m - ${corte.produto_codigo || ''}
                 </div>
             </div>
             <div style="color: #999; font-size: 12px;">
@@ -3062,65 +3505,6 @@ function renderizarCortesValidados() {
             </div>
         </div>
     `).join('');
-}
-
-function atualizarProgressoCarregamento() {
-    const total = carregamentoEmAndamento.total_cortes;
-    const validados = cortesValidados.length;
-    const percentual = total > 0 ? (validados / total) * 100 : 0;
-    
-    document.getElementById('progresso-texto').textContent = `${validados} / ${total}`;
-    document.getElementById('progresso-fill').style.width = `${percentual}%`;
-    
-    // Habilitar botão finalizar se todos validados
-    const btnFinalizar = document.getElementById('btn-finalizar-carregamento');
-    if (btnFinalizar) {
-        btnFinalizar.disabled = validados < total;
-    }
-}
-
-async function finalizarCarregamentoAtual() {
-    try {
-        mostrarLoading(true);
-        
-        // Parar scanner
-        if (scannerCarregamento) {
-            try {
-                await scannerCarregamento.stop();
-                scannerCarregamento = null;
-            } catch (err) {
-                console.log('Scanner já estava parado');
-            }
-        }
-        
-        const response = await fetch(API_CONFIG.mobileUrl('carregamento/finalizar'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                carregamento_id: carregamentoEmAndamento.id
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            mostrarToast(`✅ ${data.data.codigo_carregamento} finalizado!`, 'success');
-            
-            // Limpar estado
-            carregamentoEmAndamento = null;
-            cortesValidados = [];
-            
-            // Voltar para lista de planos
-            await abrirTelaCarregamento();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Erro ao finalizar carregamento:', error);
-        mostrarToast('Erro: ' + error.message, 'error');
-    } finally {
-        mostrarLoading(false);
-    }
 }
 
 async function cancelarCarregamento() {

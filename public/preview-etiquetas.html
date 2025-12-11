@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Etiquetas - Controle de Bobinas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .info {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .etiqueta-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        
+        .etiqueta-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .etiqueta-medidas {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        /* Etiqueta em escala real: 60mm x 30mm */
+        /* 1mm = 3.7795px (96dpi) */
+        .etiqueta {
+            width: 226.77px;  /* 60mm */
+            height: 113.39px; /* 30mm */
+            border: 2px solid #000;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        /* Linha 1 - Código (6mm = 22.68px) */
+        .etiqueta .linha-codigo {
+            height: 22.68px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Linha 2 - Código de barras (10mm = 37.8px) */
+        .etiqueta .linha-barcode {
+            height: 37.8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 10px;
+        }
+        
+        .etiqueta .linha-barcode svg {
+            max-width: 100%;
+            height: 100%;
+        }
+        
+        /* Linha 3 - Produto (7mm = 26.46px) */
+        .etiqueta .linha-produto {
+            height: 26.46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-family: Arial, sans-serif;
+        }
+        
+        /* Linha 4 - Detalhes (7mm = 26.46px) */
+        .etiqueta .linha-detalhes {
+            height: 26.46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        
+        /* Versão ampliada para visualização */
+        .etiqueta-ampliada {
+            width: 453.54px;  /* 120mm (2x) */
+            height: 226.77px; /* 60mm (2x) */
+        }
+        
+        .etiqueta-ampliada .linha-codigo {
+            height: 45.36px;
+            font-size: 28px;
+        }
+        
+        .etiqueta-ampliada .linha-barcode {
+            height: 75.6px;
+            padding: 4px 20px;
+        }
+        
+        .etiqueta-ampliada .linha-produto {
+            height: 52.92px;
+            font-size: 20px;
+        }
+        
+        .etiqueta-ampliada .linha-detalhes {
+            height: 52.92px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        /* Etiqueta de Locação - Layout simples 50/50 */
+        .etiqueta-locacao {
+            width: 226.77px;  /* 60mm */
+            height: 113.39px; /* 30mm */
+            border: 2px solid #000;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .etiqueta-locacao .linha-codigo-loc {
+            height: 56.7px; /* 15mm = 50% */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .etiqueta-locacao .linha-barcode-loc {
+            height: 56.7px; /* 15mm = 50% */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 10px;
+        }
+        
+        /* Versão ampliada locação */
+        .etiqueta-locacao-ampliada {
+            width: 453.54px;  /* 120mm (2x) */
+            height: 226.77px; /* 60mm (2x) */
+        }
+        
+        .etiqueta-locacao-ampliada .linha-codigo-loc {
+            height: 113.39px;
+            font-size: 52px;
+        }
+        
+        .etiqueta-locacao-ampliada .linha-barcode-loc {
+            height: 113.39px;
+            padding: 4px 20px;
+        }
+        
+        .escala-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #2e7d32;
+        }
+        
+        .separador {
+            width: 100%;
+            height: 2px;
+            background: #ddd;
+            margin: 30px 0;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 10mm;
+            }
+            
+            .info, .etiqueta-title, .etiqueta-medidas, .escala-info, h1, .separador {
+                display: none;
+            }
+            
+            .etiqueta-container {
+                page-break-inside: avoid;
+                margin-bottom: 5mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🏷️ Preview de Etiquetas</h1>
+    <p class="info">Visualize as etiquetas em tamanho real e ampliado</p>
+    
+    <!-- BOBINA -->
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">📦 ETIQUETA DE BOBINA</div>
+        <div class="etiqueta-medidas">Tamanho real: 60mm x 30mm | Largura em cm, Comprimento em m</div>
+        
+        <div class="etiqueta">
+            <div class="linha-codigo">BOB-PLA-000001</div>
+            <div class="linha-barcode">
+                <svg id="barcode-bobina-real"></svg>
+            </div>
+            <div class="linha-produto">Preta/Prata 190cm Cano/Cano 190gr</div>
+            <div class="linha-detalhes">PROPEX | ABC-1234 | 150,00m</div>
+        </div>
+        
+        <div class="escala-info">⬆️ Escala 1:1 (tamanho real na tela pode variar conforme monitor)</div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">📦 ETIQUETA DE BOBINA (Ampliada 2x)</div>
+        <div class="etiqueta-medidas">Visualização ampliada para detalhes</div>
+        
+        <div class="etiqueta etiqueta-ampliada">
+            <div class="linha-codigo">BOB-PLA-000001</div>
+            <div class="linha-barcode">
+                <svg id="barcode-bobina-amp"></svg>
+            </div>
+            <div class="linha-produto">Preta/Prata 190cm Cano/Cano 190gr</div>
+            <div class="linha-detalhes">PROPEX | ABC-1234 | 150,00m</div>
+        </div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <!-- Variações -->
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">📦 BOBINA - Sem Placa (Ampliada 2x)</div>
+        
+        <div class="etiqueta etiqueta-ampliada">
+            <div class="linha-codigo">BOB-CIA-000042</div>
+            <div class="linha-barcode">
+                <svg id="barcode-bobina-sem-placa"></svg>
+            </div>
+            <div class="linha-produto">Azul Royal 140cm Simples 180gr</div>
+            <div class="linha-detalhes">SANSUY | 200,00m</div>
+        </div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <!-- RETALHO -->
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">🧵 ETIQUETA DE RETALHO</div>
+        <div class="etiqueta-medidas">Tamanho real: 60mm x 30mm</div>
+        
+        <div class="etiqueta">
+            <div class="linha-codigo">RET-PLA-000001</div>
+            <div class="linha-barcode">
+                <svg id="barcode-retalho-real"></svg>
+            </div>
+            <div class="linha-produto">Preta/Prata 190cm Cano/Cano 190gr</div>
+            <div class="linha-detalhes">PROPEX | 35,50m</div>
+        </div>
+        
+        <div class="escala-info">⬆️ Escala 1:1 (tamanho real na tela pode variar conforme monitor)</div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">🧵 ETIQUETA DE RETALHO (Ampliada 2x)</div>
+        <div class="etiqueta-medidas">Visualização ampliada para detalhes</div>
+        
+        <div class="etiqueta etiqueta-ampliada">
+            <div class="linha-codigo">RET-PLA-000001</div>
+            <div class="linha-barcode">
+                <svg id="barcode-retalho-amp"></svg>
+            </div>
+            <div class="linha-produto">Preta/Prata 190cm Cano/Cano 190gr</div>
+            <div class="linha-detalhes">PROPEX | 35,50m</div>
+        </div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <!-- CORTE -->
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">✂️ ETIQUETA DE CORTE</div>
+        <div class="etiqueta-medidas">Tamanho real: 60mm x 30mm</div>
+        
+        <div class="etiqueta">
+            <div class="linha-codigo">COR-PLA-001-01</div>
+            <div class="linha-barcode">
+                <svg id="barcode-corte-real"></svg>
+            </div>
+            <div class="linha-produto">Preta/Prata 190cm Cano/Cano 190gr</div>
+            <div class="linha-detalhes">25,00m | JOÃO SILVA | AV-03</div>
+        </div>
+        
+        <div class="escala-info">⬆️ Escala 1:1 (tamanho real na tela pode variar conforme monitor)</div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">✂️ ETIQUETA DE CORTE (Ampliada 2x)</div>
+        <div class="etiqueta-medidas">Visualização ampliada para detalhes</div>
+        
+        <div class="etiqueta etiqueta-ampliada">
+            <div class="linha-codigo">COR-PLA-001-01</div>
+            <div class="linha-barcode">
+                <svg id="barcode-corte-amp"></svg>
+            </div>
+            <div class="linha-produto">Preta/Prata 190cm Cano/Cano 190gr</div>
+            <div class="linha-detalhes">25,00m | JOÃO SILVA | AV-03</div>
+        </div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <!-- BANDO Y -->
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">🔷 ETIQUETAS BANDO Y (Ampliadas 2x)</div>
+        <div class="etiqueta-medidas">Formato: LarguraMaior x LarguraY x LarguraY | Exemplo: 220x80x80cm</div>
+    </div>
+    
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">📦 BOBINA - Bando Y</div>
+        
+        <div class="etiqueta etiqueta-ampliada">
+            <div class="linha-codigo">BOB-PLA-000015</div>
+            <div class="linha-barcode">
+                <svg id="barcode-bobina-bandoy"></svg>
+            </div>
+            <div class="linha-produto">Preta/Prata 220x80x80cm 190gr</div>
+            <div class="linha-detalhes">PROPEX | ABC-1234 | 150,00m</div>
+        </div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">🧵 RETALHO - Bando Y</div>
+        
+        <div class="etiqueta etiqueta-ampliada">
+            <div class="linha-codigo">RET-PLA-000008</div>
+            <div class="linha-barcode">
+                <svg id="barcode-retalho-bandoy"></svg>
+            </div>
+            <div class="linha-produto">Azul/Branca 250x100x100cm 180gr</div>
+            <div class="linha-detalhes">SANSUY | 42,30m</div>
+        </div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">✂️ CORTE - Bando Y</div>
+        
+        <div class="etiqueta etiqueta-ampliada">
+            <div class="linha-codigo">COR-CIA-002-05</div>
+            <div class="linha-barcode">
+                <svg id="barcode-corte-bandoy"></svg>
+            </div>
+            <div class="linha-produto">Preta/Prata 220x80x80cm 190gr</div>
+            <div class="linha-detalhes">30,00m | MARIA SANTOS | AV-07</div>
+        </div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <!-- LOCAÇÃO -->
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">📍 ETIQUETA DE LOCAÇÃO</div>
+        <div class="etiqueta-medidas">Tamanho real: 60mm x 30mm | Layout simples 50/50</div>
+        
+        <div class="etiqueta-locacao">
+            <div class="linha-codigo-loc">0001-A-0001</div>
+            <div class="linha-barcode-loc">
+                <svg id="barcode-locacao-real"></svg>
+            </div>
+        </div>
+        
+        <div class="escala-info">⬆️ Escala 1:1 (tamanho real na tela pode variar conforme monitor)</div>
+    </div>
+    
+    <div class="separador"></div>
+    
+    <div class="etiqueta-container">
+        <div class="etiqueta-title">📍 ETIQUETA DE LOCAÇÃO (Ampliada 2x)</div>
+        <div class="etiqueta-medidas">Visualização ampliada para detalhes</div>
+        
+        <div class="etiqueta-locacao etiqueta-locacao-ampliada">
+            <div class="linha-codigo-loc">0001-A-0001</div>
+            <div class="linha-barcode-loc">
+                <svg id="barcode-locacao-amp"></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- JsBarcode CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <script>
+        // Gerar códigos de barras
+        document.addEventListener('DOMContentLoaded', function() {
+            // Bobina real
+            JsBarcode("#barcode-bobina-real", "BOB-PLA-000001", {
+                format: "CODE128",
+                width: 1.5,
+                height: 30,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // Bobina ampliada
+            JsBarcode("#barcode-bobina-amp", "BOB-PLA-000001", {
+                format: "CODE128",
+                width: 3,
+                height: 60,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // Bobina sem placa
+            JsBarcode("#barcode-bobina-sem-placa", "BOB-CIA-000042", {
+                format: "CODE128",
+                width: 3,
+                height: 60,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // Retalho real
+            JsBarcode("#barcode-retalho-real", "RET-PLA-000001", {
+                format: "CODE128",
+                width: 1.5,
+                height: 30,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // Retalho ampliado
+            JsBarcode("#barcode-retalho-amp", "RET-PLA-000001", {
+                format: "CODE128",
+                width: 3,
+                height: 60,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // Corte real
+            JsBarcode("#barcode-corte-real", "COR-PLA-001-01", {
+                format: "CODE128",
+                width: 1.5,
+                height: 30,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // Corte ampliado
+            JsBarcode("#barcode-corte-amp", "COR-PLA-001-01", {
+                format: "CODE128",
+                width: 3,
+                height: 60,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // ======== BANDO Y ========
+            
+            // Bobina Bando Y
+            JsBarcode("#barcode-bobina-bandoy", "BOB-PLA-000015", {
+                format: "CODE128",
+                width: 3,
+                height: 60,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // Retalho Bando Y
+            JsBarcode("#barcode-retalho-bandoy", "RET-PLA-000008", {
+                format: "CODE128",
+                width: 3,
+                height: 60,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // Corte Bando Y
+            JsBarcode("#barcode-corte-bandoy", "COR-CIA-002-05", {
+                format: "CODE128",
+                width: 3,
+                height: 60,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // ======== LOCAÇÃO ========
+            
+            // Locação real (barcode maior - 50% da etiqueta)
+            JsBarcode("#barcode-locacao-real", "0001-A-0001", {
+                format: "CODE128",
+                width: 2,
+                height: 45,
+                displayValue: false,
+                margin: 0
+            });
+            
+            // Locação ampliada
+            JsBarcode("#barcode-locacao-amp", "0001-A-0001", {
+                format: "CODE128",
+                width: 4,
+                height: 90,
+                displayValue: false,
+                margin: 0
+            });
+        });
+    </script>
+</body>
+</html>

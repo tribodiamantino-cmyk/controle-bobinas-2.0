@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fila de Impressão - Controle de Bobinas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        body {
+            background-color: #f5f5f5;
+        }
+        .etiqueta-preview {
+            width: 226px; /* 60mm * 3.78 */
+            height: 113px; /* 30mm * 3.78 */
+            background: white;
+            border: 1px solid #333;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4px;
+            box-sizing: border-box;
+            margin: 0 auto;
+        }
+        .etiqueta-preview.locacao {
+            display: flex;
+            flex-direction: column;
+        }
+        .etiqueta-codigo {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 2px;
+        }
+        .etiqueta-codigo.grande {
+            font-size: 26px;
+            margin-bottom: 4px;
+        }
+        .etiqueta-barcode {
+            height: 38px;
+            margin: 2px 0;
+        }
+        .etiqueta-barcode.grande {
+            height: 56px;
+        }
+        .etiqueta-linha3, .etiqueta-linha4 {
+            font-size: 10px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+        .etiqueta-linha4 {
+            font-weight: bold;
+        }
+        
+        .card-etiqueta {
+            transition: all 0.2s;
+        }
+        .card-etiqueta:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .card-etiqueta.selecionada {
+            border-color: #0d6efd;
+            border-width: 2px;
+        }
+        
+        .badge-tipo {
+            font-size: 0.7rem;
+        }
+        
+        .stats-card {
+            border-left: 4px solid;
+        }
+        .stats-card.pendentes {
+            border-color: #ffc107;
+        }
+        .stats-card.impressas {
+            border-color: #198754;
+        }
+        
+        /* Modal de impressão em tamanho real */
+        .modal-print .etiqueta-preview {
+            transform: scale(2);
+            transform-origin: center center;
+            margin: 60px auto;
+        }
+        
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printArea, #printArea * {
+                visibility: visible;
+            }
+            #printArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+            .etiqueta-preview {
+                border: none !important;
+                transform: none !important;
+                margin: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="bi bi-printer me-2"></i>Fila de Impressão</h2>
+                        <p class="text-muted mb-0">Gerenciar etiquetas pendentes de impressão</p>
+                    </div>
+                    <div>
+                        <a href="index.html" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Voltar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros e Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card pendentes">
+                    <div class="card-body">
+                        <h6 class="text-muted">Pendentes</h6>
+                        <h3 id="statsPendentes">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card impressas">
+                    <div class="card-body">
+                        <h6 class="text-muted">Impressas Hoje</h6>
+                        <h3 id="statsHoje">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <select class="form-select" id="filtroLoja">
+                                    <option value="">Todas as Lojas</option>
+                                    <option value="PLA">Cortinave (PLA)</option>
+                                    <option value="CIA">BN (CIA)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" id="filtroTipo">
+                                    <option value="">Todos os Tipos</option>
+                                    <option value="bobina">Bobinas</option>
+                                    <option value="retalho">Retalhos</option>
+                                    <option value="corte">Cortes</option>
+                                    <option value="locacao">Locações</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100" onclick="carregarFila()">
+                                    <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ações em Massa -->
+        <div class="row mb-3" id="acoesMassa" style="display: none;">
+            <div class="col">
+                <div class="card bg-light">
+                    <div class="card-body py-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <span><strong id="qtdSelecionadas">0</strong> selecionadas</span>
+                            <button class="btn btn-success btn-sm" onclick="imprimirSelecionadas()">
+                                <i class="bi bi-printer me-1"></i> Imprimir Selecionadas
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" onclick="marcarSelecionadasImpressas()">
+                                <i class="bi bi-check-all me-1"></i> Marcar como Impressas
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="cancelarSelecionadas()">
+                                <i class="bi bi-x-lg me-1"></i> Cancelar
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="limparSelecao()">
+                                Limpar Seleção
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Etiquetas -->
+        <div class="row" id="listaEtiquetas">
+            <div class="col text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="mt-2 text-muted">Carregando fila...</p>
+            </div>
+        </div>
+
+        <!-- Fila Vazia -->
+        <div class="row d-none" id="filaVazia">
+            <div class="col text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h4 class="mt-3 text-muted">Fila de impressão vazia</h4>
+                <p class="text-muted">Nenhuma etiqueta pendente no momento</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Preview Impressão -->
+    <div class="modal fade" id="modalPreview" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-eye me-2"></i>Preview da Etiqueta
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center modal-print">
+                    <p class="text-muted mb-3">Tamanho real: 60mm x 30mm (ampliado 2x)</p>
+                    <div id="printArea">
+                        <div class="etiqueta-preview" id="previewEtiqueta"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-success" onclick="marcarAtualImpressa()">
+                        <i class="bi bi-check me-1"></i> Marcar Impressa
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="imprimirAtual()">
+                        <i class="bi bi-printer me-1"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Estado global
+        let etiquetasPendentes = [];
+        let etiquetasSelecionadas = new Set();
+        let etiquetaAtual = null;
+
+        // Configuração da API
+        const API_BASE = window.location.origin + '/api';
+
+        // =============================================
+        // INICIALIZAÇÃO
+        // =============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarFila();
+            carregarStats();
+
+            // Filtros
+            document.getElementById('filtroLoja').addEventListener('change', carregarFila);
+            document.getElementById('filtroTipo').addEventListener('change', aplicarFiltroLocal);
+        });
+
+        // =============================================
+        // CARREGAR DADOS
+        // =============================================
+        async function carregarFila() {
+            try {
+                const loja = document.getElementById('filtroLoja').value;
+                let url = `${API_BASE}/impressao/pendentes`;
+                if (loja) url += `?loja=${loja}`;
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    etiquetasPendentes = result.data;
+                    aplicarFiltroLocal();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar fila:', error);
+                mostrarErro('Erro ao carregar fila de impressão');
+            }
+        }
+
+        function aplicarFiltroLocal() {
+            const tipo = document.getElementById('filtroTipo').value;
+            let filtradas = etiquetasPendentes;
+
+            if (tipo) {
+                filtradas = etiquetasPendentes.filter(e => e.tipo_etiqueta === tipo);
+            }
+
+            renderizarFila(filtradas);
+        }
+
+        async function carregarStats() {
+            try {
+                const response = await fetch(`${API_BASE}/impressao/stats`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const pendentes = result.data.por_status_loja
+                        .filter(s => s.status === 'pendente')
+                        .reduce((acc, s) => acc + s.total, 0);
+                    
+                    document.getElementById('statsPendentes').textContent = pendentes;
+                    document.getElementById('statsHoje').textContent = result.data.hoje?.impressas_hoje || 0;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar stats:', error);
+            }
+        }
+
+        // =============================================
+        // RENDERIZAÇÃO
+        // =============================================
+        function renderizarFila(etiquetas) {
+            const container = document.getElementById('listaEtiquetas');
+            const vazio = document.getElementById('filaVazia');
+
+            if (etiquetas.length === 0) {
+                container.innerHTML = '';
+                vazio.classList.remove('d-none');
+                return;
+            }
+
+            vazio.classList.add('d-none');
+
+            container.innerHTML = `
+                <div class="col-12 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selecionarTodas" onchange="toggleSelecionarTodas()">
+                        <label class="form-check-label" for="selecionarTodas">
+                            Selecionar todas (${etiquetas.length})
+                        </label>
+                    </div>
+                </div>
+            ` + etiquetas.map(e => renderizarCardEtiqueta(e)).join('');
+
+            atualizarAcoesMassa();
+        }
+
+        function renderizarCardEtiqueta(etiqueta) {
+            const dados = etiqueta.dados_etiqueta;
+            const selecionada = etiquetasSelecionadas.has(etiqueta.id);
+            
+            const tiposBadge = {
+                'bobina': 'bg-primary',
+                'retalho': 'bg-info',
+                'corte': 'bg-success',
+                'locacao': 'bg-warning text-dark'
+            };
+
+            return `
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                    <div class="card card-etiqueta h-100 ${selecionada ? 'selecionada' : ''}" 
+                         onclick="toggleSelecao(${etiqueta.id}, event)">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <span class="badge ${tiposBadge[etiqueta.tipo_etiqueta]} badge-tipo">
+                                    ${etiqueta.tipo_etiqueta.toUpperCase()}
+                                </span>
+                                <span class="badge bg-secondary badge-tipo">${etiqueta.loja}</span>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" 
+                                       ${selecionada ? 'checked' : ''}
+                                       onclick="event.stopPropagation(); toggleSelecao(${etiqueta.id})">
+                            </div>
+                        </div>
+                        <div class="card-body p-2">
+                            ${renderizarEtiquetaPreview(dados)}
+                        </div>
+                        <div class="card-footer bg-white d-flex gap-1">
+                            <button class="btn btn-outline-primary btn-sm flex-grow-1" 
+                                    onclick="event.stopPropagation(); abrirPreview(${etiqueta.id})">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-success btn-sm flex-grow-1" 
+                                    onclick="event.stopPropagation(); imprimirEtiqueta(${etiqueta.id})">
+                                <i class="bi bi-printer"></i>
+                            </button>
+                            <button class="btn btn-outline-success btn-sm flex-grow-1" 
+                                    onclick="event.stopPropagation(); marcarImpressa(${etiqueta.id})">
+                                <i class="bi bi-check"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" 
+                                    onclick="event.stopPropagation(); cancelarEtiqueta(${etiqueta.id})">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderizarEtiquetaPreview(dados) {
+            const isLocacao = dados.tipo === 'locacao';
+            
+            // Criar ID único para o barcode
+            const barcodeId = 'bc-' + Math.random().toString(36).substr(2, 9);
+
+            setTimeout(() => {
+                const svg = document.getElementById(barcodeId);
+                if (svg) {
+                    JsBarcode(svg, dados.linha2_barcode, {
+                        format: "CODE128",
+                        width: 1.5,
+                        height: isLocacao ? 40 : 30,
+                        displayValue: false,
+                        margin: 0
+                    });
+                }
+            }, 50);
+
+            if (isLocacao) {
+                return `
+                    <div class="etiqueta-preview locacao">
+                        <div class="etiqueta-codigo grande">${dados.linha1}</div>
+                        <svg id="${barcodeId}" class="etiqueta-barcode grande"></svg>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="etiqueta-preview">
+                    <div class="etiqueta-codigo">${dados.linha1}</div>
+                    <svg id="${barcodeId}" class="etiqueta-barcode"></svg>
+                    <div class="etiqueta-linha3">${dados.linha3 || ''}</div>
+                    <div class="etiqueta-linha4">${dados.linha4 || ''}</div>
+                </div>
+            `;
+        }
+
+        // =============================================
+        // SELEÇÃO
+        // =============================================
+        function toggleSelecao(id, event) {
+            if (event && event.target.type === 'checkbox') return;
+            
+            if (etiquetasSelecionadas.has(id)) {
+                etiquetasSelecionadas.delete(id);
+            } else {
+                etiquetasSelecionadas.add(id);
+            }
+            
+            aplicarFiltroLocal();
+        }
+
+        function toggleSelecionarTodas() {
+            const checkbox = document.getElementById('selecionarTodas');
+            const tipo = document.getElementById('filtroTipo').value;
+            let filtradas = etiquetasPendentes;
+
+            if (tipo) {
+                filtradas = etiquetasPendentes.filter(e => e.tipo_etiqueta === tipo);
+            }
+
+            if (checkbox.checked) {
+                filtradas.forEach(e => etiquetasSelecionadas.add(e.id));
+            } else {
+                filtradas.forEach(e => etiquetasSelecionadas.delete(e.id));
+            }
+            
+            aplicarFiltroLocal();
+        }
+
+        function limparSelecao() {
+            etiquetasSelecionadas.clear();
+            aplicarFiltroLocal();
+        }
+
+        function atualizarAcoesMassa() {
+            const acoes = document.getElementById('acoesMassa');
+            const qtd = document.getElementById('qtdSelecionadas');
+            
+            if (etiquetasSelecionadas.size > 0) {
+                acoes.style.display = 'block';
+                qtd.textContent = etiquetasSelecionadas.size;
+            } else {
+                acoes.style.display = 'none';
+            }
+        }
+
+        // =============================================
+        // AÇÕES INDIVIDUAIS
+        // =============================================
+        async function abrirPreview(id) {
+            const etiqueta = etiquetasPendentes.find(e => e.id === id);
+            if (!etiqueta) return;
+
+            etiquetaAtual = etiqueta;
+            const dados = etiqueta.dados_etiqueta;
+            const container = document.getElementById('previewEtiqueta');
+            
+            const isLocacao = dados.tipo === 'locacao';
+            container.className = `etiqueta-preview ${isLocacao ? 'locacao' : ''}`;
+            
+            if (isLocacao) {
+                container.innerHTML = `
+                    <div class="etiqueta-codigo grande">${dados.linha1}</div>
+                    <svg id="previewBarcode" class="etiqueta-barcode grande"></svg>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="etiqueta-codigo">${dados.linha1}</div>
+                    <svg id="previewBarcode" class="etiqueta-barcode"></svg>
+                    <div class="etiqueta-linha3">${dados.linha3 || ''}</div>
+                    <div class="etiqueta-linha4">${dados.linha4 || ''}</div>
+                `;
+            }
+
+            setTimeout(() => {
+                JsBarcode('#previewBarcode', dados.linha2_barcode, {
+                    format: "CODE128",
+                    width: 2,
+                    height: isLocacao ? 56 : 38,
+                    displayValue: false,
+                    margin: 0
+                });
+            }, 100);
+
+            const modal = new bootstrap.Modal(document.getElementById('modalPreview'));
+            modal.show();
+        }
+
+        function imprimirAtual() {
+            window.print();
+        }
+
+        async function marcarAtualImpressa() {
+            if (!etiquetaAtual) return;
+            await marcarImpressa(etiquetaAtual.id);
+            bootstrap.Modal.getInstance(document.getElementById('modalPreview')).hide();
+        }
+
+        async function imprimirEtiqueta(id) {
+            await abrirPreview(id);
+            setTimeout(() => window.print(), 300);
+        }
+
+        async function marcarImpressa(id) {
+            try {
+                const response = await fetch(`${API_BASE}/impressao/${id}/impressa`, {
+                    method: 'PUT'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    mostrarSucesso('Etiqueta marcada como impressa');
+                    carregarFila();
+                    carregarStats();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarErro('Erro ao marcar etiqueta');
+            }
+        }
+
+        async function cancelarEtiqueta(id) {
+            if (!confirm('Cancelar esta etiqueta da fila?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/impressao/${id}/cancelar`, {
+                    method: 'PUT'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    mostrarSucesso('Etiqueta cancelada');
+                    carregarFila();
+                    carregarStats();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarErro('Erro ao cancelar etiqueta');
+            }
+        }
+
+        // =============================================
+        // AÇÕES EM MASSA
+        // =============================================
+        async function imprimirSelecionadas() {
+            // Para impressão em massa, vamos abrir uma janela com todas as etiquetas
+            const ids = Array.from(etiquetasSelecionadas);
+            const etiquetas = ids.map(id => etiquetasPendentes.find(e => e.id === id)).filter(Boolean);
+
+            if (etiquetas.length === 0) {
+                mostrarErro('Nenhuma etiqueta selecionada');
+                return;
+            }
+
+            // Criar janela de impressão
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Imprimir Etiquetas</title>
+                    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+                    <style>
+                        @page { size: 60mm 30mm; margin: 0; }
+                        body { margin: 0; padding: 0; }
+                        .etiqueta {
+                            width: 60mm;
+                            height: 30mm;
+                            page-break-after: always;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+                            align-items: center;
+                            font-family: Arial, sans-serif;
+                            box-sizing: border-box;
+                            padding: 1mm;
+                        }
+                        .codigo { font-family: 'Courier New', monospace; font-weight: bold; font-size: 14pt; }
+                        .codigo.grande { font-size: 26pt; }
+                        .barcode { height: 10mm; }
+                        .barcode.grande { height: 15mm; }
+                        .linha { font-size: 10pt; text-align: center; }
+                        .linha.bold { font-weight: bold; }
+                    </style>
+                </head>
+                <body>
+                    ${etiquetas.map((e, i) => renderizarEtiquetaPrint(e.dados_etiqueta, i)).join('')}
+                    <script>
+                        document.querySelectorAll('.barcode-svg').forEach((svg, i) => {
+                            const code = svg.dataset.code;
+                            const grande = svg.classList.contains('grande');
+                            JsBarcode(svg, code, {
+                                format: "CODE128",
+                                width: 2,
+                                height: grande ? 40 : 28,
+                                displayValue: false,
+                                margin: 0
+                            });
+                        });
+                        setTimeout(() => window.print(), 500);
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        function renderizarEtiquetaPrint(dados, index) {
+            const isLocacao = dados.tipo === 'locacao';
+
+            if (isLocacao) {
+                return `
+                    <div class="etiqueta">
+                        <div class="codigo grande">${dados.linha1}</div>
+                        <svg class="barcode-svg barcode grande" data-code="${dados.linha2_barcode}"></svg>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="etiqueta">
+                    <div class="codigo">${dados.linha1}</div>
+                    <svg class="barcode-svg barcode" data-code="${dados.linha2_barcode}"></svg>
+                    <div class="linha">${dados.linha3 || ''}</div>
+                    <div class="linha bold">${dados.linha4 || ''}</div>
+                </div>
+            `;
+        }
+
+        async function marcarSelecionadasImpressas() {
+            const ids = Array.from(etiquetasSelecionadas);
+            if (ids.length === 0) {
+                mostrarErro('Nenhuma etiqueta selecionada');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/impressao/impressas`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    mostrarSucesso(result.message);
+                    etiquetasSelecionadas.clear();
+                    carregarFila();
+                    carregarStats();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarErro('Erro ao marcar etiquetas');
+            }
+        }
+
+        async function cancelarSelecionadas() {
+            const ids = Array.from(etiquetasSelecionadas);
+            if (ids.length === 0) {
+                mostrarErro('Nenhuma etiqueta selecionada');
+                return;
+            }
+
+            if (!confirm(`Cancelar ${ids.length} etiquetas?`)) return;
+
+            // Cancelar uma por uma
+            for (const id of ids) {
+                await fetch(`${API_BASE}/impressao/${id}/cancelar`, { method: 'PUT' });
+            }
+
+            mostrarSucesso(`${ids.length} etiquetas canceladas`);
+            etiquetasSelecionadas.clear();
+            carregarFila();
+            carregarStats();
+        }
+
+        // =============================================
+        // UTILITÁRIOS
+        // =============================================
+        function mostrarSucesso(msg) {
+            alert('✅ ' + msg); // TODO: Trocar por toast
+        }
+
+        function mostrarErro(msg) {
+            alert('❌ ' + msg); // TODO: Trocar por toast
+        }
+    </script>
+</body>
+</html>
