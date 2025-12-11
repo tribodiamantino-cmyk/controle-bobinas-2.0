@@ -22,7 +22,7 @@ let filtrosVisiveis = false;
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     carregarEstoque();
-    carregarCoresGramaturas();
+    // carregarCoresGramaturas() - será chamado apenas quando abrir o modal de cadastro
     
     // Listeners de formulários
     const formBobina = document.getElementById('form-bobina');
@@ -172,22 +172,33 @@ function fecharModalNovaBobina(event) {
 // Carregar cores e gramaturas para cadastro rápido
 async function carregarCoresGramaturas() {
     try {
-        // Carregar cores
-        const resCores = await fetch('/api/cores');
-        const dataCores = await resCores.json();
-        if (dataCores.success) {
-            cores = dataCores.data;
-            const selectCor = document.getElementById('quick-cor_id');
+        // Buscar cores e gramaturas apenas se ainda não foram carregadas
+        if (cores.length === 0) {
+            const resCores = await fetch('/api/cores');
+            const dataCores = await resCores.json();
+            if (dataCores.success) {
+                cores = dataCores.data;
+            }
+        }
+        
+        if (gramaturas.length === 0) {
+            const resGram = await fetch('/api/gramaturas');
+            const dataGram = await resGram.json();
+            if (dataGram.success) {
+                gramaturas = dataGram.data;
+            }
+        }
+        
+        // Preencher os selects no modal (que agora existe)
+        const selectCor = document.getElementById('quick-cor_id');
+        const selectGram = document.getElementById('quick-gramatura_id');
+        
+        if (selectCor) {
             selectCor.innerHTML = '<option value="">Selecione...</option>' +
                 cores.map(cor => `<option value="${cor.id}">${cor.nome_cor}</option>`).join('');
         }
         
-        // Carregar gramaturas
-        const resGram = await fetch('/api/gramaturas');
-        const dataGram = await resGram.json();
-        if (dataGram.success) {
-            gramaturas = dataGram.data;
-            const selectGram = document.getElementById('quick-gramatura_id');
+        if (selectGram) {
             selectGram.innerHTML = '<option value="">Selecione...</option>' +
                 gramaturas.map(g => `<option value="${g.id}">${g.gramatura}</option>`).join('');
         }
@@ -443,9 +454,8 @@ function abrirModalCadastroProduto() {
     // Inserir no body
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
-    // Carregar cores e gramaturas
-    carregarCoresParaCadastroRapido();
-    carregarGramaturasParaCadastroRapido();
+    // Carregar cores e gramaturas (a função já existe e usa os IDs corretos)
+    carregarCoresGramaturas();
     
     console.log('✅ Modal de cadastro de produto aberto');
 }
