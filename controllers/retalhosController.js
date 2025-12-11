@@ -92,6 +92,7 @@ exports.criarRetalho = async (req, res) => {
 exports.converterBobinaEmRetalho = async (req, res) => {
     try {
         const { bobina_id } = req.params;
+        console.log('🔄 Convertendo bobina ID:', bobina_id);
         
         // Buscar dados da bobina
         const [bobinas] = await db.query(
@@ -112,6 +113,7 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         );
         
         if (bobinas.length === 0) {
+            console.log('❌ Bobina não encontrada:', bobina_id);
             return res.status(404).json({ 
                 success: false, 
                 error: 'Bobina não encontrada' 
@@ -119,6 +121,7 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         }
         
         const bobina = bobinas[0];
+        console.log('📦 Bobina encontrada:', bobina.codigo_interno, '- Loja:', bobina.loja);
         
         // Verificar se bobina tem alocações em planos em produção
         const [alocacoes] = await db.query(
@@ -136,9 +139,12 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         }
         
         // Gerar código do retalho (a loja já está disponível na variável bobina)
+        console.log('🏷️ Gerando código de retalho para loja:', bobina.loja);
         const codigo_retalho = await gerarCodigoRetalho(bobina.loja);
+        console.log('✅ Código gerado:', codigo_retalho);
         
         // Criar retalho com a metragem atual da bobina (herdando placa e locacao)
+        console.log('💾 Inserindo retalho no banco...');
         const [result] = await db.query(
             `INSERT INTO retalhos 
             (codigo_retalho, produto_id, metragem, bobina_origem_id, placa, locacao, observacoes) 
@@ -155,6 +161,7 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         );
         
         const retalho_id = result.insertId;
+        console.log('✅ Retalho criado com ID:', retalho_id);
         
         // EXCLUIR a bobina (ao invés de apenas marcar como convertida)
         await db.query(`DELETE FROM bobinas WHERE id = ?`, [bobina_id]);
@@ -188,10 +195,14 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Erro ao converter bobina:', error);
+        console.error('❌ Erro ao converter bobina em retalho:');
+        console.error('   Mensagem:', error.message);
+        console.error('   Stack:', error.stack);
+        console.error('   SQL:', error.sql);
         res.status(500).json({ 
             success: false, 
-            error: error.message 
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 };
