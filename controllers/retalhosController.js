@@ -124,7 +124,8 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         // Gerar código do retalho
         const codigo_retalho = await gerarCodigoRetalho();
         
-        // Criar retalho com a metragem atual da bobina (herdando placa e localização)
+        // Criar retalho com a metragem atual da bobina (herdando placa)
+        // Nota: bobinas não tem localizacao_atual, então fica NULL
         const [result] = await db.query(
             `INSERT INTO retalhos 
             (codigo_retalho, produto_id, metragem, bobina_origem_id, placa, localizacao_atual, observacoes) 
@@ -135,7 +136,7 @@ exports.converterBobinaEmRetalho = async (req, res) => {
                 bobina.metragem_atual,
                 bobina_id,
                 bobina.placa || null, // Herdar placa da bobina
-                bobina.localizacao_atual || null, // Herdar localização
+                null, // bobina não tem localizacao_atual
                 `Convertido da bobina ${bobina.codigo_interno}`
             ]
         );

@@ -4,6 +4,21 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [2.3.1] - 2025-12-11
+
+### 🐛 Correções de Bugs
+
+#### Impressão de Etiquetas
+- **Corrigido** erro "Unknown column 'b.fabricante'" ao imprimir etiqueta de bobina
+- **Corrigido** erro ao imprimir etiqueta de retalho quando bobina origem foi excluída
+- Queries agora buscam `fabricante` e `loja` da tabela `produtos` (não mais de `bobinas`)
+
+#### Conversão Bobina → Retalho
+- **Corrigido** erro 500 ao converter bobina em retalho
+- Removida tentativa de herdar `localizacao_atual` da bobina (campo não existe em bobinas)
+
+---
+
 ## [2.3.0] - 2025-12-11
 
 ### ✨ Novidades Principais

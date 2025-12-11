@@ -417,7 +417,7 @@ async function buscarDadosBobina(id) {
             b.id,
             b.codigo_interno,
             b.metragem_atual,
-            b.fabricante,
+            p.fabricante,
             b.placa,
             b.loja,
             p.codigo as produto_codigo,
@@ -498,8 +498,8 @@ async function buscarDadosRetalho(id) {
             r.id,
             r.codigo_retalho,
             r.metragem,
-            b.fabricante,
-            b.loja,
+            p.fabricante,
+            p.loja,
             p.codigo as produto_codigo,
             p.tipo_tecido,
             p.largura_final as largura,
@@ -509,7 +509,6 @@ async function buscarDadosRetalho(id) {
             c.nome_cor as cores,
             g.gramatura
         FROM retalhos r
-        LEFT JOIN bobinas b ON r.bobina_origem_id = b.id
         LEFT JOIN produtos p ON r.produto_id = p.id
         LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
         LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
