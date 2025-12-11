@@ -409,14 +409,18 @@ MAJOR.MINOR.PATCH (ex: 2.4.0)
 
 ### Processo de Release
 
-1. Atualizar `config/version.js`
-2. Atualizar `CHANGELOG.md`
-3. Commit: `feat: descrição` ou `fix: descrição`
-4. Push para `main`
-5. Deploy manual no Railway
+1. **Atualizar `config/version.js`** (fonte única da versão)
+2. **Atualizar carimbo de versão no frontend** (`public/js/version-stamp.js`)
+3. **Atualizar `CHANGELOG.md`** (documentar mudanças)
+4. **Atualizar cabeçalho do `copilot-instructions.md`** (se necessário)
+5. Commit: `feat: descrição` ou `fix: descrição`
+6. Push para `main`
+7. Deploy manual no Railway
+8. **Verificar carimbo** aparecendo no sistema em produção
 
-### Arquivo de Versão
+### Arquivos que Precisam de Atualização
 
+#### 1. Backend - Fonte da Verdade
 ```javascript
 // config/version.js - FONTE ÚNICA DE VERDADE
 module.exports = {
@@ -426,6 +430,24 @@ module.exports = {
     status: 'stable'
 };
 ```
+
+#### 2. Frontend - Carimbo Visual
+```javascript
+// public/js/version-stamp.js
+const VERSION_INFO = {
+    version: '2.4.0',
+    buildDate: '11/12/2025',
+    summary: 'Padronização do Banco de Dados'
+};
+```
+
+#### 3. Documentação
+```markdown
+<!-- .github/copilot-instructions.md (linha 4) -->
+> Versão: 2.4.0 | Última atualização: 11/12/2025
+```
+
+**⚠️ CRÍTICO:** Os 3 arquivos DEVEM ter a mesma versão!
 
 ---
 
@@ -498,6 +520,18 @@ exports.up = async function(db) {
 npm run android:sync    # Sincroniza assets
 npm run android:build   # Gera APK debug
 # Instalar APK no dispositivo e testar
+```
+
+### Atualizar Versão do Sistema
+
+```
+1. Definir nova versão (MAJOR.MINOR.PATCH)
+2. Atualizar config/version.js (backend)
+3. Atualizar public/js/version-stamp.js (frontend)
+4. Atualizar .github/copilot-instructions.md (linha 4)
+5. Documentar em CHANGELOG.md
+6. Commit: "chore: bump version to X.X.X"
+7. Deploy e verificar carimbo em produção
 ```
 
 ---
