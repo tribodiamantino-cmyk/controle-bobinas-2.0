@@ -338,7 +338,7 @@ function abrirModalCadastroProduto() {
     
     // Mostrar modal por cima do modal de bobina
     modalEl.style.display = 'flex';
-    modalEl.style.zIndex = '1100'; // Maior que o modal de bobina
+    modalEl.style.zIndex = '9999'; // Garantir que fique na frente de tudo
     
     console.log('✅ Modal de cadastro de produto aberto');
 }
@@ -404,10 +404,17 @@ function toggleCamposTecidoRapido() {
 async function cadastrarProdutoRapido(e) {
     e.preventDefault();
     
+    // Pegar valores do modal de bobina (que está aberto por trás)
     const loja = document.getElementById('loja').value;
-    const codigoNumerico = document.getElementById('codigo').value.padStart(5, '0');
+    const codigoNumerico = document.getElementById('codigo').value;
+    
+    if (!loja || !codigoNumerico) {
+        mostrarAlerta('Erro: dados da bobina não encontrados. Feche e reabra o modal.', 'danger');
+        return;
+    }
+    
     const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
-    const codigoCompleto = `${prefixo}-${codigoNumerico}`;
+    const codigoCompleto = `${prefixo}-${codigoNumerico.padStart(5, '0')}`;
     const fabricante = document.getElementById('quick-fabricante').value;
     const tipoTecido = document.getElementById('quick-tipo_tecido').value;
     
