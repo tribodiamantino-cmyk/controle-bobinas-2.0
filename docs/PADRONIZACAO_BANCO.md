@@ -62,7 +62,7 @@ bobinas:
   metragem_reservada  DECIMAL(10,2) DEFAULT 0
   placa               VARCHAR(100)                -- Código garantia fabricante
   locacao             VARCHAR(12)                 -- ⭐ PADRONIZADO: 0001-A-0001
-  status              ENUM('Disponível','Em uso','Esgotado','Bloqueada')
+  status              ENUM('Disponível','Em Uso','Vazia','Bloqueada')  -- ⚠️ NÃO TEM 'Esgotado'!
   observacoes         TEXT
   data_entrada        DATE
   data_criacao        TIMESTAMP
@@ -247,25 +247,37 @@ function validarLocacao(locacao) {
 
 ## 🔄 Status e Visibilidade
 
+### Status de Bobinas
+
+| Status | Significado |
+|--------|-------------|
+| `Disponível` | Bobina com metragem disponível para uso |
+| `Em Uso` | Bobina sendo usada em plano de corte |
+| `Vazia` | Bobina com metragem zerada (convertida ou usada) |
+| `Bloqueada` | Bobina bloqueada por algum motivo |
+
+**⚠️ ENUM exato:** `'Disponível', 'Em Uso', 'Vazia', 'Bloqueada'`  
+**NÃO existe** `'Esgotado'` em bobinas!
+
 ### Regra de Ocultar Itens Zerados
 
 | Situação | Status | Visível na Lista | No Banco |
 |----------|--------|------------------|----------|
-| Metragem > 0 | Disponível/Em uso | ✅ Sim | ✅ Mantido |
-| Metragem = 0 | **Esgotado** | ❌ Não | ✅ Mantido |
-| Convertido em retalho | **Esgotado** | ❌ Não | ✅ Mantido |
+| Metragem > 0 | Disponível/Em Uso | ✅ Sim | ✅ Mantido |
+| Metragem = 0 | **Vazia** | ❌ Não | ✅ Mantido |
+| Convertido em retalho | **Vazia** | ❌ Não | ✅ Mantido |
 
 ### Query Padrão para Listagens
 
 ```sql
--- Bobinas disponíveis
-SELECT * FROM bobinas WHERE status != 'Esgotado';
+-- Bobinas disponíveis (exclui vazias)
+SELECT * FROM bobinas WHERE status NOT IN ('Vazia', 'Bloqueada');
 
 -- Retalhos disponíveis  
 SELECT * FROM retalhos WHERE status != 'Esgotado';
 
 -- Histórico completo (admin)
-SELECT * FROM bobinas; -- Inclui Esgotado
+SELECT * FROM bobinas; -- Inclui Vazia
 ```
 
 ---
@@ -297,8 +309,8 @@ SELECT locacao FROM bobinas WHERE id = ?
 // ERRADO - perde histórico
 DELETE FROM bobinas WHERE metragem_atual = 0
 
-// CORRETO - marcar como esgotado
-UPDATE bobinas SET status = 'Esgotado' WHERE metragem_atual = 0
+// CORRETO - marcar como vazia
+UPDATE bobinas SET status = 'Vazia' WHERE metragem_atual = 0
 ```
 
 ---

@@ -214,12 +214,13 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         const retalho_id = result.insertId;
         console.log('✅ Retalho criado com ID:', retalho_id);
         
-        // MARCAR bobina como esgotada ao invés de excluir
+        // MARCAR bobina como vazia ao invés de excluir
+        // Status ENUM: 'Disponível', 'Em Uso', 'Vazia', 'Bloqueada'
         await connection.query(
-            `UPDATE bobinas SET metragem_atual = 0, status = 'Esgotado' WHERE id = ?`,
+            `UPDATE bobinas SET metragem_atual = 0, status = 'Vazia' WHERE id = ?`,
             [bobina_id]
         );
-        console.log(`✅ Bobina ${bobina.codigo_interno} marcada como esgotada`);
+        console.log(`✅ Bobina ${bobina.codigo_interno} marcada como Vazia`);
         
         await connection.commit();
         
