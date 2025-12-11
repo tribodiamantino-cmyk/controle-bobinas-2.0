@@ -1,4 +1,4 @@
-# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions
+# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions# Controle de Bobinas 2.0 - AI Agent Instructions
 
 
 
@@ -14,7 +14,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 - **Database**: MySQL (Railway)
 
-- **Frontend**: HTML/CSS/JavaScript puro## ⚠️ DOCUMENTAÇÃO OBRIGATÓRIA
+- **Frontend**: HTML/CSS/JavaScript puro## Visão Geral do Projeto
 
 - **Mobile**: Capacitor (Android)
 
@@ -22,7 +22,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 
 
-## Estrutura do Banco de Dados- **Backend**: Node.js + Express
+## Estrutura do Banco de Dados- **Backend**: Node.js + ExpressSistema de gestão de estoque para lojas de tecidos, focado em controle de bobinas e retalhos com QR codes.
 
 
 
@@ -30,7 +30,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 - Cadastro base de produtos (tecidos)
 
-- Campos: codigo_interno, descricao, **fabricante**, largura, gramatura, cor- **Frontend**: HTML/CSS/JavaScript puro**ANTES de escrever qualquer código, consulte os documentos em `/docs/`:**## ⚠️ DOCUMENTAÇÃO OBRIGATÓRIA## System Overview
+- Campos: codigo_interno, descricao, **fabricante**, largura, gramatura, cor- **Frontend**: HTML/CSS/JavaScript puro## ⚠️ DOCUMENTAÇÃO OBRIGATÓRIA
 
 - É a **única** tabela que contém `fabricante`
 
@@ -38,7 +38,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 ### Tabela `bobinas`
 
-- Estoque de bobinas inteiras- **Deploy**: Railway
+- Estoque de bobinas inteiras- **Deploy**: Railway## Stack Tecnológica
 
 - FK: produto_id → produtos
 
@@ -46,7 +46,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 - Campo `locacao`: VARCHAR, formato `0000-X-0000` (ex: 1-A-1, 12-B-34)
 
-- **NÃO** tem campo `fabricante` - buscar via JOIN com produtos## Estrutura do Banco de Dados| Documento | Quando Consultar |
+- **NÃO** tem campo `fabricante` - buscar via JOIN com produtos## Estrutura do Banco de Dados- **Backend**: Node.js + Express
 
 
 
@@ -54,7 +54,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 - Pedaços de bobinas cortadas
 
-- FK: produto_id → produtos### Tabela `produtos`|-----------|-----------------|
+- FK: produto_id → produtos### Tabela `produtos`- **Database**: MySQL (Railway)
 
 - Campo `locacao`: VARCHAR, formato `0000-X-0000`
 
@@ -62,7 +62,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 
 
-### Formato de Locação- Campos: codigo_interno, descricao, **fabricante**, largura, gramatura, cor| `docs/ARQUITETURA.md` | Padrões de código, banco, API, estrutura |**ANTES de escrever qualquer código, consulte os documentos em `/docs/`:**Fabric roll inventory management system for Cortinave & BN (poultry tarp manufacturers). Tracks **physical bobinas** (rolls) containing **logical produtos** (fabric specs), manages **planos de corte** (cut plans) with automatic allocation, and includes **native Android app** with Bluetooth thermal printing.
+### Formato de Locação- Campos: codigo_interno, descricao, **fabricante**, largura, gramatura, cor- **Frontend**: HTML/CSS/JavaScript puro**ANTES de escrever qualquer código, consulte os documentos em `/docs/`:**## ⚠️ DOCUMENTAÇÃO OBRIGATÓRIA## System Overview
 
 - Padrão: `CORREDOR-PRATELEIRA-POSICAO`
 
@@ -70,7 +70,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 - Exemplos válidos: 1-A-1, 12-B-34, 9999-Z-9999
 
-- Exemplos inválidos: 0-A-1, 1-a-1, 01-A-01| `docs/PADRONIZACAO_CODIGOS.md` | Criar/manipular códigos (BOB, RET, COR, PDC, etc) |
+- Exemplos inválidos: 0-A-1, 1-a-1, 01-A-01- **Mobile**: Capacitor (Android)
 
 
 
@@ -78,7 +78,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 - Items com `metragem = 0` recebem `status = 'Esgotado'`
 
-- Items esgotados são mantidos para histórico mas ocultos das listagens normais- Estoque de bobinas inteiras| `docs/ESPECIFICACAO_ETIQUETAS.md` | Gerar etiquetas, impressão |
+- Items esgotados são mantidos para histórico mas ocultos das listagens normais- Estoque de bobinas inteiras- **Deploy**: Railway
 
 - Filtrar com `WHERE status != 'Esgotado'` ou `WHERE metragem > 0`
 
@@ -86,7 +86,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 ## Padrões de Código
 
-- Campo `loja` é DENORMALIZADO (cópia de produtos.loja para performance)| `docs/SISTEMA_VALIDACAO_RESERVAS.md` | Mexer em alocações, metragem_reservada |
+- Campo `loja` é DENORMALIZADO (cópia de produtos.loja para performance)
 
 ### Queries com fabricante
 
@@ -94,7 +94,7 @@ Sistema de gestão de estoque para lojas de tecidos, focado em controle de bobin
 
 -- CORRETO: buscar fabricante via JOIN
 
-SELECT b.*, p.fabricante, p.descricao - **NÃO** tem campo `fabricante` - buscar via JOIN com produtos| `docs/SISTEMA_CORTES_QR.md` | Sistema de cortes, QR codes || Documento | Quando Consultar |**Critical Distinction**: A `produto` is an abstract fabric specification (color, weight, width). A `bobina` is a physical roll containing that product with specific metragem (meters). One produto → many bobinas.
+SELECT b.*, p.fabricante, p.descricao - **NÃO** tem campo `fabricante` - buscar via JOIN com produtos## Estrutura do Banco de Dados| Documento | Quando Consultar |
 
 FROM bobinas b 
 
@@ -102,7 +102,7 @@ JOIN produtos p ON b.produto_id = p.id
 
 
 
--- ERRADO: tentar buscar de bobinas diretamente### Tabela `retalhos`| `docs/FUNCIONALIDADES.md` | Entender fluxos e regras de negócio |
+-- ERRADO: tentar buscar de bobinas diretamente### Tabela `retalhos`
 
 SELECT b.fabricante FROM bobinas b  -- ERRO: coluna não existe!
 
@@ -110,7 +110,7 @@ SELECT b.fabricante FROM bobinas b  -- ERRO: coluna não existe!
 
 
 
-### Queries com locação- FK: produto_id → produtos|-----------|-----------------|
+### Queries com locação- FK: produto_id → produtos### Tabela `produtos`|-----------|-----------------|
 
 ```sql
 
@@ -118,7 +118,7 @@ SELECT b.fabricante FROM bobinas b  -- ERRO: coluna não existe!
 
 SELECT * FROM bobinas WHERE locacao = '1-A-1'
 
-- **NÃO** tem campos `fabricante` ou `loja` - buscar via JOIN com produtos---
+- **NÃO** tem campos `fabricante` ou `loja` - buscar via JOIN com produtos- Cadastro base de produtos (tecidos)
 
 -- ERRADO: usar localizacao_atual ou locacao_id
 
@@ -126,7 +126,7 @@ SELECT * FROM bobinas WHERE localizacao_atual = '1-A-1'  -- Campo não existe!
 
 ```
 
-### Formato de Locação| `docs/ARQUITETURA.md` | Padrões de código, banco, API, estrutura |## Architecture
+### Formato de Locação- Campos: codigo_interno, descricao, **fabricante**, largura, gramatura, cor| `docs/ARQUITETURA.md` | Padrões de código, banco, API, estrutura |**ANTES de escrever qualquer código, consulte os documentos em `/docs/`:**Fabric roll inventory management system for Cortinave & BN (poultry tarp manufacturers). Tracks **physical bobinas** (rolls) containing **logical produtos** (fabric specs), manages **planos de corte** (cut plans) with automatic allocation, and includes **native Android app** with Bluetooth thermal printing.
 
 ## URLs de Produção
 
@@ -134,7 +134,144 @@ SELECT * FROM bobinas WHERE localizacao_atual = '1-A-1'  -- Campo não existe!
 
 - Health: /api/health
 
-- Regex: `/^[1-9]\d{0,3}-[A-Z]-[1-9]\d{0,3}$/`## System Overview
+- Regex: `/^[1-9]\d{0,3}-[A-Z]-[1-9]\d{0,3}$/`- É a **única** tabela que contém `fabricante`
+
+## Convenções de Commit
+
+- feat: nova funcionalidade- Exemplos válidos: 1-A-1, 12-B-34, 9999-Z-9999
+
+- fix: correção de bug
+
+- docs: documentação- Exemplos inválidos: 0-A-1, 1-a-1, 01-A-01| `docs/PADRONIZACAO_CODIGOS.md` | Criar/manipular códigos (BOB, RET, COR, PDC, etc) |
+
+- refactor: refatoração
+
+- chore: tarefas de manutenção
+
+
+
+## Arquivos Importantes### Status de Items### Tabela `bobinas`
+
+- `server.js`: Entry point
+
+- `config/database.js`: Conexão MySQL- Items com `metragem = 0` recebem `status = 'Esgotado'`
+
+- `config/version.js`: **VERSÃO DO SISTEMA** (fonte única de verdade)
+
+- `migrations/`: Scripts de migração- Items esgotados são mantidos para histórico mas ocultos das listagens normais- Estoque de bobinas inteiras| `docs/ESPECIFICACAO_ETIQUETAS.md` | Gerar etiquetas, impressão |
+
+- `docs/PADRONIZACAO_BANCO.md`: Documentação completa do schema
+
+- Filtrar com `WHERE status != 'Esgotado'` ou `WHERE metragem > 0`
+
+---
+
+- FK: produto_id → produtos
+
+## 🔢 Versionamento Semântico (SemVer)
+
+## Padrões de Código
+
+**Formato:** `MAJOR.MINOR.PATCH` (ex: 2.4.0)
+
+- Campo `loja` é DENORMALIZADO (cópia de produtos.loja para performance)| `docs/SISTEMA_VALIDACAO_RESERVAS.md` | Mexer em alocações, metragem_reservada |
+
+### Quando incrementar cada número:
+
+### Queries com fabricante
+
+| Posição | Quando Usar | Exemplo |
+
+|---------|-------------|---------|```sql- Campo `locacao`: VARCHAR, formato `0000-X-0000` (ex: 1-A-1, 12-B-34)
+
+| **MAJOR** (X.0.0) | Mudanças que **quebram compatibilidade** ou **redesign significativo** | 2.0.0 → 3.0.0 |
+
+| **MINOR** (0.X.0) | **Novas funcionalidades** que não quebram o existente | 2.3.0 → 2.4.0 |-- CORRETO: buscar fabricante via JOIN
+
+| **PATCH** (0.0.X) | **Correções de bugs** e pequenos ajustes | 2.4.0 → 2.4.1 |
+
+SELECT b.*, p.fabricante, p.descricao - **NÃO** tem campo `fabricante` - buscar via JOIN com produtos| `docs/SISTEMA_CORTES_QR.md` | Sistema de cortes, QR codes || Documento | Quando Consultar |**Critical Distinction**: A `produto` is an abstract fabric specification (color, weight, width). A `bobina` is a physical roll containing that product with specific metragem (meters). One produto → many bobinas.
+
+### Exemplos práticos:
+
+- Fix de bug no fabricante → **PATCH** (2.4.0 → 2.4.1)FROM bobinas b 
+
+- Padronização do banco (locacao) → **MINOR** (2.3.1 → 2.4.0)
+
+- Nova Central de Etiquetas → **MINOR** (2.2.0 → 2.3.0)JOIN produtos p ON b.produto_id = p.id
+
+- Redesign total da UI → **MAJOR** (2.x.x → 3.0.0)
+
+- Migração para TypeScript → **MAJOR** (2.x.x → 3.0.0)
+
+
+
+### Regra de Ouro:-- ERRADO: tentar buscar de bobinas diretamente### Tabela `retalhos`| `docs/FUNCIONALIDADES.md` | Entender fluxos e regras de negócio |
+
+> **"Quando em dúvida, é MINOR. MAJOR só quando realmente muda tudo."**
+
+SELECT b.fabricante FROM bobinas b  -- ERRO: coluna não existe!
+
+### Processo de Deploy:
+
+1. Atualizar `config/version.js` com nova versão```- Pedaços de bobinas cortadas
+
+2. Atualizar `CHANGELOG.md` com as mudanças
+
+3. Commit com mensagem seguindo convenção
+
+4. Push para main → Deploy automático no Railway
+
+### Queries com locação- FK: produto_id → produtos|-----------|-----------------|
+
+**⚠️ AVISAR O USUÁRIO** quando a mudança justificar incremento de MAJOR.
+
+```sql
+
+---
+
+-- CORRETO: usar campo locacao- Campo `locacao`: VARCHAR, formato `0000-X-0000`
+
+## 📋 ROADMAP e Tarefas Futuras
+
+SELECT * FROM bobinas WHERE locacao = '1-A-1'
+
+**⚠️ IMPORTANTE:** Quando o usuário sugerir algo e pedir para "deixar pra depois" ou "fazer no futuro":
+
+- **NÃO** tem campos `fabricante` ou `loja` - buscar via JOIN com produtos---
+
+1. **Adicionar no `ROADMAP.md`** na seção apropriada:
+
+   - **Tech Debt** → Para melhorias técnicas/refatorações-- ERRADO: usar localizacao_atual ou locacao_id
+
+   - **Backlog de Ideias** → Para novas funcionalidades
+
+2. Usar formato: `- [ ] **Título** - Descrição breve`SELECT * FROM bobinas WHERE localizacao_atual = '1-A-1'  -- Campo não existe!
+
+3. Quando concluir uma tarefa, marcar como `[x]`
+
+```
+
+**Isso garante que nada seja esquecido entre sessões!**
+
+### Formato de Locação| `docs/ARQUITETURA.md` | Padrões de código, banco, API, estrutura |## Architecture
+
+---
+
+## URLs de Produção
+
+## Documentação de Referência
+
+- `docs/PADRONIZACAO_BANCO.md` - Schema e regras de campos- API: https://controle-bobinas-20-production.up.railway.app- Padrão: `CORREDOR-PRATELEIRA-POSICAO`
+
+- `docs/SISTEMA_VALIDACAO_RESERVAS.md` - Sistema de metragem reservada
+
+- `docs/SISTEMA_CORTES_QR.md` - Sistema de QR codes- Health: /api/health
+
+- `ROADMAP.md` - Planejamento e tarefas futuras
+
+- `CHANGELOG.md` - Histórico de versões- Regex: `/^[1-9]\d{0,3}-[A-Z]-[1-9]\d{0,3}$/`## System Overview
+
 
 ## Convenções de Commit
 

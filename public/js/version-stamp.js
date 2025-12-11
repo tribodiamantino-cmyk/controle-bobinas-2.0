@@ -1,35 +1,60 @@
 /**
  * Componente de Carimbo de Versão
- * Adiciona automaticamente um carimbo com versão e data no canto inferior direito
+ * Busca versão da API e adiciona carimbo no canto inferior direito
  */
 
 (function() {
-    // Configuração da versão (atualizar aqui quando fizer novos deploys)
-    const VERSION = '2.2.0';
-    const BUILD_DATE = '08/12/2025';
+    // Fallback caso API falhe
+    let VERSION = '2.4.0';
+    let BUILD_DATE = '11/12/2025';
     const ENVIRONMENT = window.location.hostname === 'localhost' ? 'DEV' : 'PROD';
     
     // Criar elemento do carimbo
     function createVersionStamp() {
         const stamp = document.createElement('div');
         stamp.className = 'version-stamp';
+        stamp.id = 'version-stamp';
         stamp.innerHTML = `
             <div class="version-number">v${VERSION} ${ENVIRONMENT === 'DEV' ? '🔧' : '✓'}</div>
             <div class="version-date">${BUILD_DATE}</div>
         `;
-        
-        // Adicionar título tooltip
         stamp.title = `Versão ${VERSION}\nAtualizado em: ${BUILD_DATE}\nAmbiente: ${ENVIRONMENT}`;
-        
         return stamp;
+    }
+    
+    // Atualizar carimbo com dados da API
+    function updateFromAPI() {
+        fetch('/api/version')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    VERSION = data.data.version;
+                    BUILD_DATE = data.data.buildDate;
+                    
+                    const stamp = document.getElementById('version-stamp');
+                    if (stamp) {
+                        const env = data.data.environment === 'production' ? '✓' : '🔧';
+                        stamp.innerHTML = `
+                            <div class="version-number">v${VERSION} ${env}</div>
+                            <div class="version-date">${BUILD_DATE}</div>
+                        `;
+                        stamp.title = `Versão ${VERSION}\n${data.data.summary}\nAtualizado em: ${BUILD_DATE}\nAmbiente: ${data.data.environment}`;
+                    }
+                }
+            })
+            .catch(err => {
+                console.log('⚠️ Usando versão fallback (API indisponível)');
+            });
     }
     
     // Adicionar ao DOM quando página carregar
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             document.body.appendChild(createVersionStamp());
+            updateFromAPI();
         });
     } else {
         document.body.appendChild(createVersionStamp());
+        updateFromAPI();
     }
 })();

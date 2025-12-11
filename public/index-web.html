@@ -26,9 +26,8 @@
                 <h1 class="card-title">🎯 Bem-vindo ao Controle de Bobinas 2.0</h1>
             </div>
 
-            <div class="alert alert-info mb-3">
-                <strong>🚀 Sistema v2.2.0 - QR Codes Simplificados & Códigos Padronizados!</strong><br>
-                Todos os códigos foram simplificados (BOB-0001, PLA-0001, COR-0001) e otimizados para produção!
+            <div class="alert alert-info mb-3" id="version-banner">
+                <strong>🚀 Carregando informações da versão...</strong>
             </div>
 
             <!-- STATUS DO SERVIDOR -->
@@ -133,15 +132,10 @@
             </div>
 
             <!-- ÚLTIMAS ATUALIZAÇÕES -->
-            <h2 class="mb-2 mt-3">🆕 Últimas Atualizações (v2.2.0)</h2>
-            <div style="background: #e8f5e9; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #4CAF50;">
-                <ul style="color: #2e7d32; padding-left: 1.5rem;">
-                    <li><strong>QR Codes Simplificados:</strong> BOB-0001, RET-0001, PLA-0001, COR-0001-PLA-0123</li>
-                    <li><strong>Códigos de Produtos:</strong> CTV-XXXX (Cortinave), BN-XXXX (BN) alinhados com ERP</li>
-                    <li><strong>Performance:</strong> 4 migrations de otimização (5-10x mais rápido)</li>
-                    <li><strong>Validação de Reservas:</strong> Sistema multi-camadas anti-orphan</li>
-                    <li><strong>Limpeza de Dados:</strong> Script + API para reset completo do sistema</li>
-                    <li><strong>Sistema Completo:</strong> Do cadastro ao carregamento, totalmente funcional!</li>
+            <h2 class="mb-2 mt-3">🆕 Últimas Atualizações</h2>
+            <div id="changelog-container" style="background: #e8f5e9; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #4CAF50;">
+                <ul id="changelog-list" style="color: #2e7d32; padding-left: 1.5rem;">
+                    <li>Carregando...</li>
                 </ul>
             </div>
 
@@ -164,6 +158,30 @@
             .catch(error => {
                 document.getElementById('status').textContent = '❌ Erro ao conectar';
                 document.getElementById('status').className = 'badge badge-danger';
+            });
+        
+        // Carregar informações de versão
+        fetch('/api/version')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    const v = data.data;
+                    
+                    // Atualizar banner de versão
+                    document.getElementById('version-banner').innerHTML = `
+                        <strong>🚀 Sistema v${v.version} - ${v.summary}!</strong><br>
+                        <small>Atualizado em ${v.buildDate} | Fase: ${v.currentPhase}</small>
+                    `;
+                    
+                    // Atualizar changelog
+                    const changelogHtml = v.changelog.map(item => `<li>${item}</li>`).join('');
+                    document.getElementById('changelog-list').innerHTML = changelogHtml;
+                }
+            })
+            .catch(error => {
+                document.getElementById('version-banner').innerHTML = `
+                    <strong>🚀 Sistema Controle de Bobinas 2.0</strong>
+                `;
             });
     </script>
     <script src="/js/version-stamp.js"></script>

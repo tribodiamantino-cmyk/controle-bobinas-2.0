@@ -119,6 +119,23 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Endpoint de versão - usa config/version.js como fonte única
+app.get('/api/version', (req, res) => {
+    const versionInfo = require('./config/version');
+    res.json({
+        success: true,
+        data: {
+            version: versionInfo.version,
+            buildDate: versionInfo.buildDate,
+            summary: versionInfo.summary,
+            changelog: versionInfo.changelog,
+            currentPhase: versionInfo.currentPhase,
+            status: versionInfo.status,
+            environment: process.env.NODE_ENV || 'development'
+        }
+    });
+});
+
 // Importar rotas
 const coresRoutes = require('./routes/cores');
 const gramaturasRoutes = require('./routes/gramaturas');
