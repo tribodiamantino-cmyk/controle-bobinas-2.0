@@ -85,13 +85,13 @@ function abrirModalNovaBobina() {
                                     <label class="form-label" for="codigo">Código do Produto *</label>
                                     <div style="display: flex; gap: 8px; align-items: center;">
                                         <span id="codigo-prefixo" class="badge badge-info" style="font-size: 1rem; padding: 8px 12px; min-width: 50px; text-align: center;">---</span>
-                                        <input type="text" class="form-control" id="codigo" required placeholder="00001" 
-                                               maxlength="5" pattern="[0-9]{5}" style="font-family: monospace; font-size: 1.1rem;"
+                                        <input type="text" class="form-control" id="codigo" required placeholder="123 ou 00123" 
+                                               maxlength="5" pattern="[0-9]{1,5}" style="font-family: monospace; font-size: 1.1rem;"
                                                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
                                                onchange="buscarProduto()">
                                         <button type="button" class="btn btn-secondary" onclick="buscarProduto()" title="Buscar produto">🔍</button>
                                     </div>
-                                    <small class="form-text text-muted">Digite apenas os 5 dígitos numéricos do código</small>
+                                    <small class="form-text text-muted">Digite o número do código (zeros à esquerda são opcionais)</small>
                                 </div>
                             </div>
 
@@ -222,10 +222,10 @@ function atualizarPrefixoCodigo() {
     const prefixoEl = document.getElementById('codigo-prefixo');
     
     if (loja === 'Cortinave') {
-        prefixoEl.textContent = 'CTV-';
+        prefixoEl.textContent = 'PLA-';
         prefixoEl.style.background = '#3182ce';
     } else if (loja === 'BN') {
-        prefixoEl.textContent = 'BN-';
+        prefixoEl.textContent = 'CIA-';
         prefixoEl.style.background = '#38a169';
     } else {
         prefixoEl.textContent = '---';
@@ -251,8 +251,8 @@ async function buscarProduto() {
         return;
     }
     
-    // Montar código completo: CTV-00001 ou BN-00001
-    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+    // Montar código completo: PLA-00001 ou CIA-00001 (padrão PADRONIZACAO_CODIGOS.md)
+    const prefixo = loja === 'Cortinave' ? 'PLA' : 'CIA';
     const codigoCompleto = `${prefixo}-${codigoNumerico}`;
     
     try {
@@ -329,7 +329,7 @@ function abrirModalCadastroProduto() {
     
     const loja = lojaEl ? lojaEl.value : '';
     const codigoNumerico = codigoEl ? codigoEl.value.padStart(5, '0') : '';
-    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+    const prefixo = loja === 'Cortinave' ? 'PLA' : 'CIA';
     const codigoCompleto = `${prefixo}-${codigoNumerico}`;
     
     // Remover modal anterior se existir

@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const codigo = inputCodigo.value.padStart(5, '0');
         
         if (loja && inputCodigo.value) {
-            const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+            const prefixo = loja === 'Cortinave' ? 'PLA' : 'CIA';
             codigoPreview.textContent = `Código final: ${prefixo}-${codigo}`;
             codigoPreview.style.color = '#10b981';
             codigoPreview.style.fontWeight = 'bold';
@@ -418,13 +418,13 @@ async function cadastrarProduto(e) {
     }
     
     const loja = document.getElementById('loja').value;
-    const codigoNumerico = document.getElementById('codigo').value.padStart(4, '0');
-    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+    const codigoNumerico = document.getElementById('codigo').value.padStart(5, '0');
+    const prefixo = loja === 'Cortinave' ? 'PLA' : 'CIA';
     const codigoFinal = `${prefixo}-${codigoNumerico}`;
     
     const produto = {
         loja: loja,
-        codigo: codigoFinal, // Envia código formatado: CTV-0001 ou BN-0001
+        codigo: codigoFinal, // Envia código formatado: PLA-00001 ou CIA-00001
         cor_id: parseInt(document.getElementById('cor_id').value),
         gramatura_id: parseInt(document.getElementById('gramatura_id').value),
         fabricante: document.getElementById('fabricante').value,
