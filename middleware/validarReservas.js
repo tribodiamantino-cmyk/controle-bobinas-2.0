@@ -5,14 +5,11 @@ const db = require('../config/database');
  * Roda ao iniciar o servidor e pode ser chamado periodicamente
  */
 async function validarECorrigirReservas() {
-    let connection;
     try {
-        // Verificar se o banco está disponível
-        connection = await db.promise();
         console.log('🔍 Verificando consistência de metragens reservadas...');
         
         // 1. Buscar todas as alocações ativas (planos em produção)
-        const [alocacoesAtivas] = await connection.query(`
+        const [alocacoesAtivas] = await db.query(`
             SELECT ac.tipo_origem, ac.bobina_id, ac.retalho_id, ac.metragem_alocada
             FROM alocacoes_corte ac
             JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
@@ -37,13 +34,13 @@ async function validarECorrigirReservas() {
         });
         
         // 3. Buscar valores ATUAIS do banco
-        const [bobinasAtuais] = await connection.query(`
+        const [bobinasAtuais] = await db.query(`
             SELECT id, metragem_reservada 
             FROM bobinas 
             WHERE metragem_reservada > 0
         `);
         
-        const [retalhosAtuais] = await connection.query(`
+        const [retalhosAtuais] = await db.query(`
             SELECT id, metragem_reservada 
             FROM retalhos 
             WHERE metragem_reservada > 0
@@ -53,12 +50,12 @@ async function validarECorrigirReservas() {
         let correcoes = 0;
         
         // Resetar todas as reservas primeiro
-        await connection.query(`UPDATE bobinas SET metragem_reservada = 0`);
-        await connection.query(`UPDATE retalhos SET metragem_reservada = 0`);
+        await db.query(`UPDATE bobinas SET metragem_reservada = 0`);
+        await db.query(`UPDATE retalhos SET metragem_reservada = 0`);
         
         // Aplicar apenas as reservas corretas
         for (const [bobinaId, metragemCorreta] of Object.entries(reservasCorretas.bobinas)) {
-            await connection.query(`
+            await db.query(`
                 UPDATE bobinas 
                 SET metragem_reservada = ? 
                 WHERE id = ?
@@ -67,7 +64,7 @@ async function validarECorrigirReservas() {
         }
         
         for (const [retalhoId, metragemCorreta] of Object.entries(reservasCorretas.retalhos)) {
-            await connection.query(`
+            await db.query(`
                 UPDATE retalhos 
                 SET metragem_reservada = ? 
                 WHERE id = ?
