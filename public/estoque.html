@@ -281,8 +281,8 @@
     </div>
 
     <!-- Modal de Cadastro Rápido de Produto (idêntico ao formulário de produtos.html) -->
-    <div id="modal-cadastro-produto" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 800px;">
+    <div id="modal-cadastro-produto" class="modal" style="display: none; z-index: 2000;">
+        <div class="modal-content" style="max-width: 800px; position: relative; z-index: 2001;">
             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; margin-bottom: 20px;">
                 <h2 style="margin: 0;">➕ Cadastrar Novo Produto</h2>
                 <button type="button" class="close" onclick="fecharModalCadastroProduto()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
@@ -330,21 +330,6 @@
                             <option value="Normal">Normal</option>
                             <option value="Bando Y">Bando Y</option>
                         </select>
-                    </div>
-                </div>
-
-                <!-- Campo de Metragem Confiável -->
-                <div class="form-row">
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <div class="checkbox-group" style="display: flex; align-items: flex-start; gap: 10px;">
-                            <input type="checkbox" id="quick-metragem_confiavel" style="margin-top: 3px;">
-                            <label for="quick-metragem_confiavel" style="cursor: pointer;">
-                                <strong>✓ Metragem Confiável</strong>
-                                <small style="display: block; color: #666; margin-top: 4px;">
-                                    Marque se este produto possui metragens precisas do fornecedor (múltiplos exatos)
-                                </small>
-                            </label>
-                        </div>
                     </div>
                 </div>
 

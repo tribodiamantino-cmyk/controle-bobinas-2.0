@@ -410,8 +410,6 @@ async function cadastrarProdutoRapido(e) {
     const codigoCompleto = `${prefixo}-${codigoNumerico}`;
     const fabricante = document.getElementById('quick-fabricante').value;
     const tipoTecido = document.getElementById('quick-tipo_tecido').value;
-    const metConf = document.getElementById('quick-metragem_confiavel');
-    const metConfiavel = metConf ? metConf.checked : false;
     
     // Validações
     if (!fabricante) {
@@ -433,8 +431,7 @@ async function cadastrarProdutoRapido(e) {
         cor_id: parseInt(corId),
         gramatura_id: parseInt(gramaturaId),
         fabricante: fabricante,
-        tipo_tecido: tipoTecido,
-        metragem_confiavel: metConfiavel
+        tipo_tecido: tipoTecido
     };
     
     // Adicionar campos específicos conforme o tipo
