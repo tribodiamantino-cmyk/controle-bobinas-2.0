@@ -443,7 +443,7 @@ function abrirModalCadastroProduto() {
 
                         <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
                             <button type="button" class="btn btn-secondary" onclick="fecharModalCadastroProduto()">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">💾 Salvar Produto</button>
+                            <button type="submit" class="btn btn-primary" id="btn-salvar-produto">💾 Salvar Produto</button>
                         </div>
                     </form>
                 </div>
@@ -590,9 +590,12 @@ async function cadastrarProdutoRapido(e) {
     
     // Desabilitar botão durante o envio
     const btnSalvar = document.getElementById('btn-salvar-produto');
-    const btnTextOriginal = btnSalvar.innerHTML;
-    btnSalvar.disabled = true;
-    btnSalvar.innerHTML = '⏳ Salvando...';
+    let btnTextOriginal = '';
+    if (btnSalvar) {
+        btnTextOriginal = btnSalvar.innerHTML;
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = '⏳ Salvando...';
+    }
     
     try {
         console.log('📤 Enviando produto:', JSON.stringify(produto, null, 2));
@@ -625,8 +628,10 @@ async function cadastrarProdutoRapido(e) {
         mostrarAlerta('Erro ao cadastrar produto: ' + error.message, 'danger');
     } finally {
         // Reabilitar botão
-        btnSalvar.disabled = false;
-        btnSalvar.innerHTML = btnTextOriginal;
+        if (btnSalvar) {
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = btnTextOriginal;
+        }
     }
 }
 
