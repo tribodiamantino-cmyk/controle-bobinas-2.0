@@ -2,16 +2,19 @@ const db = require('../config/database');
 
 // Gerar código QR único para retalho (formato: RET-{LOJA}-{SEQUENCIAL})
 // Conforme PADRONIZACAO_CODIGOS.md
-async function gerarCodigoRetalho(loja) {
+async function gerarCodigoRetalho(loja, connection = null) {
+    const dbConn = connection || db;
+    
     try {
         // Determinar prefixo da loja
         const prefixoLoja = loja === 'Cortinave' ? 'PLA' : 'CIA';
         console.log('🔢 Gerando código para loja:', loja, '→ Prefixo:', prefixoLoja);
         
-        // Buscar último código RET com novo formato (RET-XXX-XXXXXX)
-        const [rows] = await db.query(
+        // Buscar último código RET com LIKE ao invés de REGEXP (mais compatível)
+        const [rows] = await dbConn.query(
             `SELECT codigo_retalho FROM retalhos 
-             WHERE codigo_retalho REGEXP '^RET-[A-Z]{3}-[0-9]{6}$'
+             WHERE codigo_retalho LIKE 'RET-%-%'
+             AND LENGTH(codigo_retalho) = 14
              ORDER BY id DESC LIMIT 1`
         );
         
@@ -21,9 +24,11 @@ async function gerarCodigoRetalho(loja) {
             console.log('📋 Último código encontrado:', ultimoCodigo);
             // Formato: RET-XXX-000001, pegar o último grupo de números
             const partes = ultimoCodigo.split('-');
-            if (partes.length === 3) {
+            if (partes.length === 3 && !isNaN(partes[2])) {
                 const numeroAtual = parseInt(partes[2]);
-                proximoNumero = numeroAtual + 1;
+                if (numeroAtual > 0) {
+                    proximoNumero = numeroAtual + 1;
+                }
             }
         }
         
@@ -156,7 +161,7 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         
         // Gerar código do retalho
         console.log('🏷️ Gerando código de retalho para loja:', bobina.loja);
-        const codigo_retalho = await gerarCodigoRetalho(bobina.loja);
+        const codigo_retalho = await gerarCodigoRetalho(bobina.loja, connection);
         console.log('✅ Código gerado:', codigo_retalho);
         
         // Verificar se coluna placa existe em retalhos
@@ -248,18 +253,41 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         });
         
     } catch (error) {
-        await connection.rollback();
-        console.error('❌ Erro ao converter bobina em retalho:');
-        console.error('   Mensagem:', error.message);
-        console.error('   Stack:', error.stack);
-        console.error('   SQL:', error.sql);
+        try {
+            await connection.rollback();
+        } catch (rollbackError) {
+            console.error('❌ Erro ao fazer rollback:', rollbackError.message);
+        }
+        
+        console.error('❌❌❌ ERRO CRÍTICO AO CONVERTER BOBINA ❌❌❌');
+        console.error('Bobina ID:', req.params.bobina_id);
+        console.error('Tipo do erro:', error.constructor.name);
+        console.error('Mensagem:', error.message);
+        console.error('Code:', error.code);
+        console.error('errno:', error.errno);
+        console.error('sqlState:', error.sqlState);
+        console.error('sqlMessage:', error.sqlMessage);
+        console.error('sql:', error.sql);
+        console.error('Stack completo:', error.stack);
+        console.error('❌❌❌ FIM DO ERRO ❌❌❌');
+        
         res.status(500).json({ 
             success: false, 
-            error: error.message,
-            stack: error.stack
+            error: `Erro ao converter bobina: ${error.message}`,
+            errorCode: error.code,
+            errorType: error.constructor.name,
+            sqlState: error.sqlState,
+            details: process.env.NODE_ENV === 'production' ? undefined : {
+                stack: error.stack,
+                sql: error.sql
+            }
         });
     } finally {
-        connection.release();
+        try {
+            connection.release();
+        } catch (releaseError) {
+            console.error('❌ Erro ao liberar conexão:', releaseError.message);
+        }
     }
 };
 
