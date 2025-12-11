@@ -102,29 +102,29 @@ exports.criarRetalho = async (req, res) => {
 
 // Converter bobina em retalho
 exports.converterBobinaEmRetalho = async (req, res) => {
+    const connection = await db.getConnection();
+    
     try {
         const { bobina_id } = req.params;
-        console.log('🔄 Convertendo bobina ID:', bobina_id);
+        console.log('🔄 Iniciando conversão da bobina ID:', bobina_id);
         
-        // Buscar dados da bobina
-        const [bobinas] = await db.query(
+        await connection.beginTransaction();
+        
+        // Buscar dados da bobina COM LOCK
+        const [bobinas] = await connection.query(
             `SELECT 
                 b.*,
                 p.id as produto_id,
                 p.codigo,
-                p.loja,
-                p.fabricante,
-                c.nome_cor,
-                g.gramatura
+                p.loja
             FROM bobinas b
             JOIN produtos p ON b.produto_id = p.id
-            JOIN configuracoes_cores c ON p.cor_id = c.id
-            JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-            WHERE b.id = ?`,
+            WHERE b.id = ? FOR UPDATE`,
             [bobina_id]
         );
         
         if (bobinas.length === 0) {
+            await connection.rollback();
             console.log('❌ Bobina não encontrada:', bobina_id);
             return res.status(404).json({ 
                 success: false, 
@@ -133,10 +133,13 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         }
         
         const bobina = bobinas[0];
-        console.log('📦 Bobina encontrada:', bobina.codigo_interno, '- Loja:', bobina.loja);
+        console.log('📦 Bobina encontrada:', bobina.codigo_interno);
+        console.log('   Produto ID:', bobina.produto_id);
+        console.log('   Metragem:', bobina.metragem_atual);
+        console.log('   Loja:', bobina.loja);
         
         // Verificar se bobina tem alocações em planos em produção
-        const [alocacoes] = await db.query(
+        const [alocacoes] = await connection.query(
             `SELECT COUNT(*) as count FROM alocacoes_corte ac
              JOIN planos_corte pc ON ac.plano_id = pc.id
              WHERE ac.bobina_id = ? AND pc.status = 'em_producao'`,
@@ -144,30 +147,29 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         );
         
         if (alocacoes[0].count > 0) {
+            await connection.rollback();
             return res.status(400).json({
                 success: false,
                 error: 'Bobina possui alocações em planos de corte ativos. Finalize ou cancele os planos antes de converter.'
             });
         }
         
-        // Gerar código do retalho (a loja já está disponível na variável bobina)
+        // Gerar código do retalho
         console.log('🏷️ Gerando código de retalho para loja:', bobina.loja);
         const codigo_retalho = await gerarCodigoRetalho(bobina.loja);
         console.log('✅ Código gerado:', codigo_retalho);
         
-        // Criar retalho com a metragem atual da bobina (herdando placa e locacao)
+        // Criar retalho SIMPLES (só os campos essenciais)
         console.log('💾 Inserindo retalho no banco...');
-        const [result] = await db.query(
+        const [result] = await connection.query(
             `INSERT INTO retalhos 
-            (codigo_retalho, produto_id, metragem, bobina_origem_id, placa, locacao, observacoes) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            (codigo_retalho, produto_id, metragem, bobina_origem_id, observacoes) 
+            VALUES (?, ?, ?, ?, ?)`,
             [
                 codigo_retalho, 
                 bobina.produto_id, 
                 bobina.metragem_atual,
                 bobina_id,
-                bobina.placa || null,
-                bobina.locacao || null, // Herdar locacao da bobina
                 `Convertido da bobina ${bobina.codigo_interno}`
             ]
         );
@@ -175,11 +177,16 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         const retalho_id = result.insertId;
         console.log('✅ Retalho criado com ID:', retalho_id);
         
-        // EXCLUIR a bobina (ao invés de apenas marcar como convertida)
-        await db.query(`DELETE FROM bobinas WHERE id = ?`, [bobina_id]);
-        console.log(`✅ Bobina ${bobina.codigo_interno} convertida e excluída`);
+        // MARCAR bobina como esgotada ao invés de excluir
+        await connection.query(
+            `UPDATE bobinas SET metragem_atual = 0, status = 'Esgotado' WHERE id = ?`,
+            [bobina_id]
+        );
+        console.log(`✅ Bobina ${bobina.codigo_interno} marcada como esgotada`);
         
-        // Buscar retalho criado
+        await connection.commit();
+        
+        // Buscar retalho criado para retornar
         const [retalho] = await db.query(
             `SELECT 
                 r.*,
@@ -198,15 +205,15 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         
         res.json({ 
             success: true, 
-            message: 'Bobina convertida em retalho e excluída com sucesso!',
+            message: 'Bobina convertida em retalho com sucesso!',
             data: {
-                bobina_excluida: bobina.codigo_interno,
                 codigo_retalho: retalho[0].codigo_retalho,
                 retalho: retalho[0]
             }
         });
         
     } catch (error) {
+        await connection.rollback();
         console.error('❌ Erro ao converter bobina em retalho:');
         console.error('   Mensagem:', error.message);
         console.error('   Stack:', error.stack);
@@ -214,8 +221,10 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         res.status(500).json({ 
             success: false, 
             error: error.message,
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            stack: error.stack
         });
+    } finally {
+        connection.release();
     }
 };
 
