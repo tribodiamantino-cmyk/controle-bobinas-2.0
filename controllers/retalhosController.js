@@ -21,7 +21,7 @@ async function gerarCodigoRetalho() {
 // Criar retalho manualmente
 exports.criarRetalho = async (req, res) => {
     try {
-        const { produto_id, metragem, localizacao_atual, observacoes } = req.body;
+        const { produto_id, metragem, locacao, observacoes } = req.body;
         
         if (!produto_id || !metragem) {
             return res.status(400).json({ 
@@ -36,9 +36,9 @@ exports.criarRetalho = async (req, res) => {
         // Inserir retalho
         const [result] = await db.query(
             `INSERT INTO retalhos 
-            (codigo_retalho, produto_id, metragem, localizacao_atual, observacoes) 
+            (codigo_retalho, produto_id, metragem, locacao, observacoes) 
             VALUES (?, ?, ?, ?, ?)`,
-            [codigo_retalho, produto_id, metragem, localizacao_atual || null, observacoes || null]
+            [codigo_retalho, produto_id, metragem, locacao || null, observacoes || null]
         );
         
         // Buscar retalho criado com dados do produto
@@ -124,19 +124,18 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         // Gerar código do retalho
         const codigo_retalho = await gerarCodigoRetalho();
         
-        // Criar retalho com a metragem atual da bobina (herdando placa)
-        // Nota: bobinas não tem localizacao_atual, então fica NULL
+        // Criar retalho com a metragem atual da bobina (herdando placa e locacao)
         const [result] = await db.query(
             `INSERT INTO retalhos 
-            (codigo_retalho, produto_id, metragem, bobina_origem_id, placa, localizacao_atual, observacoes) 
+            (codigo_retalho, produto_id, metragem, bobina_origem_id, placa, locacao, observacoes) 
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 codigo_retalho, 
                 bobina.produto_id, 
                 bobina.metragem_atual,
                 bobina_id,
-                bobina.placa || null, // Herdar placa da bobina
-                null, // bobina não tem localizacao_atual
+                bobina.placa || null,
+                bobina.locacao || null, // Herdar locacao da bobina
                 `Convertido da bobina ${bobina.codigo_interno}`
             ]
         );
@@ -186,8 +185,8 @@ exports.converterBobinaEmRetalho = async (req, res) => {
 // Listar todos os retalhos
 exports.listarRetalhos = async (req, res) => {
     try {
-        // Query que funciona com ou sem as colunas novas (placa, corte_origem_id)
-        // IMPORTANTE: Não retornar retalhos com metragem zerada
+        // Query com campos padronizados
+        // IMPORTANTE: Não retornar retalhos esgotados (metragem zerada ou status Esgotado)
         let query = `
             SELECT 
                 r.id,
@@ -196,7 +195,7 @@ exports.listarRetalhos = async (req, res) => {
                 r.produto_id,
                 r.metragem,
                 r.metragem_reservada,
-                r.localizacao_atual,
+                r.locacao,
                 r.status,
                 r.observacoes,
                 r.data_entrada,
@@ -212,7 +211,7 @@ exports.listarRetalhos = async (req, res) => {
             JOIN configuracoes_cores c ON p.cor_id = c.id
             JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
             LEFT JOIN bobinas b ON r.bobina_origem_id = b.id
-            WHERE r.metragem > 0
+            WHERE r.metragem > 0 AND (r.status IS NULL OR r.status != 'Esgotado')
             ORDER BY r.data_entrada DESC
         `;
         
@@ -228,7 +227,7 @@ exports.listarRetalhos = async (req, res) => {
                     r.produto_id,
                     r.metragem,
                     r.metragem_reservada,
-                    r.localizacao_atual,
+                    r.locacao,
                     r.status,
                     r.observacoes,
                     r.data_entrada,
@@ -246,7 +245,7 @@ exports.listarRetalhos = async (req, res) => {
                 JOIN configuracoes_cores c ON p.cor_id = c.id
                 JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
                 LEFT JOIN bobinas b ON r.bobina_origem_id = b.id
-                WHERE r.metragem > 0
+                WHERE r.metragem > 0 AND (r.status IS NULL OR r.status != 'Esgotado')
                 ORDER BY r.data_entrada DESC
             `);
             retalhos = retalhosComNovosCampos;
@@ -347,11 +346,11 @@ exports.buscarRetalhoPorCodigo = async (req, res) => {
 exports.atualizarRetalho = async (req, res) => {
     try {
         const { id } = req.params;
-        const { localizacao_atual, metragem, observacoes } = req.body;
+        const { locacao, metragem, observacoes } = req.body;
         
         // Verificar se retalho existe
         const [retalhos] = await db.query(
-            'SELECT localizacao_atual FROM retalhos WHERE id = ?',
+            'SELECT locacao FROM retalhos WHERE id = ?',
             [id]
         );
         
@@ -362,23 +361,28 @@ exports.atualizarRetalho = async (req, res) => {
             });
         }
         
-        const localizacaoAnterior = retalhos[0].localizacao_atual;
+        const locacaoAnterior = retalhos[0].locacao;
         
         // Atualizar retalho
         const updates = [];
         const values = [];
         
-        if (localizacao_atual !== undefined) {
-            updates.push('localizacao_atual = ?');
-            values.push(localizacao_atual);
+        if (locacao !== undefined) {
+            updates.push('locacao = ?');
+            values.push(locacao);
             
             // Registrar no histórico se localização mudou
-            if (localizacaoAnterior !== localizacao_atual) {
-                await db.query(
-                    `INSERT INTO historico_localizacao_retalhos 
-                    (retalho_id, localizacao) VALUES (?, ?)`,
-                    [id, localizacao_atual]
-                );
+            if (locacaoAnterior !== locacao) {
+                try {
+                    await db.query(
+                        `INSERT INTO historico_localizacao_retalhos 
+                        (retalho_id, localizacao) VALUES (?, ?)`,
+                        [id, locacao]
+                    );
+                } catch (e) {
+                    // Tabela de histórico pode não existir
+                    console.log('⚠️ historico_localizacao_retalhos não existe');
+                }
             }
         }
         
@@ -465,17 +469,8 @@ exports.excluirRetalho = async (req, res) => {
             });
         }
         
-        const bobina_origem_id = retalhos[0].bobina_origem_id;
-        
-        // Se veio de uma bobina, reverter o status da bobina
-        if (bobina_origem_id) {
-            await db.query(
-                `UPDATE bobinas 
-                SET convertida_em_retalho = FALSE, retalho_id = NULL 
-                WHERE id = ?`,
-                [bobina_origem_id]
-            );
-        }
+        // Nota: Se o retalho veio de uma bobina convertida, a bobina foi EXCLUÍDA
+        // Não é possível reverter, apenas excluir o retalho
         
         // Excluir retalho
         await db.query('DELETE FROM retalhos WHERE id = ?', [id]);

@@ -1116,7 +1116,7 @@ async function salvarNovoRetalho() {
             body: JSON.stringify({
                 produto_id: produtoId,
                 metragem: parseFloat(metragem),
-                localizacao_atual: localizacao || null,
+                locacao: localizacao || null,
                 observacoes: observacoes || null
             })
         });
@@ -1218,7 +1218,7 @@ async function salvarLocalizacaoRetalho(retalhoId) {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                localizacao_atual: novaLocalizacao || null
+                locacao: novaLocalizacao || null
             })
         });
         

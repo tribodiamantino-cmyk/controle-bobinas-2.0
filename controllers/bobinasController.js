@@ -204,8 +204,8 @@ exports.listarProdutosComBobinas = async (req, res) => {
                 (COALESCE(SUM(b.metragem_atual), 0) + COALESCE(SUM(r.metragem), 0)) - 
                 (COALESCE(SUM(b.metragem_reservada), 0) + COALESCE(SUM(r.metragem_reservada), 0)) as metragem_disponivel
             FROM produtos p
-            LEFT JOIN bobinas b ON p.id = b.produto_id AND b.status != 'Esgotada' AND b.convertida_em_retalho = FALSE AND b.metragem_atual > 0
-            LEFT JOIN retalhos r ON p.id = r.produto_id AND r.status != 'Esgotado' AND r.metragem > 0
+            LEFT JOIN bobinas b ON p.id = b.produto_id AND (b.status IS NULL OR b.status != 'Esgotado') AND b.metragem_atual > 0
+            LEFT JOIN retalhos r ON p.id = r.produto_id AND (r.status IS NULL OR r.status != 'Esgotado') AND r.metragem > 0
             LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
             LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
             WHERE p.ativo = 1
@@ -236,13 +236,14 @@ exports.listarBobinasPorProduto = async (req, res) => {
                 p.codigo,
                 p.fabricante,
                 c.nome_cor,
-                g.gramatura,
-                b.localizacao_atual
+                g.gramatura
             FROM bobinas b
             JOIN produtos p ON b.produto_id = p.id
             JOIN configuracoes_cores c ON p.cor_id = c.id
             JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-            WHERE b.produto_id = ? AND b.convertida_em_retalho = FALSE AND b.metragem_atual > 0
+            WHERE b.produto_id = ? 
+              AND (b.status IS NULL OR b.status != 'Esgotado') 
+              AND b.metragem_atual > 0
             ORDER BY b.data_entrada DESC`,
             [produto_id]
         );
@@ -275,8 +276,7 @@ exports.buscarBobinaPorCodigo = async (req, res) => {
                 p.largura_maior,
                 p.largura_y,
                 c.nome_cor,
-                g.gramatura,
-                b.localizacao_atual
+                g.gramatura
             FROM bobinas b
             JOIN produtos p ON b.produto_id = p.id
             JOIN configuracoes_cores c ON p.cor_id = c.id

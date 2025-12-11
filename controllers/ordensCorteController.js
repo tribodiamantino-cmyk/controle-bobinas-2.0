@@ -55,13 +55,14 @@ exports.criarPlano = async (req, res) => {
             const item = itens[i];
             
             // Validar metragem disponível
+            // Nota: bobinas convertidas são excluídas, então não precisamos filtrar por convertida_em_retalho
             const [estoque] = await db.query(`
                 SELECT 
                     COALESCE(SUM(b.metragem_atual - COALESCE(b.metragem_reservada, 0)), 0) +
                     COALESCE(SUM(r.metragem - COALESCE(r.metragem_reservada, 0)), 0) as metragem_disponivel
                 FROM produtos p
-                LEFT JOIN bobinas b ON b.produto_id = p.id AND b.status = 'Disponível' AND b.convertida_em_retalho = FALSE
-                LEFT JOIN retalhos r ON r.produto_id = p.id AND r.status = 'Disponível'
+                LEFT JOIN bobinas b ON b.produto_id = p.id AND (b.status IS NULL OR b.status = 'Disponível')
+                LEFT JOIN retalhos r ON r.produto_id = p.id AND (r.status IS NULL OR r.status = 'Disponível')
                 WHERE p.id = ?
             `, [item.produto_id]);
             
@@ -224,8 +225,8 @@ exports.buscarPlanoPorId = async (req, res) => {
                         WHEN ac.tipo_origem = 'retalho' THEN r.metragem
                     END as metragem_origem,
                     CASE 
-                        WHEN ac.tipo_origem = 'bobina' THEN b.localizacao_atual
-                        WHEN ac.tipo_origem = 'retalho' THEN r.localizacao_atual
+                        WHEN ac.tipo_origem = 'bobina' THEN b.locacao
+                        WHEN ac.tipo_origem = 'retalho' THEN r.locacao
                     END as localizacao_origem,
                     CASE 
                         WHEN ac.tipo_origem = 'bobina' THEN b.nota_fiscal
@@ -377,7 +378,7 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo, debugInfo = []) {
                         codigo: retalho.codigo_retalho,
                         metragem_total: parseFloat(retalho.metragem),
                         metragem_disponivel: metragemRealDisponivel,
-                        localizacao: retalho.localizacao_atual,
+                        localizacao: retalho.locacao,
                         motivo: '📦 Retalho disponível (prioridade)',
                         prioridade: 'alta',
                         estrategia: 'retalho_individual'
@@ -420,8 +421,7 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo, debugInfo = []) {
             (b.metragem_atual - COALESCE(b.metragem_reservada, 0)) as metragem_disponivel
         FROM bobinas b
         WHERE b.produto_id = ?
-            AND b.status = 'Disponível'
-            AND b.convertida_em_retalho = FALSE
+            AND (b.status IS NULL OR b.status = 'Disponível')
             AND (b.metragem_atual - COALESCE(b.metragem_reservada, 0)) >= ?
         ORDER BY b.metragem_atual ASC
         LIMIT 1
@@ -441,7 +441,7 @@ async function sugerirOrigemParaGrupo(produtoId, cortesGrupo, debugInfo = []) {
                     metragem_total: parseFloat(bobinaUnica[0].metragem_atual),
                     metragem_disponivel: parseFloat(bobinaUnica[0].metragem_disponivel),
                     nota_fiscal: bobinaUnica[0].nota_fiscal,
-                    localizacao: bobinaUnica[0].localizacao_atual,
+                    localizacao: bobinaUnica[0].locacao,
                     motivo: '✨ MESMA BOBINA para todos os cortes (sem retalhos disponíveis)',
                     prioridade: 'media',
                     estrategia: 'bobina_unica'
@@ -527,7 +527,7 @@ async function sugerirOrigemParaCorte(produtoId, metragem, alocacoesTemporarias 
                 codigo: retalho.codigo_retalho,
                 metragem_total: parseFloat(retalho.metragem),
                 metragem_disponivel: metragemRealDisponivel,
-                localizacao: retalho.localizacao_atual,
+                localizacao: retalho.locacao,
                 motivo: 'Retalho com tamanho próximo',
                 prioridade: 'alta'
             };
@@ -545,7 +545,6 @@ async function sugerirOrigemParaCorte(produtoId, metragem, alocacoesTemporarias 
         FROM bobinas b
         WHERE b.produto_id = ?
             AND b.status = 'Disponível'
-            AND b.convertida_em_retalho = FALSE
             AND (b.metragem_atual - COALESCE(b.metragem_reservada, 0)) >= ?
         ORDER BY b.metragem_atual ASC
     `, [produtoId, metragem]);
@@ -569,7 +568,7 @@ async function sugerirOrigemParaCorte(produtoId, metragem, alocacoesTemporarias 
                 metragem_total: parseFloat(bobina.metragem_atual),
                 metragem_disponivel: metragemRealDisponivel,
                 nota_fiscal: bobina.nota_fiscal,
-                localizacao: bobina.localizacao_atual,
+                localizacao: bobina.locacao,
                 motivo: 'Bobina menor disponível',
                 prioridade: 'media'
             };
@@ -600,8 +599,7 @@ async function sugerirOrigemParaCorte(produtoId, metragem, alocacoesTemporarias 
             metragem_atual,
             metragem_reservada,
             (metragem_atual - COALESCE(metragem_reservada, 0)) as disponivel,
-            status,
-            convertida_em_retalho
+            status
         FROM bobinas 
         WHERE produto_id = ?
         ORDER BY disponivel DESC
@@ -614,7 +612,7 @@ async function sugerirOrigemParaCorte(produtoId, metragem, alocacoesTemporarias 
     });
     console.log(`   🎯 Bobinas (${todasBobinas.length} total):`);
     todasBobinas.forEach(b => {
-        console.log(`      - ${b.codigo_interno}: ${b.metragem_atual}m total, ${b.metragem_reservada || 0}m reservada, ${b.disponivel}m disponível [${b.status}] ${b.convertida_em_retalho ? '(convertida)' : ''}`);
+        console.log(`      - ${b.codigo_interno}: ${b.metragem_atual}m total, ${b.metragem_reservada || 0}m reservada, ${b.disponivel}m disponível [${b.status}]`);
     });
     console.log(`   ⚠️  Metragem solicitada: ${metragem}m\n`);
     
@@ -622,10 +620,10 @@ async function sugerirOrigemParaCorte(produtoId, metragem, alocacoesTemporarias 
         SELECT MAX(metragem_disponivel) as max_metragem
         FROM (
             SELECT (metragem - COALESCE(metragem_reservada, 0)) as metragem_disponivel
-            FROM retalhos WHERE produto_id = ? AND status = 'Disponível'
+            FROM retalhos WHERE produto_id = ? AND (status IS NULL OR status = 'Disponível')
             UNION ALL
             SELECT (metragem_atual - COALESCE(metragem_reservada, 0)) as metragem_disponivel
-            FROM bobinas WHERE produto_id = ? AND status = 'Disponível' AND convertida_em_retalho = FALSE
+            FROM bobinas WHERE produto_id = ? AND (status IS NULL OR status = 'Disponível')
         ) as disponiveis
     `, [produtoId, produtoId]);
     
@@ -1289,11 +1287,11 @@ exports.listarOrigensDisponiveis = async (req, res) => {
                 'retalho' as tipo,
                 r.metragem as metragem_total,
                 (r.metragem - COALESCE(r.metragem_reservada, 0)) as metragem_disponivel,
-                r.localizacao_atual,
+                r.locacao,
                 r.observacoes
             FROM retalhos r
             WHERE r.produto_id = ?
-                AND r.status = 'Disponível'
+                AND (r.status IS NULL OR r.status = 'Disponível')
                 AND (r.metragem - COALESCE(r.metragem_reservada, 0)) >= ?
             ORDER BY r.metragem ASC
         `, [produto_id, metragem]);
@@ -1306,13 +1304,12 @@ exports.listarOrigensDisponiveis = async (req, res) => {
                 'bobina' as tipo,
                 b.metragem_atual as metragem_total,
                 (b.metragem_atual - COALESCE(b.metragem_reservada, 0)) as metragem_disponivel,
-                b.localizacao_atual,
+                b.locacao,
                 b.nota_fiscal,
                 b.observacoes
             FROM bobinas b
             WHERE b.produto_id = ?
-                AND b.status = 'Disponível'
-                AND b.convertida_em_retalho = FALSE
+                AND (b.status IS NULL OR b.status = 'Disponível')
                 AND (b.metragem_atual - COALESCE(b.metragem_reservada, 0)) >= ?
             ORDER BY b.metragem_atual ASC
         `, [produto_id, metragem]);

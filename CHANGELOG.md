@@ -4,6 +4,30 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [2.4.0] - 2025-01-XX
+
+### 🗄️ Padronização do Banco de Dados
+
+#### Schema Atualizado
+- **Campo `locacao`** em bobinas e retalhos agora é VARCHAR (não mais FK)
+- **Formato padrão**: `CORREDOR-PRATELEIRA-POSICAO` (ex: 1-A-1, 12-B-34)
+- **Regex validação**: `/^[1-9]\d{0,3}-[A-Z]-[1-9]\d{0,3}$/`
+- **Removida tabela `locacoes`** - locações agora são texto livre com máscara
+
+#### Regras de Campos
+- `fabricante` existe **apenas** em `produtos` (buscar via JOIN)
+- `loja` em bobinas é **denormalizado** por performance (cópia de produtos.loja)
+- Items com `metragem = 0` recebem `status = 'Esgotado'` (mantidos para histórico)
+
+#### Migrações
+- **034**: Padronização de locação (VARCHAR) e remoção de tabela locacoes
+
+### 📚 Documentação
+- Novo `docs/PADRONIZACAO_BANCO.md` com regras completas do schema
+- Atualizado `.github/copilot-instructions.md` com padrões de queries
+
+---
+
 ## [2.3.1] - 2025-12-11
 
 ### 🐛 Correções de Bugs

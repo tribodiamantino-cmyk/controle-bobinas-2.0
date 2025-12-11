@@ -313,7 +313,7 @@ function fecharModalNovoRetalho() {
 async function salvarNovoRetalho() {
     const produto_id = document.getElementById('produtoRetalho').value;
     const metragem = document.getElementById('metragemRetalho').value;
-    const localizacao_atual = document.getElementById('localizacaoRetalho').value;
+    const locacao = document.getElementById('localizacaoRetalho').value;
     const observacoes = document.getElementById('observacoesRetalho').value;
     
     try {
@@ -323,7 +323,7 @@ async function salvarNovoRetalho() {
             body: JSON.stringify({
                 produto_id,
                 metragem,
-                localizacao_atual,
+                locacao,
                 observacoes
             })
         });
@@ -356,7 +356,7 @@ function abrirModalEditarRetalho(retalhoId) {
     document.getElementById('editRetalhoId').value = retalho.id;
     document.getElementById('editCodigo').value = retalho.codigo_retalho || '';
     document.getElementById('editMetragem').value = retalho.metragem || '';
-    document.getElementById('editLocalizacao').value = retalho.localizacao_atual || '';
+    document.getElementById('editLocalizacao').value = retalho.locacao || retalho.localizacao_atual || '';
     document.getElementById('editObservacoes').value = retalho.observacoes || '';
     
     document.getElementById('modalEditarRetalho').style.display = 'flex';
@@ -369,7 +369,7 @@ function fecharModalEditarRetalho() {
 async function salvarEdicaoRetalho() {
     const id = document.getElementById('editRetalhoId').value;
     const metragem = document.getElementById('editMetragem').value;
-    const localizacao_atual = document.getElementById('editLocalizacao').value;
+    const locacao = document.getElementById('editLocalizacao').value;
     const observacoes = document.getElementById('editObservacoes').value;
     
     try {
@@ -378,7 +378,7 @@ async function salvarEdicaoRetalho() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 metragem,
-                localizacao_atual,
+                locacao,
                 observacoes
             })
         });
