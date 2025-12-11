@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function atualizarPreviewCodigo() {
         const loja = selectLoja.value;
-        const codigo = inputCodigo.value.padStart(4, '0');
+        const codigo = inputCodigo.value.padStart(5, '0');
         
         if (loja && inputCodigo.value) {
             const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';

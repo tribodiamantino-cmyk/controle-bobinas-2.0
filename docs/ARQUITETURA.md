@@ -34,8 +34,8 @@ Bobina → Plano de Corte → Cortes → Carregamento
 ### Ambientes
 | Ambiente | URL | Banco |
 |----------|-----|-------|
-| **Produção** | Railway | MySQL Railway |
-| **Local** | localhost:3000 | MySQL Local |
+| **Produção** | https://controle-bobinas-20-production.up.railway.app | MySQL Railway |
+| **Local** | http://localhost:3000 | MySQL Local |
 
 ---
 

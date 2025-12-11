@@ -26,9 +26,6 @@
         <div class="page-header">
             <h1>📦 Estoque de Bobinas</h1>
             <div style="display: flex; gap: 10px;">
-                <a href="/fila-impressao.html" class="btn btn-outline-secondary btn-lg">
-                    🖨️ Fila de Impressão
-                </a>
                 <button class="btn btn-primary btn-lg" onclick="abrirModalNovaBobina()">
                     ➕ Nova Entrada de Bobina
                 </button>
@@ -291,11 +288,19 @@
                 <div class="alert alert-info">
                     <strong>Dados pré-preenchidos:</strong><br>
                     Loja: <span id="quick-loja"></span> | 
-                    Fabricante: <span id="quick-fabricante"></span> | 
                     Código: <span id="quick-codigo"></span>
                 </div>
 
                 <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="quick-fabricante">Fabricante *</label>
+                        <select class="form-control" id="quick-fabricante" required>
+                            <option value="">Selecione...</option>
+                            <option value="Propex">Propex</option>
+                            <option value="Textiloeste">Textiloeste</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label" for="quick-cor_id">Cor *</label>
                         <select class="form-control" id="quick-cor_id" required>
@@ -309,7 +314,9 @@
                             <option value="">Selecione...</option>
                         </select>
                     </div>
+                </div>
 
+                <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="quick-tipo_tecido">Tipo de Tecido *</label>
                         <select class="form-control" id="quick-tipo_tecido" required onchange="toggleCamposTecidoRapido()">

@@ -72,7 +72,7 @@ function abrirModalNovaBobina() {
 
                                 <div class="form-group">
                                     <label class="form-label" for="loja">Loja *</label>
-                                    <select class="form-control" id="loja" required onchange="resetarBusca()">
+                                    <select class="form-control" id="loja" required onchange="atualizarPrefixoCodigo()">
                                         <option value="">Selecione...</option>
                                         <option value="Cortinave">Cortinave</option>
                                         <option value="BN">BN</option>
@@ -83,11 +83,15 @@ function abrirModalNovaBobina() {
                             <div class="form-row">
                                 <div class="form-group" style="flex: 1;">
                                     <label class="form-label" for="codigo">Código do Produto *</label>
-                                    <div style="display: flex; gap: 8px;">
-                                        <input type="text" class="form-control" id="codigo" required placeholder="Ex: CTV-0001 ou BN-0001" onchange="buscarProduto()">
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <span id="codigo-prefixo" class="badge badge-info" style="font-size: 1rem; padding: 8px 12px; min-width: 50px; text-align: center;">---</span>
+                                        <input type="text" class="form-control" id="codigo" required placeholder="00001" 
+                                               maxlength="5" pattern="[0-9]{5}" style="font-family: monospace; font-size: 1.1rem;"
+                                               oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                               onchange="buscarProduto()">
                                         <button type="button" class="btn btn-secondary" onclick="buscarProduto()" title="Buscar produto">🔍</button>
                                     </div>
-                                    <small class="form-text text-muted">O fabricante será obtido automaticamente do produto</small>
+                                    <small class="form-text text-muted">Digite apenas os 5 dígitos numéricos do código</small>
                                 </div>
                             </div>
 
@@ -201,19 +205,48 @@ function resetarBusca() {
     document.getElementById('btn-salvar').disabled = true;
 }
 
+// Atualizar prefixo do código baseado na loja
+function atualizarPrefixoCodigo() {
+    const loja = document.getElementById('loja').value;
+    const prefixoEl = document.getElementById('codigo-prefixo');
+    
+    if (loja === 'Cortinave') {
+        prefixoEl.textContent = 'CTV-';
+        prefixoEl.style.background = '#3182ce';
+    } else if (loja === 'BN') {
+        prefixoEl.textContent = 'BN-';
+        prefixoEl.style.background = '#38a169';
+    } else {
+        prefixoEl.textContent = '---';
+        prefixoEl.style.background = '#718096';
+    }
+    
+    // Também resetar a busca
+    resetarBusca();
+}
+
 // Buscar produto por loja + fabricante + código
 async function buscarProduto() {
     const loja = document.getElementById('loja').value;
-    const codigo = document.getElementById('codigo').value;
+    const codigoNumerico = document.getElementById('codigo').value.padStart(5, '0');
     
-    if (!loja || !codigo) {
-        mostrarAlerta('Selecione a loja e digite o código do produto', 'warning');
+    if (!loja) {
+        mostrarAlerta('Selecione a loja primeiro', 'warning');
         return;
     }
     
+    if (!codigoNumerico || codigoNumerico === '00000') {
+        mostrarAlerta('Digite o código numérico do produto', 'warning');
+        return;
+    }
+    
+    // Montar código completo: CTV-00001 ou BN-00001
+    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+    const codigoCompleto = `${prefixo}-${codigoNumerico}`;
+    
     try {
         const response = await fetch(
-            `/api/bobinas/buscar-produto?loja=${loja}&codigo=${codigo}`
+            `/api/bobinas/buscar-produto?loja=${loja}&codigo=${codigoCompleto}`
         );
         const data = await response.json();
         
@@ -274,14 +307,28 @@ function mostrarProdutoNaoEncontrado() {
 // Abrir modal de cadastro rápido de produto
 function abrirModalCadastroProduto() {
     const loja = document.getElementById('loja').value;
-    const codigo = document.getElementById('codigo').value;
+    const codigoNumerico = document.getElementById('codigo').value.padStart(5, '0');
+    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+    const codigoCompleto = `${prefixo}-${codigoNumerico}`;
+    
+    // Verificar se os elementos existem
+    const modalEl = document.getElementById('modal-cadastro-produto');
+    if (!modalEl) {
+        // Modal não existe no DOM, vamos criar
+        mostrarAlerta('Redirecionando para página de cadastro de produtos...', 'info');
+        window.open(`/produtos.html?codigo=${codigoNumerico}&loja=${loja}`, '_blank');
+        return;
+    }
     
     // Preencher dados no modal
-    document.getElementById('quick-loja').textContent = loja;
-    document.getElementById('quick-codigo').textContent = codigo;
+    const quickLoja = document.getElementById('quick-loja');
+    const quickCodigo = document.getElementById('quick-codigo');
+    
+    if (quickLoja) quickLoja.textContent = loja;
+    if (quickCodigo) quickCodigo.textContent = codigoCompleto;
     
     // Mostrar modal
-    document.getElementById('modal-cadastro-produto').style.display = 'flex';
+    modalEl.style.display = 'flex';
 }
 
 // Fechar modal de cadastro de produto
@@ -328,13 +375,15 @@ async function cadastrarProdutoRapido(e) {
     e.preventDefault();
     
     const loja = document.getElementById('loja').value;
-    const fabricante = document.getElementById('fabricante').value;
-    const codigo = document.getElementById('codigo').value;
+    const codigoNumerico = document.getElementById('codigo').value.padStart(5, '0');
+    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+    const codigoCompleto = `${prefixo}-${codigoNumerico}`;
+    const fabricante = document.getElementById('quick-fabricante').value;
     const tipoTecido = document.getElementById('quick-tipo_tecido').value;
     
     const produto = {
         loja: loja,
-        codigo: codigo,
+        codigo: codigoCompleto,
         cor_id: parseInt(document.getElementById('quick-cor_id').value),
         gramatura_id: parseInt(document.getElementById('quick-gramatura_id').value),
         fabricante: fabricante,

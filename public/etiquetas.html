@@ -400,10 +400,6 @@
                             <i class="bi bi-bug me-1"></i>Modo Teste
                         </label>
                     </div>
-                    <a href="/fila-impressao.html" class="btn btn-outline-light btn-sm">
-                        <i class="bi bi-printer me-1"></i>Fila
-                        <span class="badge bg-warning text-dark ms-1" id="filaCount">0</span>
-                    </a>
                 </div>
             </div>
         </div>
@@ -423,13 +419,10 @@
                 <h2><i class="bi bi-tags me-2"></i>Central de Etiquetas</h2>
                 <p class="text-muted mb-0 mt-1">Impressão em lote de etiquetas para bobinas, retalhos, cortes e locações</p>
             </div>
-            <a href="/fila-impressao.html" class="btn btn-outline-primary">
-                <i class="bi bi-clock-history me-1"></i>Ver Fila Completa
-            </a>
         </div>
         
         <!-- Stats Cards -->
-        <div class="stats-row">
+        <div class="stats-row" style="grid-template-columns: repeat(5, 1fr);">
             <div class="stat-card bobinas active" data-tipo="bobinas" onclick="selecionarTipo('bobinas')">
                 <div class="icon"><i class="bi bi-box-seam"></i></div>
                 <h3>Bobinas</h3>
@@ -449,6 +442,11 @@
                 <div class="icon"><i class="bi bi-geo-alt"></i></div>
                 <h3>Locações</h3>
                 <div class="count" id="countLocacoes">∞</div>
+            </div>
+            <div class="stat-card historico" data-tipo="historico" onclick="selecionarTipo('historico')" style="background: linear-gradient(135deg, #fefefe, #f0f4f8);">
+                <div class="icon" style="color: #718096;"><i class="bi bi-clock-history"></i></div>
+                <h3>Histórico</h3>
+                <div class="count" id="countHistorico">-</div>
             </div>
         </div>
         
@@ -645,6 +643,57 @@
                             <i class="bi bi-printer me-1"></i>Imprimir Locações
                         </button>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Histórico Section -->
+            <div class="historico-section" id="historicoSection" style="display: none; padding: 20px;">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Histórico de Impressões</strong> - Últimas etiquetas enviadas para impressão
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm active" onclick="filtrarHistorico('todos')" id="btnHistTodos">
+                            Todos
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="filtrarHistorico('impresso')" id="btnHistImpresso">
+                            ✅ Impressos
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="filtrarHistorico('pendente')" id="btnHistPendente">
+                            ⏳ Pendentes
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="filtrarHistorico('erro')" id="btnHistErro">
+                            ❌ Erros
+                        </button>
+                    </div>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="carregarHistorico()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Atualizar
+                    </button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Data/Hora</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historicoBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    Carregando histórico...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             

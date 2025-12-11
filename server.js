@@ -137,6 +137,7 @@ const seedTesteRoutes = require('./routes/seed-teste');
 const adminRoutes = require('./routes/admin');
 const impressaoRoutes = require('./routes/impressao');
 const cortesRoutes = require('./routes/cortes');
+const historicoRoutes = require('./routes/historico');
 
 // Usar rotas
 app.use('/api/cores', coresRoutes);
@@ -156,6 +157,7 @@ app.use('/api/seed', seedTesteRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/impressao', impressaoRoutes);
 app.use('/api/cortes', cortesRoutes);
+app.use('/api/historico', historicoRoutes);
 
 // Servir arquivos de upload
 app.use('/uploads', express.static('uploads'));

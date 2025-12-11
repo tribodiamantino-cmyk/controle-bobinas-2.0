@@ -2,6 +2,8 @@
 
 Sistema de gerenciamento e controle de bobinas desenvolvido com Node.js, Express e MySQL.
 
+**🌐 Produção:** https://controle-bobinas-20-production.up.railway.app
+
 ## 🚀 Tecnologias
 
 - **Node.js** - Runtime JavaScript

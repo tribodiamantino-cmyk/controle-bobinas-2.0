@@ -96,15 +96,18 @@ function selecionarTipo(tipo) {
         bobinas: '<i class="bi bi-box-seam me-2"></i>Bobinas',
         retalhos: '<i class="bi bi-scissors me-2"></i>Retalhos',
         cortes: '<i class="bi bi-rulers me-2"></i>Cortes',
-        locacoes: '<i class="bi bi-geo-alt me-2"></i>Locações'
+        locacoes: '<i class="bi bi-geo-alt me-2"></i>Locações',
+        historico: '<i class="bi bi-clock-history me-2"></i>Histórico de Impressão'
     };
     document.getElementById('panelTitle').innerHTML = titulos[tipo];
     
     // Mostrar/ocultar seções
     const isLocacoes = tipo === 'locacoes';
-    document.getElementById('filtersSection').style.display = isLocacoes ? 'none' : 'block';
-    document.getElementById('tableContainer').style.display = isLocacoes ? 'none' : 'block';
+    const isHistorico = tipo === 'historico';
+    document.getElementById('filtersSection').style.display = (isLocacoes || isHistorico) ? 'none' : 'block';
+    document.getElementById('tableContainer').style.display = (isLocacoes || isHistorico) ? 'none' : 'block';
     document.getElementById('locacoesSection').style.display = isLocacoes ? 'block' : 'none';
+    document.getElementById('historicoSection').style.display = isHistorico ? 'block' : 'none';
     document.getElementById('batchActions').classList.remove('visible');
     document.getElementById('emptyState').style.display = 'none';
     
@@ -118,12 +121,15 @@ function selecionarTipo(tipo) {
     selecionados.clear();
     document.getElementById('selectAll').checked = false;
     
-    // Buscar dados se não for locações
-    if (!isLocacoes) {
-        buscar();
-    } else {
+    // Buscar dados conforme tipo
+    if (isLocacoes) {
         document.getElementById('resultCount').textContent = 'Digite códigos para impressão';
         renderizarLocacoes();
+    } else if (isHistorico) {
+        document.getElementById('resultCount').textContent = '';
+        carregarHistorico();
+    } else {
+        buscar();
     }
 }
 
@@ -642,6 +648,158 @@ function configurarModoTeste() {
 
 function mostrarLoading(show) {
     document.getElementById('loadingOverlay').classList.toggle('visible', show);
+}
+
+// =============================================================================
+// HISTÓRICO DE IMPRESSÃO
+// =============================================================================
+
+let historicoFiltro = 'todos';
+let historicoData = [];
+
+async function carregarHistorico() {
+    try {
+        const response = await fetch(`${API_BASE}/impressao/fila`);
+        const data = await response.json();
+        
+        if (data.success) {
+            historicoData = data.data || [];
+            
+            // Atualizar contador
+            document.getElementById('countHistorico').textContent = historicoData.length;
+            
+            renderizarHistorico();
+        }
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        document.getElementById('historicoBody').innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-danger py-4">
+                    <i class="bi bi-exclamation-circle fs-1 d-block mb-2"></i>
+                    Erro ao carregar histórico
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function filtrarHistorico(filtro) {
+    historicoFiltro = filtro;
+    
+    // Atualizar botões
+    document.getElementById('btnHistTodos').classList.toggle('active', filtro === 'todos');
+    document.getElementById('btnHistImpresso').classList.toggle('active', filtro === 'impresso');
+    document.getElementById('btnHistPendente').classList.toggle('active', filtro === 'pendente');
+    document.getElementById('btnHistErro').classList.toggle('active', filtro === 'erro');
+    
+    renderizarHistorico();
+}
+
+function renderizarHistorico() {
+    const tbody = document.getElementById('historicoBody');
+    
+    // Filtrar dados
+    let dadosFiltrados = historicoData;
+    if (historicoFiltro !== 'todos') {
+        dadosFiltrados = historicoData.filter(item => item.status === historicoFiltro);
+    }
+    
+    if (dadosFiltrados.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    Nenhum registro ${historicoFiltro !== 'todos' ? 'com este status' : 'no histórico'}
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = dadosFiltrados.map(item => {
+        const statusBadge = getStatusBadge(item.status);
+        const dataFormatada = new Date(item.created_at).toLocaleString('pt-BR');
+        const tipoIcon = getTipoIcon(item.tipo_etiqueta);
+        
+        return `
+            <tr>
+                <td><span class="codigo-badge">${item.codigo || '-'}</span></td>
+                <td>${tipoIcon} ${item.tipo_etiqueta}</td>
+                <td class="small">${item.descricao || '-'}</td>
+                <td class="small text-muted">${dataFormatada}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    ${item.status === 'erro' || item.status === 'pendente' ? `
+                        <button class="btn btn-sm btn-outline-primary" onclick="reimprimirItem(${item.id})" title="Reimprimir">
+                            <i class="bi bi-printer"></i>
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-sm btn-outline-danger" onclick="removerDoHistorico(${item.id})" title="Remover">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'pendente': '<span class="badge bg-warning text-dark">⏳ Pendente</span>',
+        'impresso': '<span class="badge bg-success">✅ Impresso</span>',
+        'erro': '<span class="badge bg-danger">❌ Erro</span>'
+    };
+    return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+}
+
+function getTipoIcon(tipo) {
+    const icons = {
+        'bobina': '<i class="bi bi-box-seam text-primary"></i>',
+        'retalho': '<i class="bi bi-scissors text-success"></i>',
+        'corte': '<i class="bi bi-rulers text-warning"></i>',
+        'locacao': '<i class="bi bi-geo-alt text-info"></i>'
+    };
+    return icons[tipo] || '<i class="bi bi-tag"></i>';
+}
+
+async function reimprimirItem(id) {
+    try {
+        const response = await fetch(`${API_BASE}/impressao/reimprimir/${id}`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            ImpressaoEtiquetas.notificar('sucesso', 'Etiqueta reenviada para impressão');
+            carregarHistorico();
+        } else {
+            ImpressaoEtiquetas.notificar('erro', data.error || 'Erro ao reimprimir');
+        }
+    } catch (error) {
+        console.error('Erro ao reimprimir:', error);
+        ImpressaoEtiquetas.notificar('erro', 'Erro ao reimprimir');
+    }
+}
+
+async function removerDoHistorico(id) {
+    if (!confirm('Remover este item do histórico?')) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/impressao/fila/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            ImpressaoEtiquetas.notificar('sucesso', 'Item removido');
+            carregarHistorico();
+        } else {
+            ImpressaoEtiquetas.notificar('erro', data.error || 'Erro ao remover');
+        }
+    } catch (error) {
+        console.error('Erro ao remover:', error);
+        ImpressaoEtiquetas.notificar('erro', 'Erro ao remover');
+    }
 }
 
 // Expor função de atualização de fila globalmente
