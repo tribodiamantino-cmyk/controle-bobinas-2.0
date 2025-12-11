@@ -21,10 +21,10 @@ exports.up = async function(db) {
     if (columns.length > 0) {
         console.log('⚠️ Campo placa já existe em retalhos');
     } else {
-        // Adicionar coluna placa
+        // Adicionar coluna placa (AFTER observacoes com S)
         await db.query(`
             ALTER TABLE retalhos 
-            ADD COLUMN placa VARCHAR(50) NULL AFTER observacao
+            ADD COLUMN placa VARCHAR(50) NULL AFTER observacoes
         `);
         console.log('✅ Coluna placa adicionada');
     }
