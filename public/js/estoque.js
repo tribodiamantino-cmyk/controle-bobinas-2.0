@@ -306,50 +306,156 @@ function mostrarProdutoNaoEncontrado() {
 
 // Abrir modal de cadastro rápido de produto
 function abrirModalCadastroProduto() {
-    const loja = document.getElementById('loja').value;
-    const codigoNumerico = document.getElementById('codigo').value.padStart(5, '0');
-    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
-    const codigoCompleto = `${prefixo}-${codigoNumerico}`;
-    
-    // Verificar se os elementos existem
-    const modalEl = document.getElementById('modal-cadastro-produto');
-    if (!modalEl) {
-        mostrarAlerta('Modal de cadastro não encontrado!', 'danger');
+    // Pegar valores do modal de bobina
+    const modalBobina = document.getElementById('modalNovaBobina');
+    if (!modalBobina) {
+        mostrarAlerta('Abra primeiro o modal de entrada de bobina.', 'warning');
         return;
     }
     
-    // Preencher dados no modal
-    const quickLoja = document.getElementById('quick-loja');
-    const quickCodigo = document.getElementById('quick-codigo');
+    const lojaEl = modalBobina.querySelector('#loja');
+    const codigoEl = modalBobina.querySelector('#codigo');
     
-    if (quickLoja) quickLoja.textContent = loja;
-    if (quickCodigo) quickCodigo.textContent = codigoCompleto;
+    const loja = lojaEl ? lojaEl.value : '';
+    const codigoNumerico = codigoEl ? codigoEl.value.padStart(5, '0') : '';
+    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
+    const codigoCompleto = `${prefixo}-${codigoNumerico}`;
     
-    // Resetar formulário
-    document.getElementById('form-cadastro-rapido').reset();
+    // Remover modal anterior se existir
+    const modalAnterior = document.getElementById('modal-cadastro-produto-overlay');
+    if (modalAnterior) modalAnterior.remove();
     
-    // Resetar campos para estado inicial (Tecido Normal)
-    document.getElementById('quick-tipo_tecido').value = 'Normal';
-    toggleCamposTecidoRapido();
+    // Criar modal dinamicamente como overlay no body
+    const modalHTML = `
+        <div id="modal-cadastro-produto-overlay" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 99999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        ">
+            <div style="
+                background: white;
+                border-radius: 8px;
+                max-width: 800px;
+                width: 90%;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+            ">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #dee2e6;">
+                    <h2 style="margin: 0;">➕ Cadastrar Novo Produto</h2>
+                    <button type="button" onclick="fecharModalCadastroProduto()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                </div>
+                <div style="padding: 20px;">
+                    <form id="form-cadastro-rapido" onsubmit="cadastrarProdutoRapido(event)">
+                        <div class="alert alert-info" style="margin-bottom: 20px;">
+                            <strong>📋 Dados herdados da entrada de bobina:</strong><br>
+                            <span style="font-size: 1.1rem;">
+                                🏪 Loja: <strong>${loja}</strong> | 
+                                🔢 Código: <strong>${codigoCompleto}</strong>
+                            </span>
+                            <input type="hidden" id="quick-loja-value" value="${loja}">
+                            <input type="hidden" id="quick-codigo-value" value="${codigoCompleto}">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Cor *</label>
+                                <select class="form-control" id="quick-cor_id" required>
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Gramatura *</label>
+                                <select class="form-control" id="quick-gramatura_id" required>
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Fabricante *</label>
+                                <select class="form-control" id="quick-fabricante" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="Propex">Propex</option>
+                                    <option value="Textiloeste">Textiloeste</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tipo de Tecido *</label>
+                                <select class="form-control" id="quick-tipo_tecido" required onchange="toggleCamposTecidoRapido()">
+                                    <option value="Normal">Normal</option>
+                                    <option value="Bando Y">Bando Y</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="quick-campos-normal" class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Largura sem costura (cm) *</label>
+                                <input type="number" class="form-control" id="quick-largura_sem_costura" step="0.01" min="0" placeholder="Ex: 300">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tipo de Bainha *</label>
+                                <select class="form-control" id="quick-tipo_bainha">
+                                    <option value="">Selecione...</option>
+                                    <option value="Sem Bainha">Sem Bainha</option>
+                                    <option value="Cano/Cano">Cano/Cano</option>
+                                    <option value="Cano/Arame">Cano/Arame</option>
+                                    <option value="Arame/Arame">Arame/Arame</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Largura Final (cm) *</label>
+                                <input type="number" class="form-control" id="quick-largura_final" step="0.01" min="0" placeholder="Ex: 290" oninput="validarLarguraFinalRapido()">
+                                <small id="quick-erro-largura-final" style="color: red; display: none;">Largura final não pode ser maior que largura sem costura</small>
+                            </div>
+                        </div>
+
+                        <div id="quick-campos-bando-y" class="form-row" style="display: none;">
+                            <div class="form-group">
+                                <label class="form-label">Largura Maior (cm) *</label>
+                                <input type="number" class="form-control" id="quick-largura_maior" step="0.01" min="0" placeholder="Ex: 320">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Largura Y (cm) *</label>
+                                <input type="number" class="form-control" id="quick-largura_y" step="0.01" min="0" placeholder="Ex: 280">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                            <button type="button" class="btn btn-secondary" onclick="fecharModalCadastroProduto()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">💾 Salvar Produto</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
     
-    // Limpar erro de largura
-    const erroLargura = document.getElementById('quick-erro-largura-final');
-    if (erroLargura) erroLargura.style.display = 'none';
+    // Inserir no body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
     
-    // Mostrar modal por cima do modal de bobina
-    modalEl.style.display = 'flex';
-    modalEl.style.zIndex = '9999'; // Garantir que fique na frente de tudo
+    // Carregar cores e gramaturas
+    carregarCoresParaCadastroRapido();
+    carregarGramaturasParaCadastroRapido();
     
     console.log('✅ Modal de cadastro de produto aberto');
 }
 
 // Fechar modal de cadastro de produto
 function fecharModalCadastroProduto() {
-    const modalEl = document.getElementById('modal-cadastro-produto');
+    const modalEl = document.getElementById('modal-cadastro-produto-overlay');
     if (modalEl) {
-        modalEl.style.display = 'none';
+        modalEl.remove();
     }
-    document.getElementById('form-cadastro-rapido').reset();
 }
 
 // Validar largura final no cadastro rápido
@@ -404,31 +510,15 @@ function toggleCamposTecidoRapido() {
 async function cadastrarProdutoRapido(e) {
     e.preventDefault();
     
-    // Pegar valores do modal de bobina (que está aberto por trás)
-    const modalBobina = document.getElementById('modalNovaBobina');
-    if (!modalBobina) {
-        mostrarAlerta('Erro: modal de bobina não encontrado.', 'danger');
+    // Pegar valores dos campos hidden (preenchidos ao abrir o modal)
+    const loja = document.getElementById('quick-loja-value').value;
+    const codigoCompleto = document.getElementById('quick-codigo-value').value;
+    
+    if (!loja || !codigoCompleto) {
+        mostrarAlerta('Erro: dados da bobina não encontrados.', 'danger');
         return;
     }
     
-    const lojaEl = modalBobina.querySelector('#loja');
-    const codigoEl = modalBobina.querySelector('#codigo');
-    
-    if (!lojaEl || !codigoEl) {
-        mostrarAlerta('Erro: campos de loja/código não encontrados.', 'danger');
-        return;
-    }
-    
-    const loja = lojaEl.value;
-    const codigoNumerico = codigoEl.value;
-    
-    if (!loja || !codigoNumerico) {
-        mostrarAlerta('Erro: preencha loja e código antes de cadastrar o produto.', 'warning');
-        return;
-    }
-    
-    const prefixo = loja === 'Cortinave' ? 'CTV' : 'BN';
-    const codigoCompleto = `${prefixo}-${codigoNumerico.padStart(5, '0')}`;
     const fabricante = document.getElementById('quick-fabricante').value;
     const tipoTecido = document.getElementById('quick-tipo_tecido').value;
     
