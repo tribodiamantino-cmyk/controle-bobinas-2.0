@@ -43,8 +43,8 @@ exports.criarProduto = async (req, res) => {
         return res.status(400).json({ success: false, error: 'Campos obrigatórios: loja, código, cor, gramatura e fabricante' });
     }
 
-    // Validar formato do código (CTV-00001 ou BN-00001 - 5 dígitos)
-    const prefixoEsperado = loja === 'Cortinave' ? 'CTV' : 'BN';
+    // Validar formato do código (PLA-00001 ou CIA-00001 - 5 dígitos) - Conforme PADRONIZACAO_CODIGOS.md
+    const prefixoEsperado = loja === 'Cortinave' ? 'PLA' : 'CIA';
     const regexCodigo = new RegExp(`^${prefixoEsperado}-\\d{5}$`);
     
     if (!regexCodigo.test(codigo)) {
