@@ -144,9 +144,11 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         console.log('   Loja:', bobina.loja);
         
         // Verificar se bobina tem alocações em planos em produção
+        // JOIN através de itens_plano_corte pois alocacoes_corte não tem link direto com planos_corte
         const [alocacoes] = await connection.query(
             `SELECT COUNT(*) as count FROM alocacoes_corte ac
-             JOIN planos_corte pc ON ac.plano_corte_id = pc.id
+             JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
+             JOIN planos_corte pc ON pc.id = ipc.plano_corte_id
              WHERE ac.bobina_id = ? AND pc.status = 'em_producao'`,
             [bobina_id]
         );
