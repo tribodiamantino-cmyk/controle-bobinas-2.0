@@ -403,4 +403,34 @@ Com isso, já dá para usar no dia a dia!
 
 ---
 
+## 🔧 TECH DEBT (Dívidas Técnicas)
+
+> **Instruções para AI Agents:** Sempre que o usuário sugerir algo e pedir para "deixar pra depois", adicione aqui com status `[ ]`. Quando resolver, marque como `[x]`.
+
+### Banco de Dados
+- [ ] **Renumerar migrations 028** - Existem duas: `028_add_origem_cortes.js` e `028_add_placa_fallback.js` (ambas já rodaram, apenas organização)
+- [ ] **Atualizar schema.sql** - Arquivo `database/schema.sql` não reflete o estado atual do banco (migrations são a fonte de verdade)
+- [ ] **Padronizar status 'Vazia' → 'Esgotado'** - Trigger usa 'Vazia', mas convenção é 'Esgotado' para items zerados
+
+### Código
+- [ ] **Adicionar TypeScript** (opcional futuro) - Melhor tipagem e menos bugs
+
+### Documentação
+- [x] **Criar PADRONIZACAO_BANCO.md** - Documentação completa do schema (v2.4.0)
+- [x] **Corrigir copilot-instructions.md** - Arquivo estava corrompido
+
+---
+
+## 📋 BACKLOG DE IDEIAS
+
+> **Instruções para AI Agents:** Quando o usuário mencionar funcionalidades futuras ou ideias que não são prioridade agora, registre aqui.
+
+- [ ] Sistema de autenticação com níveis de acesso
+- [ ] Mapa visual de locações no armazém
+- [ ] App PWA completo para chão de fábrica
+- [ ] Relatórios de produtividade por operador
+- [ ] Integração com ERP (se houver)
+
+---
+
 **Vamos nessa? 🚀**
