@@ -3,26 +3,38 @@ const db = require('../config/database');
 // Gerar código QR único para retalho (formato: RET-{LOJA}-{SEQUENCIAL})
 // Conforme PADRONIZACAO_CODIGOS.md
 async function gerarCodigoRetalho(loja) {
-    // Determinar prefixo da loja
-    const prefixoLoja = loja === 'Cortinave' ? 'PLA' : 'CIA';
-    
-    // Buscar último código RET (sequencial global, independente da loja)
-    const [rows] = await db.query(
-        `SELECT codigo_retalho FROM retalhos 
-         WHERE codigo_retalho LIKE 'RET-%-%' 
-         ORDER BY id DESC LIMIT 1`
-    );
-    
-    let proximoNumero = 1;
-    if (rows.length > 0) {
-        const ultimoCodigo = rows[0].codigo_retalho;
-        // Formato: RET-XXX-000001, pegar o último grupo de números
-        const partes = ultimoCodigo.split('-');
-        const numeroAtual = parseInt(partes[2]);
-        proximoNumero = numeroAtual + 1;
+    try {
+        // Determinar prefixo da loja
+        const prefixoLoja = loja === 'Cortinave' ? 'PLA' : 'CIA';
+        console.log('🔢 Gerando código para loja:', loja, '→ Prefixo:', prefixoLoja);
+        
+        // Buscar último código RET com novo formato (RET-XXX-XXXXXX)
+        const [rows] = await db.query(
+            `SELECT codigo_retalho FROM retalhos 
+             WHERE codigo_retalho REGEXP '^RET-[A-Z]{3}-[0-9]{6}$'
+             ORDER BY id DESC LIMIT 1`
+        );
+        
+        let proximoNumero = 1;
+        if (rows.length > 0) {
+            const ultimoCodigo = rows[0].codigo_retalho;
+            console.log('📋 Último código encontrado:', ultimoCodigo);
+            // Formato: RET-XXX-000001, pegar o último grupo de números
+            const partes = ultimoCodigo.split('-');
+            if (partes.length === 3) {
+                const numeroAtual = parseInt(partes[2]);
+                proximoNumero = numeroAtual + 1;
+            }
+        }
+        
+        const novoCodigo = `RET-${prefixoLoja}-${proximoNumero.toString().padStart(6, '0')}`;
+        console.log('✅ Novo código gerado:', novoCodigo);
+        return novoCodigo;
+        
+    } catch (error) {
+        console.error('❌ Erro ao gerar código de retalho:', error);
+        throw error;
     }
-    
-    return `RET-${prefixoLoja}-${proximoNumero.toString().padStart(6, '0')}`;
 }
 
 // Criar retalho manualmente
