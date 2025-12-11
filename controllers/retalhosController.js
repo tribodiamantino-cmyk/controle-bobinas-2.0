@@ -159,22 +159,55 @@ exports.converterBobinaEmRetalho = async (req, res) => {
         const codigo_retalho = await gerarCodigoRetalho(bobina.loja);
         console.log('✅ Código gerado:', codigo_retalho);
         
-        // Criar retalho HERDANDO A PLACA da bobina (para fins de garantia)
+        // Verificar se coluna placa existe em retalhos
+        console.log('🔍 Verificando estrutura da tabela retalhos...');
+        const [colunas] = await connection.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'retalhos' 
+            AND COLUMN_NAME = 'placa'
+        `);
+        
+        const temPlaca = colunas.length > 0;
+        console.log('   Coluna placa existe?', temPlaca);
+        
+        // Criar retalho (COM ou SEM placa dependendo do schema)
         console.log('💾 Inserindo retalho no banco...');
-        console.log('   Placa herdada:', bobina.placa || 'Sem placa');
-        const [result] = await connection.query(
-            `INSERT INTO retalhos 
-            (codigo_retalho, produto_id, metragem, bobina_origem_id, placa, observacoes) 
-            VALUES (?, ?, ?, ?, ?, ?)`,
-            [
-                codigo_retalho, 
-                bobina.produto_id, 
-                bobina.metragem_atual,
-                bobina_id,
-                bobina.placa || null, // HERDA PLACA da bobina
-                `Convertido da bobina ${bobina.codigo_interno}`
-            ]
-        );
+        console.log('   Placa da bobina:', bobina.placa || 'Sem placa');
+        
+        let result;
+        if (temPlaca) {
+            // INSERT com placa
+            [result] = await connection.query(
+                `INSERT INTO retalhos 
+                (codigo_retalho, produto_id, metragem, bobina_origem_id, placa, observacoes) 
+                VALUES (?, ?, ?, ?, ?, ?)`,
+                [
+                    codigo_retalho, 
+                    bobina.produto_id, 
+                    bobina.metragem_atual,
+                    bobina_id,
+                    bobina.placa || null, // HERDA PLACA da bobina
+                    `Convertido da bobina ${bobina.codigo_interno}`
+                ]
+            );
+        } else {
+            // INSERT sem placa (fallback)
+            console.log('⚠️ Tabela sem coluna placa, inserindo sem ela');
+            [result] = await connection.query(
+                `INSERT INTO retalhos 
+                (codigo_retalho, produto_id, metragem, bobina_origem_id, observacoes) 
+                VALUES (?, ?, ?, ?, ?)`,
+                [
+                    codigo_retalho, 
+                    bobina.produto_id, 
+                    bobina.metragem_atual,
+                    bobina_id,
+                    `Convertido da bobina ${bobina.codigo_interno}`
+                ]
+            );
+        }
         
         const retalho_id = result.insertId;
         console.log('✅ Retalho criado com ID:', retalho_id);
