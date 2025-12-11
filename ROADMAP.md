@@ -425,6 +425,7 @@ Com isso, já dá para usar no dia a dia!
 
 > **Instruções para AI Agents:** Quando o usuário mencionar funcionalidades futuras ou ideias que não são prioridade agora, registre aqui.
 
+- [ ] **Página de Histórico** - Criar `/historico.html` para visualizar movimentações (API já existe em `/api/historico`)
 - [ ] Sistema de autenticação com níveis de acesso
 - [ ] Mapa visual de locações no armazém
 - [ ] App PWA completo para chão de fábrica
