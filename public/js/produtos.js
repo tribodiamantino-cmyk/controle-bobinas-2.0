@@ -399,15 +399,20 @@ function renderizarProdutos(listaProdutos) {
                 </span>
             </td>
             <td>
-                <button class="btn btn-danger btn-sm" onclick="excluirProduto(${produto.id})">🗑️</button>
+                <button class="btn btn-primary btn-sm" onclick="editarProduto(${produto.id})" title="Editar produto">✏️</button>
+                <button class="btn btn-danger btn-sm" onclick="excluirProduto(${produto.id})" title="Excluir produto">🗑️</button>
             </td>
         </tr>
     `}).join('');
 }
 
-// Cadastrar novo produto
+// Cadastrar ou atualizar produto
 async function cadastrarProduto(e) {
     e.preventDefault();
+    
+    const form = e.target;
+    const editandoId = form.dataset.editandoId;
+    const isEdicao = !!editandoId;
     
     const tipoTecido = document.getElementById('tipo_tecido').value;
     
@@ -428,22 +433,33 @@ async function cadastrarProduto(e) {
         cor_id: parseInt(document.getElementById('cor_id').value),
         gramatura_id: parseInt(document.getElementById('gramatura_id').value),
         fabricante: document.getElementById('fabricante').value,
-        tipo_tecido: tipoTecido
+        tipo_tecido: tipoTecido,
+        ativo: 1 // Manter ativo ao editar
     };
     
     // Adicionar campos específicos conforme o tipo
     if (tipoTecido === 'Bando Y') {
         produto.largura_maior = parseFloat(document.getElementById('largura_maior').value);
         produto.largura_y = parseFloat(document.getElementById('largura_y').value);
+        // Zerar campos do tipo normal
+        produto.largura_sem_costura = null;
+        produto.tipo_bainha = null;
+        produto.largura_final = null;
     } else {
         produto.largura_sem_costura = parseFloat(document.getElementById('largura_sem_costura').value);
         produto.tipo_bainha = document.getElementById('tipo_bainha').value;
         produto.largura_final = parseFloat(document.getElementById('largura_final').value);
+        // Zerar campos do Bando Y
+        produto.largura_maior = null;
+        produto.largura_y = null;
     }
     
     try {
-        const response = await fetch('/api/produtos', {
-            method: 'POST',
+        const url = isEdicao ? `/api/produtos/${editandoId}` : '/api/produtos';
+        const method = isEdicao ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(produto)
         });
@@ -453,28 +469,39 @@ async function cadastrarProduto(e) {
         console.log('Resposta do servidor:', response.status, data);
         
         if (response.ok) {
-            mostrarAlerta(`Produto ${codigoFinal} cadastrado com sucesso!`, 'success');
+            const mensagem = isEdicao 
+                ? `Produto ${codigoFinal} atualizado com sucesso!`
+                : `Produto ${codigoFinal} cadastrado com sucesso!`;
             
-            // Limpar formulário completamente
-            document.getElementById('form-produto').reset();
+            mostrarAlerta(mensagem, 'success');
             
-            // Resetar tipo de tecido para Normal e mostrar campos corretos
-            document.getElementById('tipo_tecido').value = 'Normal';
-            toggleCamposTecido();
-            
-            // Limpar preview
-            document.getElementById('codigo-preview').textContent = 'Código final: -';
-            document.getElementById('codigo-preview').style.color = '#666';
+            // Se estava editando, limpar o estado de edição
+            if (isEdicao) {
+                cancelarEdicao();
+            } else {
+                // Limpar formulário completamente
+                document.getElementById('form-produto').reset();
+                
+                // Resetar tipo de tecido para Normal e mostrar campos corretos
+                document.getElementById('tipo_tecido').value = 'Normal';
+                toggleCamposTecido();
+                
+                // Limpar preview
+                document.getElementById('codigo-preview').textContent = 'Código final: -';
+                document.getElementById('codigo-preview').style.color = '#666';
+            }
             
             // Recarregar lista de produtos
             carregarProdutos();
         } else {
             console.error('Erro detalhado:', data);
-            mostrarAlerta(data.error || 'Erro ao cadastrar produto', 'danger');
+            const tipoOperacao = isEdicao ? 'atualizar' : 'cadastrar';
+            mostrarAlerta(data.error || `Erro ao ${tipoOperacao} produto`, 'danger');
         }
     } catch (error) {
         console.error('Erro na requisição:', error);
-        mostrarAlerta('Erro ao cadastrar produto: ' + error.message, 'danger');
+        const tipoOperacao = isEdicao ? 'atualizar' : 'cadastrar';
+        mostrarAlerta(`Erro ao ${tipoOperacao} produto: ` + error.message, 'danger');
     }
 }
 
@@ -553,6 +580,91 @@ async function salvarCampo(id, campo) {
         mostrarAlerta('Erro ao atualizar produto: ' + error.message, 'danger');
         carregarProdutos();
     }
+}
+
+// Editar produto
+async function editarProduto(id) {
+    try {
+        // Buscar dados do produto
+        const response = await fetch(`/api/produtos/${id}`);
+        const data = await response.json();
+        
+        if (!data.success || !data.data) {
+            mostrarAlerta('Erro ao carregar produto', 'danger');
+            return;
+        }
+        
+        const produto = data.data;
+        
+        // Preencher formulário com dados do produto
+        document.getElementById('loja').value = produto.loja;
+        document.getElementById('codigo').value = produto.codigo.split('-')[1]; // Pegar apenas os números
+        document.getElementById('cor_id').value = produto.cor_id;
+        document.getElementById('gramatura_id').value = produto.gramatura_id;
+        document.getElementById('fabricante').value = produto.fabricante;
+        document.getElementById('tipo_tecido').value = produto.tipo_tecido || 'Normal';
+        
+        // Atualizar campos específicos conforme tipo
+        toggleCamposTecido();
+        
+        if (produto.tipo_tecido === 'Bando Y') {
+            document.getElementById('largura_maior').value = produto.largura_maior;
+            document.getElementById('largura_y').value = produto.largura_y;
+        } else {
+            document.getElementById('largura_sem_costura').value = produto.largura_sem_costura;
+            document.getElementById('tipo_bainha').value = produto.tipo_bainha;
+            document.getElementById('largura_final').value = produto.largura_final;
+        }
+        
+        // Mudar o formulário para modo edição
+        const form = document.getElementById('form-produto');
+        form.dataset.editandoId = id;
+        
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        btnSubmit.innerHTML = '💾 Atualizar Produto';
+        btnSubmit.classList.remove('btn-primary');
+        btnSubmit.classList.add('btn-warning');
+        
+        // Adicionar botão de cancelar edição
+        let btnCancelar = document.getElementById('btn-cancelar-edicao');
+        if (!btnCancelar) {
+            btnCancelar = document.createElement('button');
+            btnCancelar.type = 'button';
+            btnCancelar.id = 'btn-cancelar-edicao';
+            btnCancelar.className = 'btn btn-secondary';
+            btnCancelar.innerHTML = '❌ Cancelar';
+            btnCancelar.onclick = cancelarEdicao;
+            btnSubmit.parentElement.insertBefore(btnCancelar, btnSubmit);
+        }
+        
+        // Scroll para o formulário
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        mostrarAlerta('Editando produto. Modifique os campos e clique em "Atualizar Produto"', 'info');
+        
+    } catch (error) {
+        mostrarAlerta('Erro ao carregar produto: ' + error.message, 'danger');
+    }
+}
+
+// Cancelar edição
+function cancelarEdicao() {
+    const form = document.getElementById('form-produto');
+    delete form.dataset.editandoId;
+    
+    const btnSubmit = form.querySelector('button[type="submit"]');
+    btnSubmit.innerHTML = '💾 Cadastrar Produto';
+    btnSubmit.classList.remove('btn-warning');
+    btnSubmit.classList.add('btn-primary');
+    
+    const btnCancelar = document.getElementById('btn-cancelar-edicao');
+    if (btnCancelar) {
+        btnCancelar.remove();
+    }
+    
+    form.reset();
+    toggleCamposTecido();
+    mostrarAlerta('Edição cancelada', 'info');
 }
 
 // Excluir produto

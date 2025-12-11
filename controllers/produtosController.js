@@ -20,6 +20,33 @@ exports.listarProdutos = async (req, res) => {
     }
 };
 
+// Buscar produto por ID
+exports.buscarProdutoPorId = async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        const [produtos] = await db.query(
+            `SELECT p.*, 
+                    c.nome_cor, 
+                    g.gramatura
+             FROM produtos p
+             LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+             LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+             WHERE p.id = ?`,
+            [id]
+        );
+        
+        if (produtos.length === 0) {
+            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
+        }
+        
+        res.json({ success: true, data: produtos[0] });
+    } catch (error) {
+        console.error('Erro ao buscar produto:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 // Criar produto
 exports.criarProduto = async (req, res) => {
     const { 
