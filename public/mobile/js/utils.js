@@ -191,11 +191,12 @@ const Utils = {
         if (!codigo) return false;
         
         const padroes = [
-            /^BOB-[A-Z]{3}-\d{6}$/,     // BOB-PLA-000001
-            /^RET-[A-Z]{3}-\d{6}$/,     // RET-CIA-000042
-            /^COR-\d{4}-\d{5}$/,        // COR-2025-00001
-            /^PDC-[A-Z]{3}-\d{3}$/,     // PDC-PLA-015
-            /^LOC-\d+$/                 // LOC-15
+            /^BOB-[A-Z]{3}-\d{6}$/,           // BOB-PLA-000001
+            /^RET-[A-Z]{3}-\d{6}$/,           // RET-CIA-000042
+            /^COR-\d{4}-\d{5}$/,              // COR-2025-00001
+            /^PDC-[A-Z]{3}-\d{3}$/,           // PDC-PLA-015
+            /^LOC-\d{1,4}-[A-Z]-\d{1,4}$/,    // LOC-1-A-1 até LOC-9999-Z-9999
+            /^\d{1,4}-[A-Z]-\d{1,4}$/         // 1-A-1 até 9999-Z-9999 (sem prefixo)
         ];
         
         return padroes.some(padrao => padrao.test(codigo));
@@ -212,6 +213,9 @@ const Utils = {
         if (codigo.startsWith('COR-')) return 'corte';
         if (codigo.startsWith('PDC-')) return 'pdc';
         if (codigo.startsWith('LOC-')) return 'locacao';
+        
+        // Formato de locação SEM prefixo: 1-A-1 até 9999-Z-9999
+        if (/^\d{1,4}-[A-Z]-\d{1,4}$/.test(codigo)) return 'locacao';
         
         return null;
     },
