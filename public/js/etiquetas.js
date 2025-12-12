@@ -509,8 +509,8 @@ function adicionarLocacao() {
 }
 
 function validarFormatoLocacao(codigo) {
-    // Formato: 0000-X-0000 (4 dígitos, letra, 4 dígitos)
-    const regex = /^\d{4}-[A-Z]-\d{4}$/;
+    // Formato flexível: N-X-N (de 1-A-1 até 9999-Z-9999)
+    const regex = /^\d{1,4}-[A-Z]-\d{1,4}$/;
     return regex.test(codigo);
 }
 

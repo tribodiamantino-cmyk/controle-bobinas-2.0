@@ -1051,7 +1051,7 @@ function renderizarItemBobina(bobina) {
                 <div class="bobina-localizacao-edit" id="loc-edit-${bobina.id}" style="display: none;">
                     📍 Localização: 
                     <input type="text" class="input-localizacao" id="input-loc-${bobina.id}" 
-                           placeholder="0000-X-0000" maxlength="12" 
+                           placeholder="1-A-1" maxlength="12" 
                            onkeyup="aplicarMascaraLocalizacao(${bobina.id})">
                     <button class="btn btn-sm btn-success" onclick="salvarLocalizacao(${bobina.id})">✅</button>
                     <button class="btn btn-sm btn-secondary" onclick="cancelarEdicaoLocalizacao(${bobina.id})">❌</button>
@@ -1129,7 +1129,7 @@ function renderizarItemRetalho(retalho) {
                 <div class="bobina-localizacao-edit" id="loc-edit-ret-${retalho.id}" style="display: none;">
                     📍 Localização: 
                     <input type="text" class="input-localizacao" id="input-loc-ret-${retalho.id}" 
-                           placeholder="0000-X-0000" maxlength="12" 
+                           placeholder="1-A-1" maxlength="12" 
                            onkeyup="aplicarMascaraLocalizacaoRetalho(${retalho.id})">
                     <button class="btn btn-sm btn-success" onclick="salvarLocalizacaoRetalho(${retalho.id})">✅</button>
                     <button class="btn btn-sm btn-secondary" onclick="cancelarEdicaoLocalizacaoRetalho(${retalho.id})">❌</button>
@@ -1268,9 +1268,9 @@ function abrirModalNovoRetalho(produtoId) {
                             <div class="form-group">
                                 <label>📍 Localização (Opcional)</label>
                                 <input type="text" class="form-control" id="retalho-localizacao" 
-                                       placeholder="0000-X-0000" maxlength="12"
+                                       placeholder="1-A-1" maxlength="12"
                                        onkeyup="aplicarMascaraLocalizacaoInput('retalho-localizacao')">
-                                <small class="form-text text-muted">Formato: 0000-X-0000</small>
+                                <small class="form-text text-muted">Formato: N-X-N (ex: 1-A-1, 150-B-320)</small>
                             </div>
                             
                             <div class="form-group">
@@ -1397,32 +1397,23 @@ function cancelarEdicaoLocalizacaoRetalho(retalhoId) {
     document.getElementById(`loc-edit-ret-${retalhoId}`).style.display = 'none';
 }
 
-// Aplicar máscara de localização em retalho
+// Aplicar máscara de localização em retalho (flexível N-X-N)
 function aplicarMascaraLocalizacaoRetalho(retalhoId) {
     const input = document.getElementById(`input-loc-ret-${retalhoId}`);
-    let valor = input.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    let valor = input.value.toUpperCase().replace(/[^0-9A-Z-]/g, '');
     
-    if (valor.length > 4) {
-        valor = valor.substring(0, 4) + '-' + valor.substring(4);
-    }
-    if (valor.length > 6) {
-        valor = valor.substring(0, 6) + '-' + valor.substring(6);
-    }
-    if (valor.length > 11) {
-        valor = valor.substring(0, 11);
-    }
-    
+    // Permite digitação livre no formato N-X-N
     input.value = valor;
 }
 
 // Salvar localização de retalho
 async function salvarLocalizacaoRetalho(retalhoId) {
-    const novaLocalizacao = document.getElementById(`input-loc-ret-${retalhoId}`).value.trim();
+    const novaLocalizacao = document.getElementById(`input-loc-ret-${retalhoId}`).value.trim().toUpperCase();
     
-    // Validar formato
-    const regex = /^\d{4}-[A-Z]-\d{4}$/;
+    // Validar formato flexível: 1-A-1 até 9999-Z-9999
+    const regex = /^\d{1,4}-[A-Z]-\d{1,4}$/;
     if (novaLocalizacao && !regex.test(novaLocalizacao)) {
-        mostrarAlerta('Formato de localização inválido! Use: 0000-X-0000', 'warning');
+        mostrarAlerta('Formato de localização inválido! Use: N-X-N (ex: 1-A-1, 150-B-320)', 'warning');
         return;
     }
     
@@ -1482,21 +1473,12 @@ async function verHistoricoLocalizacaoRetalho(retalhoId) {
     }
 }
 
-// Aplicar máscara em input genérico (para modal)
+// Aplicar máscara em input genérico (para modal) - flexível N-X-N
 function aplicarMascaraLocalizacaoInput(inputId) {
     const input = document.getElementById(inputId);
-    let valor = input.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    let valor = input.value.toUpperCase().replace(/[^0-9A-Z-]/g, '');
     
-    if (valor.length > 4) {
-        valor = valor.substring(0, 4) + '-' + valor.substring(4);
-    }
-    if (valor.length > 6) {
-        valor = valor.substring(0, 6) + '-' + valor.substring(6);
-    }
-    if (valor.length > 11) {
-        valor = valor.substring(0, 11);
-    }
-    
+    // Permite digitação livre no formato N-X-N
     input.value = valor;
 }
 
@@ -1811,24 +1793,20 @@ function cancelarEdicaoLocalizacao(bobinaId) {
     document.getElementById(`loc-edit-${bobinaId}`).style.display = 'none';
 }
 
-// Aplicar máscara de localização: 0000-X-0000
+// Aplicar máscara de localização: N-X-N (flexível de 1-A-1 até 9999-Z-9999)
 function aplicarMascaraLocalizacao(bobinaId) {
     const input = document.getElementById(`input-loc-${bobinaId}`);
-    let valor = input.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
+    let valor = input.value.toUpperCase().replace(/[^0-9A-Z-]/g, '');
     
-    // Aplicar máscara
-    if (valor.length <= 4) {
-        input.value = valor;
-    } else if (valor.length <= 5) {
-        input.value = valor.slice(0, 4) + '-' + valor.slice(4);
-    } else {
-        input.value = valor.slice(0, 4) + '-' + valor.slice(4, 5) + '-' + valor.slice(5, 9);
-    }
+    // Permite digitação livre no formato N-X-N
+    // Remove caracteres inválidos mas mantém hífens
+    input.value = valor;
 }
 
-// Validar formato de localização
+// Validar formato de localização (flexível)
 function validarLocalizacao(localizacao) {
     if (!localizacao) return true; // Vazio é permitido
+    // Aceita de 1-A-1 até 9999-Z-9999
     const regex = /^\d{1,4}-[A-Z]-\d{1,4}$/;
     return regex.test(localizacao);
 }
@@ -1836,11 +1814,11 @@ function validarLocalizacao(localizacao) {
 // Salvar localização
 async function salvarLocalizacao(bobinaId) {
     const input = document.getElementById(`input-loc-${bobinaId}`);
-    const novaLocalizacao = input.value.trim();
+    const novaLocalizacao = input.value.trim().toUpperCase();
     
     // Validar formato
     if (novaLocalizacao && !validarLocalizacao(novaLocalizacao)) {
-        mostrarAlerta('Formato inválido! Use: 0000-X-0000 (ex: 0150-B-0320)', 'danger');
+        mostrarAlerta('Formato inválido! Use: N-X-N (ex: 1-A-1, 150-B-320)', 'danger');
         input.focus();
         return;
     }
