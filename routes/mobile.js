@@ -2110,9 +2110,9 @@ router.get('/validar-codigo/:codigo', async (req, res) => {
         // Detecta tipo pelo prefixo
         if (codigo.startsWith('BOB-')) {
             tipo = 'bobina';
-            // Busca bobina pelo código
+            // Busca bobina pelo código (código correto: codigo_interno)
             const [bobinas] = await db.query(
-                'SELECT id, codigo_bobina as codigo FROM bobinas WHERE codigo_bobina = ? OR qr_code = ?',
+                'SELECT id, codigo_interno as codigo FROM bobinas WHERE codigo_interno = ? OR qr_code = ?',
                 [codigo, codigo]
             );
             if (bobinas.length > 0) {
@@ -2385,10 +2385,10 @@ router.post('/pdcs/validar-origem', async (req, res) => {
 
         console.log('🔍 Validando origem escaneada:', codigo_escaneado);
 
-        // Busca o item pelo código
+        // Busca o item pelo código (código correto: codigo_interno para bobinas)
         const validacao = await db.query(
             origem_esperada_tipo === 'bobina'
-                ? 'SELECT id, codigo_bobina as codigo FROM bobinas WHERE codigo_bobina = ? OR qr_code = ?'
+                ? 'SELECT id, codigo_interno as codigo FROM bobinas WHERE codigo_interno = ? OR qr_code = ?'
                 : 'SELECT id, qr_code as codigo FROM retalhos WHERE qr_code = ?',
             origem_esperada_tipo === 'bobina' 
                 ? [codigo_escaneado, codigo_escaneado]

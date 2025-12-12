@@ -7,13 +7,34 @@ exports.up = async function(db) {
     `);
     
     if (columns.length === 0) {
+        // Adicionar colunas uma por uma para evitar erro de duplicatas
         await db.query(`
             ALTER TABLE planos_corte
-            ADD COLUMN locacoes_validadas BOOLEAN DEFAULT FALSE COMMENT 'Se operador escaneou QR das locações',
-            ADD COLUMN data_armazenamento TIMESTAMP NULL COMMENT 'Quando foi guardado',
-            ADD COLUMN armazenado_por VARCHAR(100) NULL COMMENT 'Quem guardou',
-            ADD COLUMN data_finalizacao TIMESTAMP NULL COMMENT 'Quando plano foi finalizado'
+            ADD COLUMN locacoes_validadas BOOLEAN DEFAULT FALSE COMMENT 'Se operador escaneou QR das locações'
         `);
+        
+        await db.query(`
+            ALTER TABLE planos_corte
+            ADD COLUMN data_armazenamento TIMESTAMP NULL COMMENT 'Quando foi guardado'
+        `);
+        
+        await db.query(`
+            ALTER TABLE planos_corte
+            ADD COLUMN armazenado_por VARCHAR(100) NULL COMMENT 'Quem guardou'
+        `);
+        
+        // data_finalizacao já pode existir - verificar antes de adicionar
+        const [finalizacaoCol] = await db.query(`
+            SHOW COLUMNS FROM planos_corte LIKE 'data_finalizacao'
+        `);
+        
+        if (finalizacaoCol.length === 0) {
+            await db.query(`
+                ALTER TABLE planos_corte
+                ADD COLUMN data_finalizacao TIMESTAMP NULL COMMENT 'Quando plano foi finalizado'
+            `);
+        }
+        
         console.log('✓ Colunas adicionadas à tabela planos_corte');
     } else {
         console.log('⏭️  Colunas já existem - pulando');

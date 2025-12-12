@@ -83,6 +83,9 @@ async function runMigrations() {
 
 // ============= SEGURANÇA =============
 
+// Trust proxy - necessário para Railway/Heroku (atrás de proxy reverso)
+app.set('trust proxy', 1);
+
 // Helmet - Headers de segurança
 app.use(helmet({
     contentSecurityPolicy: false, // Desabilitado para não quebrar inline scripts
