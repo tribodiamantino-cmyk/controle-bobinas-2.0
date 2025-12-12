@@ -261,6 +261,7 @@ exports.listarBobinasPorProduto = async (req, res) => {
         const [bobinas] = await db.query(
             `SELECT 
                 b.*,
+                b.locacao as localizacao_atual,
                 p.codigo,
                 p.fabricante,
                 c.nome_cor,

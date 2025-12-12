@@ -378,6 +378,7 @@ exports.listarRetalhosPorProduto = async (req, res) => {
         const [retalhos] = await db.query(
             `SELECT 
                 r.*,
+                r.locacao as localizacao_atual,
                 p.codigo,
                 p.fabricante,
                 c.nome_cor,
