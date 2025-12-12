@@ -271,7 +271,7 @@ class ConsultasModule {
                 <div class="detail-header">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h2><i class="bi bi-box me-2"></i>${data.codigo_bobina || data.qr_code}</h2>
+                            <h2><i class="bi bi-box me-2"></i>${data.codigo_interno}</h2>
                             <span class="badge bg-${statusClass}">${data.status}</span>
                         </div>
                         <div class="text-end">
@@ -376,7 +376,7 @@ class ConsultasModule {
                 <div class="detail-header">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h2><i class="bi bi-recycle me-2"></i>${data.qr_code}</h2>
+                            <h2><i class="bi bi-recycle me-2"></i>${data.codigo_retalho}</h2>
                             <span class="badge bg-${statusClass}">${data.status}</span>
                         </div>
                         <div class="text-end">

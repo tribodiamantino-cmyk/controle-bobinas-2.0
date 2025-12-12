@@ -1154,17 +1154,9 @@ router.post('/finalizar-plano/:planoId', async (req, res) => {
                         ]
                     );
                     
-                    // Gerar QR code para o retalho (formato: R-{id})
-                    const qrCode = `R-${retalhoResult.insertId}`;
-                    await connection.query(
-                        'UPDATE retalhos SET qr_code = ? WHERE id = ?',
-                        [qrCode, retalhoResult.insertId]
-                    );
-                    
                     retalhosCriados.push({
                         id: retalhoResult.insertId,
                         codigo: codigoRetalho,
-                        qr_code: qrCode,
                         metragem: sobra,
                         origem: origem.bobina_codigo
                     });
@@ -1311,7 +1303,6 @@ router.post('/imprimir/buscar-codigo', async (req, res) => {
                 SELECT 
                     r.id,
                     r.codigo_retalho,
-                    r.qr_code,
                     r.metragem,
                     r.localizacao_atual,
                     p.codigo as produto_codigo,
@@ -2110,10 +2101,10 @@ router.get('/validar-codigo/:codigo', async (req, res) => {
         // Detecta tipo pelo prefixo
         if (codigo.startsWith('BOB-')) {
             tipo = 'bobina';
-            // Busca bobina pelo código (código correto: codigo_interno)
+            // Busca bobina pelo código
             const [bobinas] = await db.query(
-                'SELECT id, codigo_interno as codigo FROM bobinas WHERE codigo_interno = ? OR qr_code = ?',
-                [codigo, codigo]
+                'SELECT id, codigo_interno as codigo FROM bobinas WHERE codigo_interno = ?',
+                [codigo]
             );
             if (bobinas.length > 0) {
                 id = bobinas[0].id;
@@ -2122,10 +2113,10 @@ router.get('/validar-codigo/:codigo', async (req, res) => {
 
         } else if (codigo.startsWith('RET-')) {
             tipo = 'retalho';
-            // Busca retalho pelo código (código correto: codigo_retalho)
+            // Busca retalho pelo código
             const [retalhos] = await db.query(
-                'SELECT id, codigo_retalho as codigo FROM retalhos WHERE codigo_retalho = ? OR qr_code = ?',
-                [codigo, codigo]
+                'SELECT id, codigo_retalho as codigo FROM retalhos WHERE codigo_retalho = ?',
+                [codigo]
             );
             if (retalhos.length > 0) {
                 id = retalhos[0].id;
@@ -2290,8 +2281,8 @@ router.get('/pdcs/:id/origens', async (req, res) => {
                 ac.origem_tipo,
                 ac.origem_id,
                 CASE 
-                    WHEN ac.origem_tipo = 'bobina' THEN b.codigo_bobina
-                    WHEN ac.origem_tipo = 'retalho' THEN r.qr_code
+                    WHEN ac.origem_tipo = 'bobina' THEN b.codigo_interno
+                    WHEN ac.origem_tipo = 'retalho' THEN r.codigo_retalho
                 END as codigo,
                 CASE 
                     WHEN ac.origem_tipo = 'bobina' THEN b.locacao
@@ -2385,14 +2376,12 @@ router.post('/pdcs/validar-origem', async (req, res) => {
 
         console.log('🔍 Validando origem escaneada:', codigo_escaneado);
 
-        // Busca o item pelo código (código correto: codigo_interno para bobinas, codigo_retalho para retalhos)
+        // Busca o item pelo código (codigo_interno para bobinas, codigo_retalho para retalhos)
         const validacao = await db.query(
             origem_esperada_tipo === 'bobina'
-                ? 'SELECT id, codigo_interno as codigo FROM bobinas WHERE codigo_interno = ? OR qr_code = ?'
-                : 'SELECT id, codigo_retalho as codigo FROM retalhos WHERE codigo_retalho = ? OR qr_code = ?',
-            origem_esperada_tipo === 'bobina' 
-                ? [codigo_escaneado, codigo_escaneado]
-                : [codigo_escaneado, codigo_escaneado]
+                ? 'SELECT id, codigo_interno as codigo FROM bobinas WHERE codigo_interno = ?'
+                : 'SELECT id, codigo_retalho as codigo FROM retalhos WHERE codigo_retalho = ?',
+            [codigo_escaneado]
         );
 
         const [itens] = validacao;

@@ -298,7 +298,6 @@ exports.listarRetalhos = async (req, res) => {
             SELECT 
                 r.id,
                 r.codigo_retalho,
-                r.qr_code,
                 r.produto_id,
                 r.metragem,
                 r.metragem_reservada,
@@ -330,7 +329,6 @@ exports.listarRetalhos = async (req, res) => {
                 SELECT 
                     r.id,
                     r.codigo_retalho,
-                    r.qr_code,
                     r.produto_id,
                     r.metragem,
                     r.metragem_reservada,
