@@ -364,12 +364,19 @@ const API_BASE_URL = 'https://controle-bobinas-20-production.up.railway.app';
 
 ### Railway (Produção)
 
+✅ **AUTO-DEPLOY ATIVADO** (Confirmado em 11/12/2025)
+
+**Fluxo Automático:**
 1. Fazer commit das alterações
 2. Push para branch `main`
-3. Acessar Railway Dashboard
-4. Clicar em "Deploy" manualmente
+3. Railway detecta automaticamente e inicia deploy
+4. Aguardar conclusão (2-5 minutos)
+5. Verificar em produção: `/api/health`
 
-**⚠️ Auto-deploy está DESABILITADO por segurança**
+**Deploy Manual (se necessário):**
+1. Acessar Railway Dashboard
+2. Aba "Deployments"
+3. Clicar em "Deploy" ou "Redeploy"
 
 ### Variáveis de Ambiente (Railway)
 

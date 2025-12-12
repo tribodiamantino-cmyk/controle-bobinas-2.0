@@ -1,50 +1,77 @@
-# ✅ CONFIGURAÇÃO RAILWAY - Deploy Manual
+# ✅ CONFIGURAÇÃO RAILWAY - Deploy Automático
 
-## 🎯 Objetivo
+## 🎯 Status Atual
 
-Desativar deploy automático no Railway para ter controle total sobre quando colocar mudanças em produção.
+✅ **AUTO-DEPLOY ATIVADO** (Confirmado em 11/12/2025)
+
+O sistema está configurado para fazer deploy automático sempre que houver push para a branch `main`.
 
 ---
 
-## 📋 Passo a Passo (Fazer AGORA)
+## 📋 Como Funciona
+
+### Deploy Automático Ativo
+
+1. **Push para GitHub:**
+   ```bash
+   git add .
+   git commit -m "feat: nova funcionalidade"
+   git push
+   ```
+
+2. **Railway detecta automaticamente:**
+   - Monitora a branch `main` do repositório
+   - Inicia build automático
+   - Deploy em produção após build bem-sucedido
+
+3. **Verificar Deploy:**
+   - Acesse: https://railway.app/project/controle-bobinas-2.0
+   - Aba "Deployments" mostra novo deploy iniciando
+   - Aguarde conclusão (geralmente 2-5 minutos)
+
+### Verificar Status em Produção
+
+Após deploy completar:
+```bash
+# Health check
+curl https://controle-bobinas-20-production.up.railway.app/api/health
+```
+
+---
+
+## � Como Desativar Auto-Deploy (se necessário)
+
+Caso precise desativar o auto-deploy no futuro:
 
 ### 1️⃣ Acessar Railway Dashboard
 
 1. Abra: https://railway.app/
-2. Faça login (se necessário)
-3. Localize o projeto **"controle-bobinas-2.0"**
-4. Clique no serviço **"controle-bobinas-20-production"**
+2. Localize o projeto **"controle-bobinas-2.0"**
+3. Clique no serviço
 
 ### 2️⃣ Acessar Settings
 
-1. No topo da página, clique em **"Settings"** (ícone de engrenagem ⚙️)
-2. Role a página para baixo até encontrar a seção **"Service"** ou **"Deploy"**
+1. Clique em **"Settings"** (⚙️)
+2. Role até a seção **"Service"** ou **"Deploy"**
 
-### 3️⃣ Desativar Auto Deploy
+### 3️⃣ Desativar
 
-Procure por uma das seguintes opções (depende da versão do Railway):
+Procure por:
 
-#### Opção A: Chave "Auto Deploy"
-- Encontre o toggle **"Auto Deploy"**
-- **Desligue** (deve ficar cinza/desativado)
-- Clique em **"Save"** ou as mudanças salvam automaticamente
+#### Opção A: Toggle "Auto Deploy"
+- Encontre **"Auto Deploy"**
+- **Desligue** o toggle
+- Salve
 
-#### Opção B: Chave "Watch Paths" 
+#### Opção B: Watch Paths
 - Encontre **"Watch Paths"**
-- **Apague** todos os caminhos (deixe vazio)
-- Clique em **"Save"**
+- **Apague** todos os caminhos
+- Salve
 
-#### Opção C: Trigger de Deploy
+#### Opção C: Deploy Trigger
 - Encontre **"Deploy Trigger"**
-- Mude de **"Push to main"** para **"Manual"**
-- Salve as alterações
-
-### 4️⃣ Verificar Configuração
-
-Após salvar:
-- ✅ Deve aparecer uma mensagem tipo: "Settings updated"
-- ✅ Na aba "Deployments", não deve ter novos deploys automáticos
-- ✅ Você verá um botão **"Deploy"** ou **"Redeploy"** disponível
+- Mude para **"Manual"**
+- Salve
 
 ---
 
