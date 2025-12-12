@@ -31,7 +31,7 @@
       "presentationStyle": "fullscreen"
     },
     "BarcodeScanning": {
-      "formats": ["CODE_128"],
+      "formats": ["QR_CODE", "CODE_128", "CODE_39", "EAN_13", "EAN_8"],
       "lensFacing": "back"
     }
   }
