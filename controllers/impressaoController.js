@@ -50,6 +50,9 @@ const adicionar = async (req, res) => {
             });
         }
 
+        // Converter loja para formato da fila_impressao (PLA/CIA)
+        const lojaConvertida = converterLojaParaFila(dadosEtiqueta.loja);
+
         // Inserir na fila
         const [result] = await db.query(`
             INSERT INTO fila_impressao 
@@ -62,7 +65,7 @@ const adicionar = async (req, res) => {
             dadosEtiqueta.codigo,
             quantidade,
             prioridade,
-            dadosEtiqueta.loja || 'PLA',
+            lojaConvertida,
             solicitado_por
         ]);
 
@@ -659,6 +662,33 @@ async function buscarDadosLocacao(id) {
             descricao: l.descricao
         }
     };
+}
+
+/**
+ * Converte o formato de loja da tabela bobinas/produtos para a fila_impressao
+ * bobinas.loja: 'Cortinave' ou 'BN'
+ * fila_impressao.loja: 'PLA' ou 'CIA'
+ */
+function converterLojaParaFila(loja) {
+    if (!loja) return 'PLA';
+    
+    const lojaUpper = String(loja).toUpperCase();
+    
+    // Se já está no formato correto
+    if (lojaUpper === 'PLA' || lojaUpper === 'CIA') {
+        return lojaUpper;
+    }
+    
+    // Converter formato legado
+    if (lojaUpper === 'CORTINAVE' || lojaUpper === 'PALOTINA') {
+        return 'PLA';
+    }
+    if (lojaUpper === 'BN' || lojaUpper === 'CIANORTE') {
+        return 'CIA';
+    }
+    
+    // Default
+    return 'PLA';
 }
 
 /**

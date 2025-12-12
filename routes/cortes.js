@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
                 cc.nome_cor,
                 cg.gramatura
             FROM cortes_realizados cr
-            LEFT JOIN alocacoes_corte ac ON ac.id = cr.alocacao_id
+            LEFT JOIN alocacoes_corte ac ON ac.id = cr.alocacao_corte_id
             LEFT JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
             LEFT JOIN planos_corte pc ON pc.id = ipc.plano_corte_id
             LEFT JOIN produtos p ON p.id = ipc.produto_id
@@ -101,7 +101,7 @@ router.get('/:id', async (req, res) => {
                 cc.nome_cor,
                 cg.gramatura
             FROM cortes_realizados cr
-            LEFT JOIN alocacoes_corte ac ON ac.id = cr.alocacao_id
+            LEFT JOIN alocacoes_corte ac ON ac.id = cr.alocacao_corte_id
             LEFT JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
             LEFT JOIN planos_corte pc ON pc.id = ipc.plano_corte_id
             LEFT JOIN produtos p ON p.id = ipc.produto_id
