@@ -956,8 +956,12 @@ async function toggleProduto(produtoId) {
 }
 
 // Carregar bobinas e retalhos de um produto
-async function carregarBobinasERetalhos(produtoId) {
+async function carregarBobinasERetalhos(produtoId, manterAba = null) {
     try {
+        // Detectar aba atual antes de recarregar
+        const abaRetalhos = document.getElementById(`aba-retalhos-${produtoId}`);
+        const abaAtual = manterAba || (abaRetalhos?.classList.contains('active') ? 'retalhos' : 'bobinas');
+        
         // Carregar bobinas e retalhos em paralelo
         const [resBobinas, resRetalhos] = await Promise.all([
             fetch(`/api/bobinas/produto/${produtoId}`),
@@ -968,7 +972,7 @@ async function carregarBobinasERetalhos(produtoId) {
         const dataRetalhos = await resRetalhos.json();
         
         if (dataBobinas.success && dataRetalhos.success) {
-            renderizarBobinasERetalhos(produtoId, dataBobinas.data, dataRetalhos.data);
+            renderizarBobinasERetalhos(produtoId, dataBobinas.data, dataRetalhos.data, abaAtual);
         }
         
     } catch (error) {
@@ -979,7 +983,7 @@ async function carregarBobinasERetalhos(produtoId) {
 }
 
 // Renderizar bobinas e retalhos com sistema de abas
-function renderizarBobinasERetalhos(produtoId, bobinas, retalhos) {
+function renderizarBobinasERetalhos(produtoId, bobinas, retalhos, abaAtiva = 'bobinas') {
     const container = document.getElementById(`bobinas-${produtoId}`);
     
     const totalBobinas = bobinas.length;
@@ -1062,10 +1066,10 @@ function renderizarBobinasERetalhos(produtoId, bobinas, retalhos) {
         
         <div class="abas-container">
             <div class="abas-header">
-                <button class="aba-btn active" id="aba-bobinas-${produtoId}" onclick="mostrarAba(${produtoId}, 'bobinas')">
+                <button class="aba-btn ${abaAtiva === 'bobinas' ? 'active' : ''}" id="aba-bobinas-${produtoId}" onclick="mostrarAba(${produtoId}, 'bobinas')">
                     📦 Bobinas (${totalBobinas})
                 </button>
-                <button class="aba-btn" id="aba-retalhos-${produtoId}" onclick="mostrarAba(${produtoId}, 'retalhos')">
+                <button class="aba-btn ${abaAtiva === 'retalhos' ? 'active' : ''}" id="aba-retalhos-${produtoId}" onclick="mostrarAba(${produtoId}, 'retalhos')">
                     📐 Retalhos (${totalRetalhos})
                 </button>
                 <button class="btn btn-sm btn-primary" onclick="abrirModalNovoRetalho(${produtoId})" style="margin-left: auto;">
@@ -1073,11 +1077,11 @@ function renderizarBobinasERetalhos(produtoId, bobinas, retalhos) {
                 </button>
             </div>
             
-            <div class="aba-content active" id="content-bobinas-${produtoId}">
+            <div class="aba-content ${abaAtiva === 'bobinas' ? 'active' : ''}" id="content-bobinas-${produtoId}" style="${abaAtiva === 'bobinas' ? '' : 'display: none;'}">
                 ${renderizarListaBobinas(bobinas)}
             </div>
             
-            <div class="aba-content" id="content-retalhos-${produtoId}" style="display: none;">
+            <div class="aba-content ${abaAtiva === 'retalhos' ? 'active' : ''}" id="content-retalhos-${produtoId}" style="${abaAtiva === 'retalhos' ? '' : 'display: none;'}">
                 ${renderizarListaRetalhos(retalhos)}
             </div>
         </div>
