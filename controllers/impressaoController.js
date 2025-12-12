@@ -452,12 +452,12 @@ async function buscarDadosBobina(id) {
 
     const b = rows[0];
     
-    // Converter loja para prefixo de código (PLA ou CIA)
-    const lojaPrefix = converterLojaParaCodigo(b.loja);
+    // ✅ USAR O CÓDIGO DO BANCO - NUNCA GERAR NA ETIQUETA
+    // O código no banco é a fonte da verdade
+    const codigo = b.codigo_interno;
     
-    // Formatar código SEMPRE no padrão: BOB-{LOJA}-{000000}
-    // Ignora codigo_interno antigo que pode estar em formato errado
-    const codigo = `BOB-${lojaPrefix}-${String(b.id).padStart(6, '0')}`;
+    // Extrair loja do código para uso na fila de impressão
+    const lojaPrefix = converterLojaParaFila(b.loja);
 
     // Linha do produto
     let linhaProduto;
@@ -535,12 +535,12 @@ async function buscarDadosRetalho(id) {
 
     const r = rows[0];
     
-    // Converter loja para prefixo de código (PLA ou CIA)
-    const lojaPrefix = converterLojaParaCodigo(r.loja);
+    // ✅ USAR O CÓDIGO DO BANCO - NUNCA GERAR NA ETIQUETA
+    // O código no banco é a fonte da verdade
+    const codigo = r.codigo_retalho;
     
-    // Formatar código SEMPRE no padrão: RET-{LOJA}-{000000}
-    // Ignora codigo_retalho antigo que pode estar em formato errado
-    const codigo = `RET-${lojaPrefix}-${String(r.id).padStart(6, '0')}`;
+    // Extrair loja do código para uso na fila de impressão
+    const lojaPrefix = converterLojaParaFila(r.loja);
 
     // Linha do produto (herdada da bobina)
     let linhaProduto;
@@ -582,11 +582,11 @@ async function buscarDadosCorte(id) {
     const [rows] = await db.query(`
         SELECT 
             cr.id,
-            cr.codigo_qr,
+            cr.codigo_corte,
             cr.metragem_cortada,
             cr.created_at,
             ipc.metragem as metragem_solicitada,
-            pc.codigo as plano_codigo,
+            pc.codigo_plano as plano_codigo,
             pc.cliente,
             pc.obra,
             p.codigo as produto_codigo,
@@ -604,10 +604,13 @@ async function buscarDadosCorte(id) {
     if (rows.length === 0) return null;
 
     const c = rows[0];
-    const loja = c.loja || 'PLA';
     
-    // Código do corte: COR-{LOJA}-{PDC}-{00}
-    const codigo = c.codigo_qr || `COR-${loja}-${c.plano_codigo || '000'}-${String(c.id).padStart(2, '0')}`;
+    // ✅ USAR O CÓDIGO DO BANCO - NUNCA GERAR NA ETIQUETA
+    // O campo codigo_corte é a fonte da verdade (formato: COR-YYYY-XXXXX)
+    const codigo = c.codigo_corte;
+    
+    // Extrair loja para uso na fila de impressão
+    const lojaPrefix = converterLojaParaFila(c.loja);
 
     // Linha 3: Produto resumido
     const linhaProduto = `${c.produto_codigo || 'Produto'} ${c.largura || ''}cm`;
@@ -619,7 +622,7 @@ async function buscarDadosCorte(id) {
     return {
         tipo: 'corte',
         codigo,
-        loja,
+        loja: lojaPrefix,
         linha1: codigo,
         linha2_barcode: codigo,
         linha3: linhaProduto,
