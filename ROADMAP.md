@@ -427,6 +427,18 @@ Com isso, já dá para usar no dia a dia!
 
 > **Instruções para AI Agents:** Quando o usuário mencionar funcionalidades futuras ou ideias que não são prioridade agora, registre aqui.
 
+### Sistema de Fotos de Contraprova
+- [ ] **Migração para dispositivo de produção** - Atualmente fotos armazenadas em `uploads/cortes/` no servidor. Avaliar migração para S3/Cloudinary ou outro serviço especializado de armazenamento
+- [ ] **Afinamento da função de foto** - Otimizar resolução, compressão e qualidade das fotos de medidor (atualmente HD 1280x720, Sharp 85%)
+- [ ] **Galeria de fotos por PDC** - Interface para visualizar todas as fotos de contraprova de um plano de corte
+- [ ] **OCR em fotos de medidor** - Leitura automática da medição para comparar com metragem informada
+
+### Sistema de Carregamento
+- [ ] **Relatório A4 de Carregamento** - Gerar relatório completo em A4 do PDC carregado (lista de cortes, metragens, fotos, assinaturas) via servidor de impressão para impressoras A4 (diferente da térmica de etiquetas)
+- [ ] **Múltiplas impressoras no servidor** - Suportar impressora térmica (etiquetas) + impressora A4 (relatórios) no mesmo servidor de impressão
+- [ ] **Template de relatório personalizável** - Permitir customizar layout do relatório de carregamento por empresa (Cortinave/BN)
+
+### Outras Funcionalidades
 - [ ] **Página de Histórico** - Criar `/historico.html` para visualizar movimentações (API já existe em `/api/historico`)
 - [ ] Sistema de autenticação com níveis de acesso
 - [ ] Mapa visual de locações no armazém
