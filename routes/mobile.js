@@ -2362,19 +2362,18 @@ router.get('/pdcs/:id/origens', async (req, res) => {
         const [alocacoes] = await db.query(`
             SELECT 
                 ac.tipo_origem as origem_tipo,
-                CASE 
-                    WHEN ac.tipo_origem = 'bobina' THEN ac.bobina_id
-                    WHEN ac.tipo_origem = 'retalho' THEN ac.retalho_id
-                END as origem_id,
-                CASE 
+                ac.bobina_id,
+                ac.retalho_id,
+                COALESCE(ac.bobina_id, ac.retalho_id) as origem_id,
+                MAX(CASE 
                     WHEN ac.tipo_origem = 'bobina' THEN b.codigo_interno
                     WHEN ac.tipo_origem = 'retalho' THEN r.codigo_retalho
-                END as codigo,
-                CASE 
+                END) as codigo,
+                MAX(CASE 
                     WHEN ac.tipo_origem = 'bobina' THEN b.locacao
                     WHEN ac.tipo_origem = 'retalho' THEN r.locacao
-                END as locacao,
-                CONCAT(p.codigo, ' - ', c.nome_cor, ' ', g.gramatura, 'g/m²') as produto,
+                END) as locacao,
+                MAX(CONCAT(p.codigo, ' - ', COALESCE(c.nome_cor, ''), ' ', COALESCE(g.gramatura, ''), 'g/m²')) as produto,
                 COUNT(DISTINCT ipc.id) as total_cortes,
                 COUNT(DISTINCT cr.id) as cortes_concluidos
             FROM alocacoes_corte ac
@@ -2389,7 +2388,7 @@ router.get('/pdcs/:id/origens', async (req, res) => {
                 AND ((cr.bobina_id = ac.bobina_id AND ac.tipo_origem = 'bobina')
                      OR (cr.retalho_id = ac.retalho_id AND ac.tipo_origem = 'retalho'))
             WHERE ipc.plano_corte_id = ?
-            GROUP BY ac.tipo_origem, CASE WHEN ac.tipo_origem = 'bobina' THEN ac.bobina_id ELSE ac.retalho_id END
+            GROUP BY ac.tipo_origem, ac.bobina_id, ac.retalho_id
             ORDER BY ac.tipo_origem, codigo
         `, [pdcId]);
 
