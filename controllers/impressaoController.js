@@ -279,7 +279,7 @@ const obterEtiqueta = async (req, res) => {
  */
 const historico = async (req, res) => {
     try {
-        const { loja, status = 'impressa' } = req.query;
+        const { loja, status } = req.query;
 
         let sql = `
             SELECT 
@@ -292,16 +292,26 @@ const historico = async (req, res) => {
                 created_at,
                 impresso_em
             FROM fila_impressao
-            WHERE status = ?
         `;
-        const params = [status];
+        const params = [];
+        const conditions = [];
+
+        // Filtrar por status se especificado
+        if (status && ['pendente', 'impressa', 'cancelada'].includes(status)) {
+            conditions.push('status = ?');
+            params.push(status);
+        }
 
         if (loja && ['PLA', 'CIA'].includes(loja)) {
-            sql += ' AND loja = ?';
+            conditions.push('loja = ?');
             params.push(loja);
         }
 
-        sql += ' ORDER BY impresso_em DESC LIMIT 100';
+        if (conditions.length > 0) {
+            sql += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        sql += ' ORDER BY created_at DESC LIMIT 100';
 
         const [rows] = await db.query(sql, params);
 
