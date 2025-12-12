@@ -659,7 +659,7 @@ let historicoData = [];
 
 async function carregarHistorico() {
     try {
-        const response = await fetch(`${API_BASE}/impressao/fila`);
+        const response = await fetch(`${API_BASE}/impressao/historico`);
         const data = await response.json();
         
         if (data.success) {

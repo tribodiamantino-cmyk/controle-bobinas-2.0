@@ -441,10 +441,13 @@ async function buscarDadosBobina(id) {
     if (rows.length === 0) return null;
 
     const b = rows[0];
-    const loja = b.loja || 'PLA';
     
-    // Formatar código: BOB-{LOJA}-{000000}
-    const codigo = b.codigo_interno || `BOB-${loja}-${String(b.id).padStart(6, '0')}`;
+    // Converter loja para prefixo de código (PLA ou CIA)
+    const lojaPrefix = converterLojaParaCodigo(b.loja);
+    
+    // Formatar código SEMPRE no padrão: BOB-{LOJA}-{000000}
+    // Ignora codigo_interno antigo que pode estar em formato errado
+    const codigo = `BOB-${lojaPrefix}-${String(b.id).padStart(6, '0')}`;
 
     // Linha do produto
     let linhaProduto;
@@ -469,7 +472,7 @@ async function buscarDadosBobina(id) {
     return {
         tipo: 'bobina',
         codigo,
-        loja,
+        loja: lojaPrefix,
         linha1: codigo,
         linha2_barcode: codigo,
         linha3: linhaProduto.trim(),
@@ -521,10 +524,13 @@ async function buscarDadosRetalho(id) {
     if (rows.length === 0) return null;
 
     const r = rows[0];
-    const loja = r.loja || 'PLA';
     
-    // Formatar código: RET-{LOJA}-{000000}
-    const codigo = r.codigo_retalho || `RET-${loja}-${String(r.id).padStart(6, '0')}`;
+    // Converter loja para prefixo de código (PLA ou CIA)
+    const lojaPrefix = converterLojaParaCodigo(r.loja);
+    
+    // Formatar código SEMPRE no padrão: RET-{LOJA}-{000000}
+    // Ignora codigo_retalho antigo que pode estar em formato errado
+    const codigo = `RET-${lojaPrefix}-${String(r.id).padStart(6, '0')}`;
 
     // Linha do produto (herdada da bobina)
     let linhaProduto;
@@ -542,7 +548,7 @@ async function buscarDadosRetalho(id) {
     return {
         tipo: 'retalho',
         codigo,
-        loja,
+        loja: lojaPrefix,
         linha1: codigo,
         linha2_barcode: codigo,
         linha3: linhaProduto.trim(),
@@ -689,6 +695,16 @@ function converterLojaParaFila(loja) {
     
     // Default
     return 'PLA';
+}
+
+/**
+ * Converte o formato de loja para usar no código da etiqueta
+ * Retorna o prefixo correto: PLA ou CIA
+ * Usado nos códigos: BOB-PLA-000001, RET-CIA-000042
+ */
+function converterLojaParaCodigo(loja) {
+    // Reutiliza a mesma lógica de conversão
+    return converterLojaParaFila(loja);
 }
 
 /**
