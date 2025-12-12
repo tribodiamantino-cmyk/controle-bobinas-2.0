@@ -29,8 +29,8 @@ Sistema de **gestão de estoque de bobinas de lona** para fabricação de cortin
 
 | Empresa | Cidade | Prefixo de Código |
 |---------|--------|-------------------|
-| **Cortinave** | Palotina/PR | `CTV` ou `PLA` |
-| **BN** | Cianorte/PR | `BN` ou `CIA` |
+| **Cortinave** | Palotina/PR | `PLA` |
+| **BN** | Cianorte/PR | `CIA` |
 
 ### Conceito Central
 
@@ -287,7 +287,7 @@ module.exports = router;
 
 | Entidade | Formato | Exemplo |
 |----------|---------|---------|
-| Produto | `{LOJA}-{00000}` | `CTV-00123` |
+| Produto | `{LOJA}-{00000}` | `PLA-00123` |
 | Bobina | `BOB-{LOJA}-{000000}` | `BOB-PLA-000001` |
 | Retalho | `RET-{LOJA}-{000000}` | `RET-CIA-000042` |
 | Plano | `PDC-{LOJA}-{000}` | `PDC-PLA-001` |
