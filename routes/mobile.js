@@ -2150,14 +2150,32 @@ router.get('/validar-codigo/:codigo', async (req, res) => {
 
         } else if (codigo.startsWith('LOC-')) {
             tipo = 'locacao';
-            // LOC-15 → ID = 15
-            id = parseInt(codigo.replace('LOC-', ''));
+            // Remove prefixo LOC- para buscar no banco
+            // LOC-0001-A-0001 → 0001-A-0001
+            const codigoSemPrefixo = codigo.substring(4);
+            console.log('🔍 Buscando locação:', codigoSemPrefixo);
+            
             const [locacoes] = await db.query(
-                'SELECT id, locacao FROM locacoes WHERE id = ?',
-                [id]
+                'SELECT id, codigo FROM locacoes WHERE codigo = ?',
+                [codigoSemPrefixo]
             );
             if (locacoes.length > 0) {
-                dados = locacoes[0];
+                id = locacoes[0].id;
+                dados = { id: locacoes[0].id, codigo: locacoes[0].codigo };
+            }
+
+        } else if (/^\d{4}-[A-Z]-\d{4}$/.test(codigo)) {
+            // Formato XXXX-X-XXXX sem prefixo (backward compatible)
+            tipo = 'locacao';
+            console.log('🔍 Buscando locação (sem prefixo):', codigo);
+            
+            const [locacoes] = await db.query(
+                'SELECT id, codigo FROM locacoes WHERE codigo = ?',
+                [codigo]
+            );
+            if (locacoes.length > 0) {
+                id = locacoes[0].id;
+                dados = { id: locacoes[0].id, codigo: locacoes[0].codigo };
             }
 
         } else {

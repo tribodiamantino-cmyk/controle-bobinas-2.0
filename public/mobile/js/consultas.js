@@ -205,15 +205,20 @@ class ConsultasModule {
     }
 
     /**
-     * Busca locação (extrai ID do código)
+     * Busca locação (valida código e busca detalhes)
      */
     async buscarLocacao(codigo) {
         try {
-            // LOC-15 → ID = 15
-            const id = codigo.replace('LOC-', '');
+            // Valida código via API (aceita LOC-XXXX-X-XXXX ou XXXX-X-XXXX)
+            const validation = await API.validarCodigo(codigo);
             
-            const response = await API.getLocacaoItens(id);
-            return { id, itens: response.data, locacao: response.locacao };
+            if (!validation.data || !validation.data.id) {
+                throw new Error('Locação não encontrada');
+            }
+
+            // Busca detalhes com itens armazenados
+            const response = await API.getLocacaoDetails(validation.data.id);
+            return response.data;
 
         } catch (error) {
             console.error('Erro ao buscar locação:', error);
@@ -553,40 +558,73 @@ class ConsultasModule {
      * Renderiza detalhes de locação
      */
     renderLocacao(data) {
-        const itensHtml = data.itens && data.itens.length > 0 
-            ? data.itens.map(item => {
-                const icone = item.tipo === 'bobina' ? 'bi-box' : 'bi-recycle';
-                return `
-                    <div class="list-item">
-                        <div class="list-item-header">
-                            <div>
-                                <div class="list-item-title">
-                                    <i class="bi ${icone}"></i> ${item.codigo}
-                                </div>
-                                <div class="list-item-subtitle">${item.produto || 'Produto'}</div>
-                            </div>
-                            <div>
-                                <span class="badge bg-success">${Utils.formatarMetragem(item.metragem_disponivel)}</span>
-                            </div>
-                        </div>
-                        <button class="btn btn-sm btn-outline-primary mt-2" 
-                                onclick="consultas.processarCodigo('${item.codigo}')">
-                            <i class="bi bi-eye"></i> Ver Detalhes
-                        </button>
+        // Se locação vazia
+        if (data.vazia || !data.itens || data.itens.length === 0) {
+            return `
+                <div class="detail-card">
+                    <div class="detail-header">
+                        <h2><i class="bi bi-geo-alt me-2"></i>LOC-${data.codigo}</h2>
+                        ${data.descricao ? `<p class="text-muted mb-0">${data.descricao}</p>` : ''}
                     </div>
-                `;
-            }).join('')
-            : '<p class="text-muted text-center py-4">Nenhum item nesta locação</p>';
+
+                    <div class="info-section text-center py-5">
+                        <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+                        <h4 class="text-muted">Locação Vazia</h4>
+                        <p class="text-muted">Nenhum item armazenado nesta locação</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Renderiza lista de itens
+        const itensHtml = data.itens.map(item => {
+            const icone = item.tipo === 'bobina' ? 'bi-box' : 'bi-recycle';
+            const produto = `${item.nome_cor || ''} ${item.gramatura ? item.gramatura + 'g' : ''} ${item.fabricante || ''}`.trim();
+            const badgeClass = item.status === 'Disponível' ? 'bg-success' : 'bg-warning';
+            
+            return `
+                <div class="list-item mb-2">
+                    <div class="list-item-header">
+                        <div>
+                            <div class="list-item-title">
+                                <i class="bi ${icone}"></i> ${item.codigo}
+                            </div>
+                            <div class="list-item-subtitle">${produto}</div>
+                            <small class="text-muted"><i class="bi bi-building"></i> ${item.loja}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${badgeClass}">${Utils.formatarMetragem(item.metragem)}</span>
+                            <small class="d-block text-muted mt-1">${item.status}</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary mt-2 w-100" 
+                            onclick="consultas.processarCodigo('${item.codigo}')">
+                        <i class="bi bi-eye"></i> Ver Detalhes
+                    </button>
+                </div>
+            `;
+        }).join('');
 
         return `
             <div class="detail-card">
                 <div class="detail-header">
-                    <h2><i class="bi bi-geo-alt me-2"></i>LOC-${data.id}</h2>
-                    <p class="text-muted mb-0">${data.locacao || 'Locação'}</p>
+                    <h2><i class="bi bi-geo-alt me-2"></i>LOC-${data.codigo}</h2>
+                    ${data.descricao ? `<p class="text-muted mb-0">${data.descricao}</p>` : ''}
                 </div>
 
                 <div class="info-section">
-                    <h3><i class="bi bi-box"></i> ITENS (${data.itens?.length || 0})</h3>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="mb-0"><i class="bi bi-box"></i> ITENS ARMAZENADOS</h3>
+                        <span class="badge bg-primary">${data.total_itens} ${data.total_itens === 1 ? 'item' : 'itens'}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Total de Metragem:</strong> 
+                        <span class="badge bg-info">${Utils.formatarMetragem(data.total_metragem)}</span>
+                    </div>
+
+                    <hr>
+
                     ${itensHtml}
                 </div>
             </div>

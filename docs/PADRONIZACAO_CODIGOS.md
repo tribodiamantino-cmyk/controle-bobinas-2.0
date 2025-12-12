@@ -192,7 +192,7 @@ COR-{LOJA}-{PLANO}-{SEQUENCIAL}
 
 ## 6. Locação
 
-### Formato
+### Formato no Banco de Dados
 ```
 {SETOR}-{CORREDOR}-{POSICAO}
 ```
@@ -203,22 +203,49 @@ COR-{LOJA}-{PLANO}-{SEQUENCIAL}
 | CORREDOR | Identificador do corredor | 1 letra (A-Z) | A |
 | POSICAO | Posição na prateleira | 4 dígitos (0001-9999) | 0025 |
 
+### Formato no QR Code (Etiqueta)
+```
+LOC-{SETOR}-{CORREDOR}-{POSICAO}
+```
+
+| Componente | Descrição | Formato | Exemplo |
+|------------|-----------|---------|---------|
+| LOC | Prefixo fixo | 3 letras | LOC |
+| SETOR | Área do galpão | 4 dígitos (0001-9999) | 0001 |
+| CORREDOR | Identificador do corredor | 1 letra (A-Z) | A |
+| POSICAO | Posição na prateleira | 4 dígitos (0001-9999) | 0025 |
+
 ### Exemplos
+
+**No Banco de Dados:**
 - `0001-A-0001` → Setor 1, Corredor A, Posição 1
 - `0001-B-0150` → Setor 1, Corredor B, Posição 150
 - `0002-A-0001` → Setor 2, Corredor A, Posição 1
+
+**No QR Code (Impresso):**
+- `LOC-0001-A-0001` → Setor 1, Corredor A, Posição 1
+- `LOC-0001-B-0150` → Setor 1, Corredor B, Posição 150
+- `LOC-0002-A-0001` → Setor 2, Corredor A, Posição 1
 
 ### Regras
 1. **Geração:** Manual (conforme expansão do espaço físico)
 2. **Compartilhado:** Estoque único para ambas as lojas
 3. **Sem prefixo de loja:** Locação é física, não pertence a uma loja específica
+4. **Prefixo LOC-:** Adicionado APENAS no QR Code impresso (não no banco)
+5. **Validação:** Sistema aceita com ou sem prefixo LOC- ao escanear
 
 ### Etiqueta
 ✅ **Possui etiqueta física** (gerada conforme demanda)
 
 ### Caracteres
-- **Total:** 11 caracteres
+- **Banco:** 11 caracteres (`XXXX-X-XXXX`)
+- **QR Code:** 15 caracteres (`LOC-XXXX-X-XXXX`)
 - **Compatível com Code 128:** ✅ Sim
+
+### Backward Compatibility
+- ✅ Sistema aceita `0001-A-0001` (sem prefixo)
+- ✅ Sistema aceita `LOC-0001-A-0001` (com prefixo)
+- ✅ Etiquetas antigas (sem LOC-) continuam funcionando
 
 ---
 

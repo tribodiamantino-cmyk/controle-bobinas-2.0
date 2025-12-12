@@ -86,10 +86,10 @@ class API {
     }
 
     /**
-     * Busca itens em uma locação
+     * Busca detalhes de locação com itens armazenados
      */
-    static async getLocacaoItens(id) {
-        return this.request(`/locacoes/${id}/itens`);
+    static async getLocacaoDetails(id) {
+        return this.request(`/locacoes/${id}/detalhes-mobile`);
     }
 
     /**

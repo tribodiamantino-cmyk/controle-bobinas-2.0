@@ -661,20 +661,24 @@ async function buscarDadosLocacao(id) {
     const l = rows[0];
     const loja = l.loja || 'PLA';
     
-    // Código da locação: {0000}-{X}-{0000}
+    // Código da locação no banco: {0000}-{X}-{0000}
     // Formato: CCCC-A-NNNN (Corredor-Andar-Coluna)
-    const codigo = l.codigo || `${String(l.corredor || 0).padStart(4, '0')}-${l.andar || 'A'}-${String(l.coluna || 0).padStart(4, '0')}`;
+    const codigoBanco = l.codigo || `${String(l.corredor || 0).padStart(4, '0')}-${l.andar || 'A'}-${String(l.coluna || 0).padStart(4, '0')}`;
+    
+    // QR Code impresso: LOC-{codigo} (adiciona prefixo)
+    const codigoQR = `LOC-${codigoBanco}`;
 
     return {
         tipo: 'locacao',
-        codigo,
+        codigo: codigoQR, // QR com prefixo LOC-
         loja,
-        linha1: codigo,
-        linha2_barcode: codigo,
+        linha1: codigoQR, // Display na etiqueta com prefixo
+        linha2_barcode: codigoQR, // Barcode com prefixo
         // Locação tem layout 50/50 (código grande + barcode grande)
         layout: '50-50',
         raw: {
             id: l.id,
+            codigo_banco: codigoBanco, // Código sem prefixo (para referência)
             corredor: l.corredor,
             coluna: l.coluna,
             andar: l.andar,

@@ -198,6 +198,7 @@ exports.reativarLocacao = async (req, res) => {
             message: 'Locação reativada com sucesso!' 
         });
         
+        
     } catch (error) {
         console.error('Erro ao reativar locação:', error);
         res.status(500).json({ 
@@ -206,3 +207,97 @@ exports.reativarLocacao = async (req, res) => {
         });
     }
 };
+
+// Detalhes de locação para MOBILE (com itens armazenados)
+exports.detalhesParaMobile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        console.log('📍 Buscando detalhes da locação ID:', id);
+        
+        // Buscar dados da locação
+        const [locacao] = await db.query(`
+            SELECT id, codigo, descricao, ativa
+            FROM locacoes 
+            WHERE id = ?
+        `, [id]);
+        
+        if (!locacao || locacao.length === 0) {
+            console.log('❌ Locação não encontrada:', id);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Locação não encontrada' 
+            });
+        }
+        
+        const loc = locacao[0];
+        
+        // Buscar bobinas nesta locação (exceto esgotadas)
+        const [bobinas] = await db.query(`
+            SELECT 
+                b.id,
+                b.codigo_interno as codigo,
+                'bobina' as tipo,
+                b.metragem_atual as metragem,
+                b.status,
+                b.loja,
+                p.fabricante,
+                c.nome_cor,
+                g.gramatura
+            FROM bobinas b
+            JOIN produtos p ON b.produto_id = p.id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            WHERE b.locacao = ? AND b.status != 'Esgotado'
+            ORDER BY b.codigo_interno
+        `, [loc.codigo]);
+        
+        // Buscar retalhos nesta locação (exceto esgotados)
+        const [retalhos] = await db.query(`
+            SELECT 
+                r.id,
+                r.codigo_retalho as codigo,
+                'retalho' as tipo,
+                r.metragem as metragem,
+                r.status,
+                r.loja,
+                p.fabricante,
+                c.nome_cor,
+                g.gramatura
+            FROM retalhos r
+            JOIN produtos p ON r.produto_id = p.id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            WHERE r.locacao = ? AND r.status != 'Esgotado'
+            ORDER BY r.codigo_retalho
+        `, [loc.codigo]);
+        
+        // Combinar itens
+        const itens = [...bobinas, ...retalhos];
+        const totalMetragem = itens.reduce((sum, item) => sum + parseFloat(item.metragem || 0), 0);
+        
+        console.log(`✅ Locação ${loc.codigo}: ${itens.length} item(ns), ${totalMetragem}m total`);
+        
+        res.json({ 
+            success: true, 
+            data: {
+                id: loc.id,
+                codigo: loc.codigo,
+                descricao: loc.descricao,
+                ativa: loc.ativa,
+                vazia: itens.length === 0,
+                total_itens: itens.length,
+                total_metragem: parseFloat(totalMetragem.toFixed(2)),
+                itens
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao buscar detalhes da locação:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+

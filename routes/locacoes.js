@@ -5,6 +5,9 @@ const locacoesController = require('../controllers/locacoesController');
 // Listar todas as locações (ativas e inativas)
 router.get('/', locacoesController.listarLocacoes);
 
+// Detalhes para mobile (com itens armazenados) - ANTES da rota /:id
+router.get('/:id/detalhes-mobile', locacoesController.detalhesParaMobile);
+
 // Buscar locação por ID
 router.get('/:id', locacoesController.buscarLocacao);
 
