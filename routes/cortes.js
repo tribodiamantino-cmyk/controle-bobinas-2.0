@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
                 cr.data_corte,
                 cr.operador_nome,
                 pc.id as plano_id,
-                pc.codigo as plano_codigo,
+                pc.codigo_plano as plano_codigo,
                 pc.cliente,
                 p.descricao as produto_descricao,
                 p.cor1,
@@ -94,7 +94,7 @@ router.get('/:id', async (req, res) => {
             SELECT 
                 cr.*,
                 pc.id as plano_id,
-                pc.codigo as plano_codigo,
+                pc.codigo_plano as plano_codigo,
                 pc.cliente,
                 p.descricao as produto_descricao
             FROM cortes_realizados cr
