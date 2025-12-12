@@ -2294,7 +2294,7 @@ router.get('/pdcs/producao', async (req, res) => {
                 COUNT(DISTINCT ipc.id) as total_cortes,
                 COUNT(DISTINCT cr.id) as cortes_concluidos
             FROM planos_corte pc
-            LEFT JOIN itens_plano_corte ipc ON ipc.plano_id = pc.id
+            LEFT JOIN itens_plano_corte ipc ON ipc.plano_corte_id = pc.id
             LEFT JOIN cortes_realizados cr ON cr.item_plano_corte_id = ipc.id
             WHERE pc.status = 'em_producao'
         `;
@@ -2379,10 +2379,10 @@ router.get('/pdcs/:id/origens', async (req, res) => {
             LEFT JOIN bobinas b ON ac.origem_tipo = 'bobina' AND ac.origem_id = b.id
             LEFT JOIN retalhos r ON ac.origem_tipo = 'retalho' AND ac.origem_id = r.id
             LEFT JOIN produtos p ON (b.produto_id = p.id OR r.produto_id = p.id)
-            LEFT JOIN cortes_realizados cr ON cr.item_plano_id = ipc.id 
+            LEFT JOIN cortes_realizados cr ON cr.item_plano_corte_id = ipc.id 
                 AND cr.origem_tipo = ac.origem_tipo 
                 AND cr.origem_id = ac.origem_id
-            WHERE ipc.plano_id = ?
+            WHERE ipc.plano_corte_id = ?
             GROUP BY ac.origem_tipo, ac.origem_id
             ORDER BY ac.origem_tipo, codigo
         `, [pdcId]);
@@ -2398,10 +2398,10 @@ router.get('/pdcs/:id/origens', async (req, res) => {
                     cr.status
                 FROM itens_plano_corte ipc
                 JOIN alocacoes_corte ac ON ac.item_plano_id = ipc.id
-                LEFT JOIN cortes_realizados cr ON cr.item_plano_id = ipc.id
+                LEFT JOIN cortes_realizados cr ON cr.item_plano_corte_id = ipc.id
                     AND cr.origem_tipo = ac.origem_tipo
                     AND cr.origem_id = ac.origem_id
-                WHERE ipc.plano_id = ?
+                WHERE ipc.plano_corte_id = ?
                     AND ac.origem_tipo = ?
                     AND ac.origem_id = ?
                 ORDER BY ipc.id
