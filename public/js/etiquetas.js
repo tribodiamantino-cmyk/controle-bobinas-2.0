@@ -804,3 +804,13 @@ async function removerDoHistorico(id) {
 
 // Expor função de atualização de fila globalmente
 window.atualizarContadorFila = atualizarContadorFila;
+
+// Função para mostrar a fila de impressão (vai para histórico com filtro pendentes)
+function mostrarFila() {
+    // Selecionar o tipo histórico
+    selecionarTipo('historico');
+    // Aplicar filtro de pendentes
+    setTimeout(() => {
+        filtrarHistorico('pendente');
+    }, 300);
+}

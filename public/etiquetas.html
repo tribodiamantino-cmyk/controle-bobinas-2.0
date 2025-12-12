@@ -389,6 +389,14 @@
                 <h2><i class="bi bi-tags me-2"></i>Central de Etiquetas</h2>
                 <p class="text-muted mb-0 mt-1">Impressão em lote de etiquetas para bobinas, retalhos, cortes e locações</p>
             </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="fila-indicator" id="filaIndicator" style="background: #f0f8ff; padding: 10px 15px; border-radius: 8px; border: 2px solid #667eea; cursor: pointer;" onclick="mostrarFila()">
+                    <i class="bi bi-printer me-2" style="color: #667eea;"></i>
+                    <span style="font-weight: 600; color: #333;">Fila: </span>
+                    <span id="filaCount" style="font-weight: bold; color: #667eea;">0</span>
+                    <span style="color: #666;"> pendente(s)</span>
+                </div>
+            </div>
         </div>
         
         <!-- Stats Cards -->
