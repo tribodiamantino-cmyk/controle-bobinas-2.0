@@ -18,6 +18,9 @@ router.get('/produto/:produto_id', retalhosController.listarRetalhosPorProduto);
 // Buscar retalho por código
 router.get('/codigo/:codigo_retalho', retalhosController.buscarRetalhoPorCodigo);
 
+// Buscar retalho por ID (para mobile)
+router.get('/:id', retalhosController.buscarRetalhoPorId);
+
 // Atualizar retalho (principalmente localização)
 router.put('/:id', retalhosController.atualizarRetalho);
 

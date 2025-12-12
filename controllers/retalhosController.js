@@ -402,6 +402,51 @@ exports.listarRetalhosPorProduto = async (req, res) => {
     }
 };
 
+// Buscar retalho por ID (para mobile)
+exports.buscarRetalhoPorId = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const [retalho] = await db.query(
+            `SELECT 
+                r.*,
+                p.codigo,
+                p.loja,
+                p.fabricante,
+                p.tipo_tecido,
+                p.largura_sem_costura,
+                p.tipo_bainha,
+                p.largura_final,
+                p.largura_maior,
+                p.largura_y,
+                c.nome_cor,
+                g.gramatura
+            FROM retalhos r
+            JOIN produtos p ON r.produto_id = p.id
+            JOIN configuracoes_cores c ON p.cor_id = c.id
+            JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            WHERE r.id = ?`,
+            [id]
+        );
+        
+        if (retalho.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Retalho não encontrado' 
+            });
+        }
+        
+        res.json({ success: true, data: retalho[0] });
+        
+    } catch (error) {
+        console.error('Erro ao buscar retalho por ID:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
 // Buscar retalho por código
 exports.buscarRetalhoPorCodigo = async (req, res) => {
     try {
