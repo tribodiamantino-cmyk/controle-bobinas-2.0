@@ -17,11 +17,6 @@
             font-family: 'Segoe UI', system-ui, sans-serif;
         }
         
-        .navbar {
-            background: linear-gradient(135deg, var(--primary-color), #1a365d);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
         .main-container {
             max-width: 1400px;
             margin: 0 auto;
@@ -356,53 +351,27 @@
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="/">
-                <i class="bi bi-box-seam me-2"></i>Controle de Bobinas 2.0
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/estoque.html">
-                            <i class="bi bi-boxes me-1"></i>Estoque
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/retalhos.html">
-                            <i class="bi bi-scissors me-1"></i>Retalhos
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/planos.html">
-                            <i class="bi bi-clipboard-check me-1"></i>Planos
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/etiquetas.html">
-                            <i class="bi bi-tag me-1"></i>Etiquetas
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/configuracoes.html">
-                            <i class="bi bi-gear me-1"></i>Config
-                        </a>
-                    </li>
-                </ul>
-                <div class="d-flex align-items-center">
-                    <div class="form-check form-switch me-3">
-                        <input class="form-check-input" type="checkbox" id="toggleModoTeste">
-                        <label class="form-check-label text-white small" for="toggleModoTeste">
-                            <i class="bi bi-bug me-1"></i>Modo Teste
-                        </label>
-                    </div>
+    <!-- Navbar Padrão do Sistema -->
+    <nav class="navbar" style="background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <a href="/" class="navbar-brand" style="font-size: 1.5rem; font-weight: bold; color: #667eea; text-decoration: none;">🎯 Controle de Bobinas 2.0</a>
+        <ul class="navbar-menu" style="display: flex; gap: 1rem; list-style: none; margin: 0; padding: 0; align-items: center;">
+            <li><a href="/" style="text-decoration: none; color: #333; padding: 0.5rem 1rem; border-radius: 5px;">Dashboard</a></li>
+            <li><a href="/produtos.html" style="text-decoration: none; color: #333; padding: 0.5rem 1rem; border-radius: 5px;">Produtos</a></li>
+            <li><a href="/estoque.html" style="text-decoration: none; color: #333; padding: 0.5rem 1rem; border-radius: 5px;">Estoque</a></li>
+            <li><a href="/retalhos.html" style="text-decoration: none; color: #333; padding: 0.5rem 1rem; border-radius: 5px;">Retalhos</a></li>
+            <li><a href="/ordens.html" style="text-decoration: none; color: #333; padding: 0.5rem 1rem; border-radius: 5px;">Ordens</a></li>
+            <li><a href="/templates.html" style="text-decoration: none; color: #333; padding: 0.5rem 1rem; border-radius: 5px;">Obras Padrão</a></li>
+            <li><a href="/etiquetas.html" class="active" style="text-decoration: none; background: #667eea; color: white; padding: 0.5rem 1rem; border-radius: 5px;">🏷️ Etiquetas</a></li>
+            <li><a href="/configuracoes.html" style="text-decoration: none; color: #333; padding: 0.5rem 1rem; border-radius: 5px;">Config</a></li>
+            <li style="margin-left: 1rem; border-left: 1px solid #ddd; padding-left: 1rem;">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="toggleModoTeste">
+                    <label class="form-check-label small" for="toggleModoTeste" style="color: #666;">
+                        🐛 Modo Teste
+                    </label>
                 </div>
-            </div>
-        </div>
+            </li>
+        </ul>
     </nav>
     
     <!-- Modo Teste Banner -->
