@@ -40,6 +40,7 @@ router.get('/', async (req, res) => {
             LEFT JOIN configuracoes_cores cc ON p.cor_id = cc.id
             LEFT JOIN configuracoes_gramaturas cg ON p.gramatura_id = cg.id
             WHERE pc.status IN ('Em Produção', 'Finalizado')
+              AND cr.status = 'concluido'
         `;
         
         const params = [];
