@@ -2150,33 +2150,63 @@ router.get('/validar-codigo/:codigo', async (req, res) => {
 
         } else if (codigo.startsWith('LOC-')) {
             tipo = 'locacao';
-            // Remove prefixo LOC- para buscar no banco
+            // Remove prefixo LOC- para obter código real
+            // LOC-1-A-1 → 1-A-1
             // LOC-0001-A-0001 → 0001-A-0001
-            const codigoSemPrefixo = codigo.substring(4);
-            console.log('🔍 Buscando locação:', codigoSemPrefixo);
+            const codigoLocacao = codigo.substring(4);
+            console.log('🔍 Buscando itens na locação:', codigoLocacao);
             
-            const [locacoes] = await db.query(
-                'SELECT id, codigo FROM locacoes WHERE codigo = ?',
-                [codigoSemPrefixo]
+            // Busca itens (bobinas/retalhos) que estão nessa locação
+            // Locação não precisa estar cadastrada, é referência livre
+            const [bobinas] = await db.query(
+                'SELECT COUNT(*) as total FROM bobinas WHERE locacao = ? AND status != "Esgotado"',
+                [codigoLocacao]
             );
-            if (locacoes.length > 0) {
-                id = locacoes[0].id;
-                dados = { id: locacoes[0].id, codigo: locacoes[0].codigo };
+            const [retalhos] = await db.query(
+                'SELECT COUNT(*) as total FROM retalhos WHERE locacao = ? AND status != "Esgotado"',
+                [codigoLocacao]
+            );
+            
+            const totalItens = (bobinas[0]?.total || 0) + (retalhos[0]?.total || 0);
+            
+            // Se encontrou itens OU locação é válida (formato correto), aceita
+            if (totalItens > 0 || /^\d{1,4}-[A-Z]-\d{1,4}$/.test(codigoLocacao)) {
+                id = codigoLocacao; // ID é o próprio código (locação livre)
+                dados = { 
+                    codigo: codigoLocacao, 
+                    total_itens: totalItens,
+                    vazia: totalItens === 0
+                };
+                console.log(`✅ Locação ${codigoLocacao}: ${totalItens} item(ns)`);
+            } else {
+                console.log(`❌ Formato inválido: ${codigoLocacao}`);
             }
 
-        } else if (/^\d{4}-[A-Z]-\d{4}$/.test(codigo)) {
-            // Formato XXXX-X-XXXX sem prefixo (backward compatible)
+        } else if (/^\d{1,4}-[A-Z]-\d{1,4}$/.test(codigo)) {
+            // Formato N-X-N sem prefixo (backward compatible)
+            // Aceita: 1-A-1, 12-B-34, 123-C-456, 0001-A-0001, etc
             tipo = 'locacao';
-            console.log('🔍 Buscando locação (sem prefixo):', codigo);
+            console.log('🔍 Buscando itens na locação (sem prefixo):', codigo);
             
-            const [locacoes] = await db.query(
-                'SELECT id, codigo FROM locacoes WHERE codigo = ?',
+            // Busca itens (bobinas/retalhos) que estão nessa locação
+            const [bobinas] = await db.query(
+                'SELECT COUNT(*) as total FROM bobinas WHERE locacao = ? AND status != "Esgotado"',
                 [codigo]
             );
-            if (locacoes.length > 0) {
-                id = locacoes[0].id;
-                dados = { id: locacoes[0].id, codigo: locacoes[0].codigo };
-            }
+            const [retalhos] = await db.query(
+                'SELECT COUNT(*) as total FROM retalhos WHERE locacao = ? AND status != "Esgotado"',
+                [codigo]
+            );
+            
+            const totalItens = (bobinas[0]?.total || 0) + (retalhos[0]?.total || 0);
+            
+            id = codigo; // ID é o próprio código (locação livre)
+            dados = { 
+                codigo: codigo, 
+                total_itens: totalItens,
+                vazia: totalItens === 0
+            };
+            console.log(`✅ Locação ${codigo}: ${totalItens} item(ns)`);
 
         } else {
             return res.json({

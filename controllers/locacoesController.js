@@ -209,28 +209,49 @@ exports.reativarLocacao = async (req, res) => {
 };
 
 // Detalhes de locação para MOBILE (com itens armazenados)
+// Aceita código direto (ex: 1-A-1, 0001-A-0001)
+// Locações são referências livres, não precisam estar cadastradas
 exports.detalhesParaMobile = async (req, res) => {
     try {
         const { id } = req.params;
         
-        console.log('📍 Buscando detalhes da locação ID:', id);
+        // ID pode ser:
+        // - Código direto: "1-A-1", "0001-A-0001"
+        // - ID numérico (se vier da tabela locacoes)
         
-        // Buscar dados da locação
-        const [locacao] = await db.query(`
-            SELECT id, codigo, descricao, ativa
-            FROM locacoes 
-            WHERE id = ?
-        `, [id]);
+        let codigoLocacao = id;
+        let descricao = null;
         
-        if (!locacao || locacao.length === 0) {
-            console.log('❌ Locação não encontrada:', id);
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Locação não encontrada' 
-            });
+        console.log('📍 Buscando itens na locação:', id);
+        
+        // Se ID é numérico, tenta buscar na tabela locacoes (opcional)
+        if (/^\d+$/.test(id)) {
+            try {
+                const [locacao] = await db.query(`
+                    SELECT codigo, descricao FROM locacoes WHERE id = ?
+                `, [id]);
+                
+                if (locacao.length > 0) {
+                    codigoLocacao = locacao[0].codigo;
+                    descricao = locacao[0].descricao;
+                    console.log(`📋 Locação encontrada na tabela: ${codigoLocacao}`);
+                } else {
+                    console.log(`⚠️  ID ${id} não é locação cadastrada, tratando como código direto`);
+                }
+            } catch (err) {
+                // Tabela locacoes pode não existir, continua com código direto
+                console.log('⚠️  Tabela locacoes indisponível, usando código direto');
+            }
         }
         
-        const loc = locacao[0];
+        // Validar formato do código
+        if (!/^\d{1,4}-[A-Z]-\d{1,4}$/.test(codigoLocacao)) {
+            console.log(`❌ Formato inválido: ${codigoLocacao}`);
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Formato inválido. Use: N-X-N (ex: 1-A-1, 0001-A-0001)' 
+            });
+        }
         
         // Buscar bobinas nesta locação (exceto esgotadas)
         const [bobinas] = await db.query(`
@@ -250,7 +271,7 @@ exports.detalhesParaMobile = async (req, res) => {
             LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
             WHERE b.locacao = ? AND b.status != 'Esgotado'
             ORDER BY b.codigo_interno
-        `, [loc.codigo]);
+        `, [codigoLocacao]);
         
         // Buscar retalhos nesta locação (exceto esgotados)
         const [retalhos] = await db.query(`
@@ -270,21 +291,19 @@ exports.detalhesParaMobile = async (req, res) => {
             LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
             WHERE r.locacao = ? AND r.status != 'Esgotado'
             ORDER BY r.codigo_retalho
-        `, [loc.codigo]);
+        `, [codigoLocacao]);
         
         // Combinar itens
         const itens = [...bobinas, ...retalhos];
         const totalMetragem = itens.reduce((sum, item) => sum + parseFloat(item.metragem || 0), 0);
         
-        console.log(`✅ Locação ${loc.codigo}: ${itens.length} item(ns), ${totalMetragem}m total`);
+        console.log(`✅ Locação ${codigoLocacao}: ${itens.length} item(ns), ${totalMetragem}m total`);
         
         res.json({ 
             success: true, 
             data: {
-                id: loc.id,
-                codigo: loc.codigo,
-                descricao: loc.descricao,
-                ativa: loc.ativa,
+                codigo: codigoLocacao,
+                descricao: descricao,
                 vazia: itens.length === 0,
                 total_itens: itens.length,
                 total_metragem: parseFloat(totalMetragem.toFixed(2)),
