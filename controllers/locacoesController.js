@@ -281,7 +281,7 @@ exports.detalhesParaMobile = async (req, res) => {
                 'retalho' as tipo,
                 r.metragem as metragem,
                 r.status,
-                r.loja,
+                p.loja,
                 p.fabricante,
                 c.nome_cor,
                 g.gramatura
