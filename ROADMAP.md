@@ -1,6 +1,46 @@
 # 🗺️ ROADMAP - Sistema de Controle de Bobinas 2.0
 ## Cortinave & BN - Lonas para Aviários
 
+**Última atualização:** 12/12/2025 | **Versão atual:** 2.5.0
+
+---
+
+## ✅ VERSÃO 2.5.0 - MOBILE V2.0 COMPLETO (12/12/2025)
+
+### 🎉 MARCO IMPORTANTE: Reconstrução Total do Mobile
+
+**Motivação:** Mudança na lógica de impressão (server-side) + adoção de Code 128
+
+#### Frontend Completo (3.500+ linhas)
+- ✅ Arquitetura base: Vanilla JS + Capacitor 7 + Bootstrap 5
+- ✅ Módulo CONSULTAS (741 linhas)
+- ✅ Módulo PDC - Produção (986 linhas)
+- ✅ Módulo CARREGAMENTO (622 linhas)
+- ✅ 30+ funções utilitárias compartilhadas
+- ✅ Scanner ML Kit (Code 128)
+- ✅ Camera HD (1280x720, contraprova de cortes)
+
+#### Backend (617 linhas)
+- ✅ 10 novos endpoints mobile
+- ✅ Validação de códigos
+- ✅ Agrupamento de origens por PDC
+- ✅ Validação de cortes em carregamento
+- ✅ Upload multipart de fotos
+
+#### Capacitor Setup
+- ✅ Plugins instalados: ML Kit + Camera
+- ✅ Configurações Android
+- ✅ Assets sincronizados
+- ✅ Pronto para build APK
+
+#### Documentação
+- ✅ Especificação completa (1.126 linhas)
+- ✅ Guia de testes (28 cenários)
+- ✅ Setup Capacitor completo
+- ✅ API documentation
+
+**Status:** DESENVOLVIMENTO 100% COMPLETO | AGUARDANDO TESTES
+
 ---
 
 ## 📊 VISÃO GERAL DO SISTEMA

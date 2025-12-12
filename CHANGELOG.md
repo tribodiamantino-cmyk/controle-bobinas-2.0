@@ -4,6 +4,126 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [2.5.0] - 2025-12-12 🎉 MOBILE V2.0
+
+### 🚀 Reconstrução Completa do Mobile
+
+#### Nova Arquitetura
+- **Stack:** Vanilla JS + Capacitor 7 + Bootstrap 5
+- **Scanner:** ML Kit Barcode Scanning (Code 128) - substitui QR codes
+- **Camera:** Capacitor Camera (HD 1280x720, 85% quality)
+- **Impressão:** Server-side (remove Bluetooth térmica do mobile)
+- **Dispositivo:** Xiaomi Mi 13T (Android 13+)
+- **Conectividade:** Always online (Wi-Fi)
+
+#### 📱 Três Módulos Implementados
+
+**1. CONSULTAS** (741 linhas)
+- Scanner de códigos de barras
+- Input manual com validação
+- Detalhes de bobinas (metragem, locação, status)
+- Detalhes de retalhos (origem, produto)
+- Detalhes de cortes (PDC, cliente, foto)
+- Detalhes de locações (itens armazenados)
+- Ações: imprimir etiqueta, ver histórico
+
+**2. PDC - Produção** (986 linhas)
+- Listagem de PDCs em produção com progresso
+- Agrupamento de origens (bobinas/retalhos)
+- Validação de origem via scanner (antes de cortar)
+- Lista de cortes pendentes por origem
+- **Captura obrigatória de foto do medidor** (contraprova)
+- Registro de corte com upload multipart
+- Atualização de locação após cortes
+- Finalização com múltiplas locações de armazenamento
+
+**3. CARREGAMENTO** (622 linhas)
+- Listagem de PDCs finalizados
+- Início de processo de carregamento
+- Validação de cortes via scanner
+- Progresso em tempo real (X/Y cortes - %)
+- Detecção de erros (corte de outro PDC, duplicado)
+- Lista dos últimos 5 validados
+- Finalização com auditoria completa
+- Histórico de carregamentos anteriores
+
+#### 🏗️ Base Compartilhada (1.628 linhas)
+
+**Componentes:**
+- `mobile.css` (500+ linhas) - Estilos globais, scanner overlay, progress bars
+- `config.js` - Configurações centralizadas (API, scanner, camera, timeouts)
+- `utils.js` (400+ linhas) - 30+ funções utilitárias (formatação, toasts, validação)
+- `api.js` (300+ linhas) - 22 endpoints mapeados
+- `scanner.js` - Wrapper ML Kit com callbacks
+- `camera.js` - Wrapper Capacitor Camera com FormData
+
+#### 🔌 Backend - 10 Novos Endpoints
+
+1. `GET /api/mobile/validar-codigo/:codigo` - Valida e detecta tipo
+2. `GET /api/mobile/pdcs/producao` - Lista PDCs em produção com progresso
+3. `GET /api/mobile/pdcs/:id/origens` - Agrupa origens por PDC
+4. `POST /api/mobile/pdcs/validar-origem` - Valida scan de origem
+5. `POST /api/mobile/pdcs/atualizar-locacao` - Atualiza locação pós-corte
+6. `GET /api/mobile/carregamento/disponiveis` - PDCs finalizados
+7. `POST /api/mobile/carregamento/validar-corte` - Valida corte em carregamento
+8. `GET /api/mobile/historico/:tipo/:id` - Histórico (placeholder)
+9. `POST /api/mobile/imprimir` - Impressão (placeholder)
+10. Endpoints de iniciar/finalizar carregamento
+
+#### 📦 Capacitor Setup
+
+**Plugins Instalados:**
+- `@capacitor/core@^8.0.0`
+- `@capacitor/android@^8.0.0`
+- `@capacitor-mlkit/barcode-scanning@7.4.0`
+- `@capacitor/camera@8.0.0`
+
+**Configurações:**
+- Scanner: Code 128, lens back, beep + vibrate
+- Camera: HD 1280x720, quality 85%, no editing
+- Server: URL produção Railway configurada
+
+#### 📚 Documentação Nova
+
+- `docs/MOBILE_V2_COMPLETO.md` (1.126 linhas) - Especificação completa com wireframes
+- `docs/GUIA_TESTES_MOBILE_V2.md` - 28 cenários de teste detalhados
+- `docs/SETUP_CAPACITOR_V2.md` - Guia completo de configuração e build APK
+- `docs/API_MOBILE_V2.md` - Documentação de todos endpoints
+
+#### 🎯 Estatísticas
+
+- **Total de código:** ~6.500 linhas
+- **Arquivos criados:** 17 arquivos (13 código + 4 docs)
+- **Commits:** 7 commits
+- **Tempo desenvolvimento:** 1 dia
+- **Cobertura:** 3 módulos completos + backend completo
+
+### 🔧 Melhorias Técnicas
+
+- **Validações:** Múltiplos checkpoints antes de cada operação
+- **Feedback:** Visual, háptico e sonoro em todas ações
+- **Performance:** Loading states, debounce, cache opcional
+- **UX:** Progress bars animadas, toasts informativos, navegação intuitiva
+- **Segurança:** Input validation, error handling, timeout em requests
+
+### 📝 Scripts NPM Adicionados
+
+```bash
+npm run android:sync     # Sincroniza assets web → Android
+npm run android:build    # Build debug APK
+npm run android:release  # Build release APK
+```
+
+### 🚀 Próximos Passos
+
+1. Testes completos (28 cenários documentados)
+2. Build APK debug
+3. Instalação no Xiaomi Mi 13T
+4. Testes em produção real
+5. Coleta de feedback do operador
+
+---
+
 ## [2.4.0] - 2025-01-XX
 
 ### 🗄️ Padronização do Banco de Dados

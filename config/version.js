@@ -16,25 +16,25 @@
 
 module.exports = {
     // Versão atual do sistema
-    version: '2.4.0',
+    version: '2.5.0',
     
     // Data do último deploy (atualizar manualmente)
-    buildDate: '11/12/2025',
+    buildDate: '12/12/2025',
     
     // Resumo da versão atual
-    summary: 'Padronização do Banco de Dados',
+    summary: 'Mobile v2.0 - Reconstrução Completa',
     
     // Changelog resumido (últimas 5 mudanças)
     changelog: [
-        'Padronização do campo locacao (VARCHAR)',
-        'Documentação completa do schema',
-        'Regras de fabricante/loja definidas',
-        'Central de Etiquetas unificada',
-        'Histórico de Movimentações'
+        'Novo Mobile: 3 módulos completos (CONSULTAS, PDC, CARREGAMENTO)',
+        'Scanner ML Kit Code 128 (substitui QR)',
+        'Camera HD para contraprova de cortes',
+        '10 novos endpoints mobile',
+        'Capacitor 7 + 2 plugins configurados'
     ],
     
     // Fase atual do roadmap
-    currentPhase: 'Testes de Produção',
+    currentPhase: 'Mobile v2.0 - Aguardando Testes',
     
     // Status geral
     status: 'stable'

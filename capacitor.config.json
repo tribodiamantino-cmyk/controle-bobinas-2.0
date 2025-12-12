@@ -2,11 +2,12 @@
   "appId": "com.cortinave.controlebobinas",
   "appName": "Controle Bobinas",
   "webDir": "public",
-  "version": "2.2.5-20251210-1025",
+  "version": "2.5.0-20251212-mobile-v2",
   "server": {
     "androidScheme": "http",
     "cleartext": true,
-    "hostname": "localhost"
+    "hostname": "localhost",
+    "url": "https://controle-bobinas-20-production.up.railway.app"
   },
   "android": {
     "buildOptions": {
@@ -17,8 +18,21 @@
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 2000,
-      "backgroundColor": "#6366f1",
+      "backgroundColor": "#2c3e50",
       "showSpinner": false
+    },
+    "Camera": {
+      "quality": 85,
+      "width": 1280,
+      "height": 720,
+      "allowEditing": false,
+      "saveToGallery": false,
+      "correctOrientation": true,
+      "presentationStyle": "fullscreen"
+    },
+    "BarcodeScanning": {
+      "formats": ["CODE_128"],
+      "lensFacing": "back"
     }
   }
 }
