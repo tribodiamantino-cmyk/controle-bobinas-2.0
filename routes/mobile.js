@@ -2401,7 +2401,7 @@ router.get('/pdcs/:id/origens', async (req, res) => {
             const [cortes] = await db.query(`
                 SELECT 
                     ipc.id as item_id,
-                    ipc.metragem_corte,
+                    ipc.metragem,
                     cr.id as corte_id,
                     cr.codigo_corte,
                     cr.status
@@ -2428,7 +2428,7 @@ router.get('/pdcs/:id/origens', async (req, res) => {
                 cortes: cortes.map(c => ({
                     id: c.item_id,
                     codigo_corte: c.codigo_corte,
-                    metragem: parseFloat(c.metragem_corte),
+                    metragem: parseFloat(c.metragem),
                     status: c.status || 'pendente'
                 }))
             };
