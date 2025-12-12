@@ -27,16 +27,17 @@ router.get('/', async (req, res) => {
                 pc.id as plano_id,
                 pc.codigo_plano as plano_codigo,
                 pc.cliente,
-                p.descricao as produto_descricao,
-                p.cor1,
-                p.cor2,
-                p.largura,
-                p.gramatura
+                p.fabricante,
+                p.largura_final,
+                cc.nome_cor,
+                cg.gramatura
             FROM cortes_realizados cr
             LEFT JOIN alocacoes_corte ac ON ac.id = cr.alocacao_id
             LEFT JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
             LEFT JOIN planos_corte pc ON pc.id = ipc.plano_corte_id
             LEFT JOIN produtos p ON p.id = ipc.produto_id
+            LEFT JOIN configuracoes_cores cc ON p.cor_id = cc.id
+            LEFT JOIN configuracoes_gramaturas cg ON p.gramatura_id = cg.id
             WHERE 1=1
         `;
         
@@ -61,8 +62,7 @@ router.get('/', async (req, res) => {
             plano_id: c.plano_id,
             plano_codigo: c.plano_codigo,
             cliente: c.cliente,
-            produto_descricao: c.produto_descricao || 
-                [c.cor1, c.cor2, c.largura ? `${c.largura}cm` : '', c.gramatura ? `${c.gramatura}gr` : '']
+            produto_descricao: [c.nome_cor, c.gramatura ? `${c.gramatura}gr` : '', c.fabricante, c.largura_final ? `${c.largura_final}cm` : '']
                     .filter(Boolean).join(' ')
         }));
         
@@ -96,12 +96,17 @@ router.get('/:id', async (req, res) => {
                 pc.id as plano_id,
                 pc.codigo_plano as plano_codigo,
                 pc.cliente,
-                p.descricao as produto_descricao
+                p.fabricante,
+                p.largura_final,
+                cc.nome_cor,
+                cg.gramatura
             FROM cortes_realizados cr
             LEFT JOIN alocacoes_corte ac ON ac.id = cr.alocacao_id
             LEFT JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
             LEFT JOIN planos_corte pc ON pc.id = ipc.plano_corte_id
             LEFT JOIN produtos p ON p.id = ipc.produto_id
+            LEFT JOIN configuracoes_cores cc ON p.cor_id = cc.id
+            LEFT JOIN configuracoes_gramaturas cg ON p.gramatura_id = cg.id
             WHERE cr.id = ?
         `, [id]);
         
@@ -112,9 +117,14 @@ router.get('/:id', async (req, res) => {
             });
         }
         
+        // Adicionar produto_descricao formatado
+        const corte = cortes[0];
+        corte.produto_descricao = [corte.nome_cor, corte.gramatura ? `${corte.gramatura}gr` : '', corte.fabricante]
+            .filter(Boolean).join(' ');
+        
         res.json({
             success: true,
-            data: cortes[0]
+            data: corte
         });
         
     } catch (error) {
