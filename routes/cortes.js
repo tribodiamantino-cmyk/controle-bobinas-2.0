@@ -27,6 +27,7 @@ router.get('/', async (req, res) => {
                 pc.id as plano_id,
                 pc.codigo_plano as plano_codigo,
                 pc.cliente,
+                pc.status as plano_status,
                 p.fabricante,
                 p.largura_final,
                 cc.nome_cor,
@@ -38,7 +39,7 @@ router.get('/', async (req, res) => {
             LEFT JOIN produtos p ON p.id = ipc.produto_id
             LEFT JOIN configuracoes_cores cc ON p.cor_id = cc.id
             LEFT JOIN configuracoes_gramaturas cg ON p.gramatura_id = cg.id
-            WHERE 1=1
+            WHERE pc.status IN ('Em Produção', 'Finalizado')
         `;
         
         const params = [];
