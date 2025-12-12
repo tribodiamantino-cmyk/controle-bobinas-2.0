@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2c3e50">
+    <title>PDC - Controle de Bobinas</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="mobile-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <button class="btn btn-back" onclick="window.location.href='index.html'">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <h1 class="flex-grow-1 text-center mb-0">✂️ PDC</h1>
+            <button class="btn btn-back" onclick="pdc.recarregarLista()" style="opacity: 0.8;">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="container mt-3 mb-5">
+        <!-- TELA 1: Lista de PDCs -->
+        <div id="listaView" style="display: none;">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h4 class="mb-3">Planos em Produção</h4>
+                    <div id="listaContainer">
+                        <!-- Será preenchido via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA 2: Origens do PDC -->
+        <div id="origensView" style="display: none;">
+            <div class="mb-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="pdc.voltarParaLista()">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </button>
+            </div>
+
+            <!-- Info do PDC -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h4 id="pdcTitulo" class="mb-2"></h4>
+                    <p id="pdcCliente" class="text-muted mb-3"></p>
+                    
+                    <!-- Progresso -->
+                    <div class="progress-info">
+                        <div class="progress-text">
+                            <span id="progressoTexto">0/0 cortes</span>
+                            <span id="progressoPercent">0%</span>
+                        </div>
+                        <div class="progress">
+                            <div id="progressoBar" class="progress-bar bg-success" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Origens -->
+            <h5 class="mb-3">🎯 Origens para Cortar</h5>
+            <div id="origensContainer">
+                <!-- Será preenchido via JS -->
+            </div>
+        </div>
+
+        <!-- TELA 3: Cortes da Origem -->
+        <div id="cortesView" style="display: none;">
+            <div class="mb-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="pdc.voltarParaOrigens()">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </button>
+            </div>
+
+            <!-- Info da Origem -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h4 id="origemTitulo" class="mb-2"></h4>
+                    <p id="origemProduto" class="text-muted mb-1"></p>
+                    <p id="origemLocacao" class="mb-0">
+                        <i class="bi bi-geo-alt"></i> <span></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Botão Validar Origem -->
+            <div id="validarOrigemSection" class="mb-3">
+                <button class="btn btn-warning btn-lg w-100 btn-icon" onclick="pdc.validarOrigem()">
+                    <i class="bi bi-qr-code-scan"></i>
+                    <span>ESCANEAR ORIGEM</span>
+                </button>
+                <p class="text-center text-muted mt-2 mb-0">
+                    <small>Escaneie o código da origem antes de iniciar os cortes</small>
+                </p>
+            </div>
+
+            <!-- Lista de Cortes -->
+            <div id="cortesSection" style="display: none;">
+                <h5 class="mb-3">✂️ Cortes</h5>
+                <div id="cortesContainer">
+                    <!-- Será preenchido via JS -->
+                </div>
+
+                <!-- Botão Atualizar Locação -->
+                <div id="atualizarLocacaoSection" style="display: none;" class="mt-4">
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i>
+                        Todos cortes concluídos!
+                    </div>
+                    <button class="btn btn-primary btn-lg w-100 btn-icon" onclick="pdc.atualizarLocacaoOrigem()">
+                        <i class="bi bi-geo-alt"></i>
+                        <span>ATUALIZAR LOCAÇÃO</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA 4: Realizar Corte -->
+        <div id="corteView" style="display: none;">
+            <div class="mb-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="pdc.cancelarCorte()">
+                    <i class="bi bi-x"></i> Cancelar
+                </button>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="mb-4">✂️ Registrar Corte</h4>
+
+                    <!-- Origem -->
+                    <div class="info-section">
+                        <h5><i class="bi bi-box"></i> Origem</h5>
+                        <p id="corteOrigemCodigo" class="text-large"></p>
+                    </div>
+
+                    <!-- Metragem -->
+                    <div class="info-section">
+                        <h5><i class="bi bi-rulers"></i> Metragem a Cortar</h5>
+                        <div class="text-center">
+                            <span id="corteMetragem" class="text-xlarge text-primary"></span>
+                        </div>
+                    </div>
+
+                    <!-- Foto -->
+                    <div class="info-section">
+                        <h5><i class="bi bi-camera"></i> Foto do Medidor *</h5>
+                        <div class="foto-preview" id="fotoPreview">
+                            <div class="foto-placeholder">
+                                <i class="bi bi-camera"></i>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-lg w-100 mt-3" onclick="pdc.tirarFoto()">
+                            <i class="bi bi-camera-fill"></i> TIRAR FOTO
+                        </button>
+                    </div>
+
+                    <!-- Botão Confirmar -->
+                    <button id="btnConfirmarCorte" class="btn btn-success btn-lg w-100 mt-4" onclick="pdc.confirmarCorte()" disabled>
+                        <i class="bi bi-check-circle"></i> CONFIRMAR CORTE
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA 5: Finalizar PDC -->
+        <div id="finalizarView" style="display: none;">
+            <div class="mb-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="pdc.voltarParaOrigens()">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </button>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <div class="icon-xl text-success mb-3">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <h3>PDC Concluído!</h3>
+                    <p id="finalizarPDCNome" class="text-muted mb-4"></p>
+
+                    <div class="alert alert-info">
+                        <h5><i class="bi bi-geo-alt"></i> Armazenamento</h5>
+                        <p>Escaneie as locações onde os cortes estão guardados</p>
+                    </div>
+
+                    <!-- Scanner de Locações -->
+                    <button class="btn btn-primary btn-lg w-100 mb-3" onclick="pdc.escanearLocacao()">
+                        <i class="bi bi-qr-code-scan"></i> ESCANEAR LOCAÇÃO
+                    </button>
+
+                    <!-- Locações Escaneadas -->
+                    <div id="locacoesEscaneadas" class="mb-4">
+                        <!-- Será preenchido via JS -->
+                    </div>
+
+                    <!-- Botão Finalizar -->
+                    <button id="btnFinalizarPDC" class="btn btn-success btn-lg w-100" onclick="pdc.finalizarPDC()" disabled>
+                        <i class="bi bi-check-circle"></i> FINALIZAR PDC
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/scanner.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/pdc.js"></script>
+</body>
+</html>
