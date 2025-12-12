@@ -24,8 +24,6 @@ router.get('/', async (req, res) => {
                 cr.foto_medidor_url,
                 cr.data_corte,
                 cr.operador_nome,
-                cr.placa_origem,
-                cr.codigo_origem,
                 pc.id as plano_id,
                 pc.codigo as plano_codigo,
                 pc.cliente,
@@ -65,11 +63,7 @@ router.get('/', async (req, res) => {
             cliente: c.cliente,
             produto_descricao: c.produto_descricao || 
                 [c.cor1, c.cor2, c.largura ? `${c.largura}cm` : '', c.gramatura ? `${c.gramatura}gr` : '']
-                    .filter(Boolean).join(' '),
-            origem: {
-                placa: c.placa_origem,
-                codigo: c.codigo_origem
-            }
+                    .filter(Boolean).join(' ')
         }));
         
         console.log(`✅ Listados ${resultado.length} cortes`);
