@@ -576,7 +576,7 @@ exports.historicoProduto = async (req, res) => {
                 pc.id as plano_id,
                 pc.codigo_plano,
                 pc.cliente,
-                pc.obra
+                pc.aviario
             FROM cortes_realizados cr
             LEFT JOIN bobinas b ON cr.bobina_id = b.id
             LEFT JOIN retalhos r ON cr.retalho_id = r.id
@@ -636,7 +636,7 @@ exports.historicoProduto = async (req, res) => {
                     plano_id: c.plano_id,
                     plano_codigo: c.codigo_plano,
                     cliente: c.cliente,
-                    obra: c.obra
+                    aviario: c.aviario
                 }
             });
         });
