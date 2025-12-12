@@ -428,3 +428,79 @@ exports.excluirBobina = async (req, res) => {
         });
     }
 };
+
+// Listar todas as bobinas (para Central de Etiquetas)
+exports.listarTodas = async (req, res) => {
+    try {
+        const { loja, status, nota_fiscal } = req.query;
+        
+        let sql = `
+            SELECT 
+                b.id,
+                b.codigo_interno,
+                b.nota_fiscal,
+                b.loja,
+                b.metragem_inicial,
+                b.metragem_atual,
+                b.metragem_reservada,
+                b.status,
+                b.placa,
+                b.data_entrada,
+                p.id as produto_id,
+                p.fabricante,
+                p.tipo_tecido,
+                c.nome_cor,
+                g.gramatura
+            FROM bobinas b
+            LEFT JOIN produtos p ON b.produto_id = p.id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            WHERE b.status != 'Esgotado'
+        `;
+        
+        const params = [];
+        
+        if (loja) {
+            sql += ` AND b.loja = ?`;
+            params.push(loja);
+        }
+        
+        if (status) {
+            sql += ` AND b.status = ?`;
+            params.push(status);
+        }
+        
+        if (nota_fiscal) {
+            sql += ` AND b.nota_fiscal LIKE ?`;
+            params.push(`%${nota_fiscal}%`);
+        }
+        
+        sql += ` ORDER BY b.data_entrada DESC`;
+        
+        const [bobinas] = await db.query(sql, params);
+        
+        // Formatar para a Central de Etiquetas
+        const resultado = bobinas.map(b => ({
+            id: b.id,
+            codigo: b.codigo_interno,
+            produto: `${b.nome_cor || ''} ${b.gramatura || ''}g ${b.fabricante || ''}`.trim(),
+            metragem: b.metragem_atual,
+            status: b.status,
+            nota_fiscal: b.nota_fiscal,
+            loja: b.loja,
+            placa: b.placa
+        }));
+        
+        res.json({
+            success: true,
+            data: resultado
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao listar bobinas:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao listar bobinas: ' + error.message
+        });
+    }
+};

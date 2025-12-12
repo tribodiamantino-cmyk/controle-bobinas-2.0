@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const bobinasController = require('../controllers/bobinasController');
 
+// Listar todas as bobinas (para Central de Etiquetas)
+router.get('/', bobinasController.listarTodas);
+
 // Criar nova bobina
 router.post('/', bobinasController.criarBobina);
 
