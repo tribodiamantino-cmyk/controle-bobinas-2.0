@@ -2295,7 +2295,7 @@ router.get('/pdcs/producao', async (req, res) => {
                 COUNT(DISTINCT cr.id) as cortes_concluidos
             FROM planos_corte pc
             LEFT JOIN itens_plano_corte ipc ON ipc.plano_id = pc.id
-            LEFT JOIN cortes_realizados cr ON cr.item_plano_id = ipc.id
+            LEFT JOIN cortes_realizados cr ON cr.item_plano_corte_id = ipc.id
             WHERE pc.status = 'em_producao'
         `;
 
