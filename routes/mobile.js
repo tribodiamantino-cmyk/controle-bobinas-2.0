@@ -2113,11 +2113,12 @@ router.get('/validar-codigo/:codigo', async (req, res) => {
 
         } else if (codigo.startsWith('RET-')) {
             tipo = 'retalho';
-            // Busca retalho pelo código
+            // Busca retalho pelo código com mais informações para debug
             const [retalhos] = await db.query(
-                'SELECT id, codigo_retalho as codigo FROM retalhos WHERE codigo_retalho = ?',
+                'SELECT id, codigo_retalho as codigo, metragem, status FROM retalhos WHERE codigo_retalho = ?',
                 [codigo]
             );
+            console.log(`🔍 Busca retalho ${codigo}:`, retalhos.length > 0 ? `Encontrado ID ${retalhos[0].id}` : 'NÃO ENCONTRADO');
             if (retalhos.length > 0) {
                 id = retalhos[0].id;
                 dados = retalhos[0];
@@ -2167,13 +2168,19 @@ router.get('/validar-codigo/:codigo', async (req, res) => {
         }
 
         if (!id || !dados) {
+            console.log(`❌ ${tipo?.toUpperCase() || 'ITEM'} não encontrado no banco:`, codigo);
             return res.json({
                 success: false,
-                error: `${tipo.toUpperCase()} não encontrado: ${codigo}`
+                error: `${tipo?.toUpperCase() || 'ITEM'} não encontrado: ${codigo}`,
+                details: {
+                    codigo,
+                    tipo,
+                    message: 'Verifique se o código está correto ou se o item existe no sistema'
+                }
             });
         }
 
-        console.log('✅ Código validado:', tipo, id);
+        console.log('✅ Código validado:', tipo, id, '- Dados:', dados);
 
         res.json({
             success: true,
@@ -2690,6 +2697,58 @@ router.post('/imprimir', async (req, res) => {
 
     } catch (error) {
         console.error('❌ Erro ao imprimir:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * DEBUG: Endpoint para verificar existência de retalho
+ * GET /api/mobile/debug/retalho/:codigo
+ */
+router.get('/debug/retalho/:codigo', async (req, res) => {
+    try {
+        const codigo = req.params.codigo.toUpperCase();
+        
+        console.log('🔍 DEBUG: Verificando retalho:', codigo);
+        
+        // Busca completa
+        const [retalhos] = await db.query(`
+            SELECT 
+                r.*,
+                p.codigo as produto_codigo,
+                p.loja
+            FROM retalhos r
+            LEFT JOIN produtos p ON r.produto_id = p.id
+            WHERE r.codigo_retalho = ?
+        `, [codigo]);
+        
+        if (retalhos.length === 0) {
+            // Tenta buscar todos retalhos similares
+            const [similares] = await db.query(`
+                SELECT codigo_retalho, id, status, metragem
+                FROM retalhos
+                WHERE codigo_retalho LIKE ?
+                LIMIT 10
+            `, [`%${codigo.split('-').pop()}%`]);
+            
+            return res.json({
+                success: false,
+                encontrado: false,
+                codigo_buscado: codigo,
+                similares,
+                total_retalhos: await db.query('SELECT COUNT(*) as total FROM retalhos')
+                    .then(([r]) => r[0].total)
+            });
+        }
+        
+        res.json({
+            success: true,
+            encontrado: true,
+            retalho: retalhos[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro no debug:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
