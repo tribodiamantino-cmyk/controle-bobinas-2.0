@@ -1,27 +1,55 @@
 const db = require('../config/database');
 
-// Gerar código QR único para bobina (formato: BOB-0001)
-async function gerarCodigoQR() {
-    // Buscar último código
+// Gerar código QR único para bobina (formato: BOB-{LOJA}-{SEQUENCIAL})
+// Conforme PADRONIZACAO_CODIGOS.md: BOB-PLA-000001
+async function gerarCodigoQR(loja) {
+    // Determinar prefixo da loja
+    const prefixoLoja = loja === 'Cortinave' ? 'PLA' : 'CIA';
+    console.log('🔢 Gerando código bobina para loja:', loja, '→ Prefixo:', prefixoLoja);
+    
+    // Buscar último código BOB com formato correto
     const [rows] = await db.query(
         `SELECT codigo_interno FROM bobinas 
-         WHERE codigo_interno LIKE 'BOB-%' 
+         WHERE codigo_interno LIKE 'BOB-%-______'
          ORDER BY id DESC LIMIT 1`
     );
     
     let proximoNumero = 1;
     if (rows.length > 0) {
         const ultimoCodigo = rows[0].codigo_interno;
-        const numeroAtual = parseInt(ultimoCodigo.split('-')[1]);
-        proximoNumero = numeroAtual + 1;
+        console.log('📋 Último código encontrado:', ultimoCodigo);
+        // Formato: BOB-XXX-000001, pegar o último grupo de números
+        const partes = ultimoCodigo.split('-');
+        if (partes.length === 3 && !isNaN(partes[2])) {
+            const numeroAtual = parseInt(partes[2]);
+            if (numeroAtual > 0) {
+                proximoNumero = numeroAtual + 1;
+            }
+        }
+    } else {
+        // Fallback: verificar formato antigo BOB-0001 para migração
+        const [rowsAntigo] = await db.query(
+            `SELECT codigo_interno FROM bobinas 
+             WHERE codigo_interno LIKE 'BOB-%'
+             ORDER BY id DESC LIMIT 1`
+        );
+        if (rowsAntigo.length > 0) {
+            const ultimoCodigo = rowsAntigo[0].codigo_interno;
+            const partes = ultimoCodigo.split('-');
+            if (partes.length === 2 && !isNaN(partes[1])) {
+                proximoNumero = parseInt(partes[1]) + 1;
+            }
+        }
     }
     
-    return `BOB-${proximoNumero.toString().padStart(4, '0')}`;
+    const novoCodigo = `BOB-${prefixoLoja}-${proximoNumero.toString().padStart(6, '0')}`;
+    console.log('✅ Novo código bobina gerado:', novoCodigo);
+    return novoCodigo;
 }
 
-// Manter função legada para compatibilidade (deprecated)
+// Manter função legada para compatibilidade
 async function gerarCodigoInterno(loja) {
-    return await gerarCodigoQR();
+    return await gerarCodigoQR(loja);
 }
 
 // Criar nova bobina
