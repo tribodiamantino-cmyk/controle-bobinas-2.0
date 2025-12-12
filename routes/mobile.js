@@ -2733,10 +2733,12 @@ router.get('/debug/retalho/:codigo', async (req, res) => {
                 r.*,
                 p.codigo as produto_codigo,
                 p.loja,
-                p.descricao as produto_descricao,
-                p.fabricante
+                p.fabricante,
+                CONCAT(c.nome_cor, ' ', g.gramatura, 'g/m² ', p.largura_final, 'm') as produto_descricao
             FROM retalhos r
             LEFT JOIN produtos p ON r.produto_id = p.id
+            LEFT JOIN configuracoes_cores c ON c.id = p.cor_id
+            LEFT JOIN configuracoes_gramaturas g ON g.id = p.gramatura_id
             WHERE r.codigo_retalho = ?
         `, [codigo]);
         
@@ -2755,9 +2757,11 @@ router.get('/debug/retalho/:codigo', async (req, res) => {
                     r.status, 
                     r.metragem,
                     p.loja,
-                    p.descricao as produto_descricao
+                    CONCAT(c.nome_cor, ' ', g.gramatura, 'g/m² ', p.largura_final, 'm') as produto_descricao
                 FROM retalhos r
                 LEFT JOIN produtos p ON r.produto_id = p.id
+                LEFT JOIN configuracoes_cores c ON c.id = p.cor_id
+                LEFT JOIN configuracoes_gramaturas g ON g.id = p.gramatura_id
                 WHERE r.codigo_retalho LIKE ?
                 ORDER BY r.id DESC
                 LIMIT 10
@@ -2770,9 +2774,11 @@ router.get('/debug/retalho/:codigo', async (req, res) => {
                     r.status,
                     r.metragem,
                     p.loja,
-                    p.descricao as produto_descricao
+                    CONCAT(c.nome_cor, ' ', g.gramatura, 'g/m² ', p.largura_final, 'm') as produto_descricao
                 FROM retalhos r
                 LEFT JOIN produtos p ON r.produto_id = p.id
+                LEFT JOIN configuracoes_cores c ON c.id = p.cor_id
+                LEFT JOIN configuracoes_gramaturas g ON g.id = p.gramatura_id
                 WHERE r.status != 'Esgotado'
                 ORDER BY r.id DESC
                 LIMIT 20
@@ -2832,10 +2838,13 @@ router.get('/debug/todos-retalhos', async (req, res) => {
                 r.locacao,
                 p.codigo as produto_codigo,
                 p.loja,
-                p.descricao as produto_descricao,
+                p.fabricante,
+                CONCAT(c.nome_cor, ' ', g.gramatura, 'g/m² ', p.largura_final, 'm') as produto_descricao,
                 CHAR_LENGTH(r.codigo_retalho) as tamanho_codigo
             FROM retalhos r
             LEFT JOIN produtos p ON r.produto_id = p.id
+            LEFT JOIN configuracoes_cores c ON c.id = p.cor_id
+            LEFT JOIN configuracoes_gramaturas g ON g.id = p.gramatura_id
             ORDER BY r.id DESC
             LIMIT 50
         `);
