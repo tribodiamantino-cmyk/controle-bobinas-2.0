@@ -46,6 +46,28 @@ exports.up = async function(db) {
         // 2. ALOCACOES_CORTE → BOBINAS
         // ====================================
         
+        // Primeiro, remover CHECK constraint que conflita com CASCADE
+        const [checkConstraints] = await db.query(`
+            SELECT CONSTRAINT_NAME 
+            FROM information_schema.TABLE_CONSTRAINTS 
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'alocacoes_corte'
+            AND CONSTRAINT_TYPE = 'CHECK'
+            AND CONSTRAINT_NAME LIKE '%chk%'
+        `);
+        
+        for (const constraint of checkConstraints) {
+            console.log(`  📌 Removendo CHECK constraint: ${constraint.CONSTRAINT_NAME}`);
+            try {
+                await db.query(`
+                    ALTER TABLE alocacoes_corte 
+                    DROP CHECK ${constraint.CONSTRAINT_NAME}
+                `);
+            } catch (e) {
+                console.log(`  ⚠️  Erro ao remover CHECK (pode não existir): ${e.message}`);
+            }
+        }
+        
         const [fkAlocBobina] = await db.query(`
             SELECT CONSTRAINT_NAME 
             FROM information_schema.TABLE_CONSTRAINTS 

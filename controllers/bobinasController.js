@@ -287,6 +287,55 @@ exports.listarBobinasPorProduto = async (req, res) => {
     }
 };
 
+// Buscar bobina por ID (para mobile/consultas)
+exports.buscarPorId = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        console.log('🔍 Buscando bobina por ID:', id);
+        
+        const [bobina] = await db.query(
+            `SELECT 
+                b.*,
+                b.codigo_interno as codigo,
+                p.codigo as codigo_produto,
+                p.fabricante,
+                p.tipo_tecido,
+                p.largura_sem_costura,
+                p.tipo_bainha,
+                p.largura_final,
+                p.largura_maior,
+                p.largura_y,
+                c.nome_cor,
+                g.gramatura
+            FROM bobinas b
+            JOIN produtos p ON b.produto_id = p.id
+            JOIN configuracoes_cores c ON p.cor_id = c.id
+            JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+            WHERE b.id = ?`,
+            [id]
+        );
+        
+        if (bobina.length === 0) {
+            console.log('❌ Bobina não encontrada, ID:', id);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Bobina não encontrada' 
+            });
+        }
+        
+        console.log('✅ Bobina encontrada:', bobina[0].codigo);
+        res.json({ success: true, data: bobina[0] });
+        
+    } catch (error) {
+        console.error('❌ Erro ao buscar bobina:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao buscar bobina: ' + error.message 
+        });
+    }
+};
+
 // Buscar bobina por código interno (para etiqueta)
 exports.buscarBobinaPorCodigo = async (req, res) => {
     try {

@@ -24,6 +24,9 @@ router.get('/buscar-produto', bobinasController.buscarProduto);
 // Histórico de uma bobina específica
 router.get('/:id/historico', historicoController.historicoBobina);
 
+// Buscar bobina por ID (para mobile/consultas) - DEVE VIR POR ÚLTIMO
+router.get('/:id', bobinasController.buscarPorId);
+
 // Excluir bobina
 router.delete('/:id', bobinasController.excluirBobina);
 
