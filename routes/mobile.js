@@ -2813,6 +2813,98 @@ router.get('/debug/retalho/:codigo', async (req, res) => {
     }
 });
 
+/**
+ * DIAGNÓSTICO COMPLETO: Investigar dados reais de retalhos
+ * GET /api/mobile/debug/todos-retalhos
+ */
+router.get('/debug/todos-retalhos', async (req, res) => {
+    try {
+        console.log('🔍 DIAGNÓSTICO COMPLETO: Listando todos os retalhos');
+        
+        // 1. Todos os retalhos com detalhes
+        const [todos] = await db.query(`
+            SELECT 
+                r.id,
+                r.codigo_retalho,
+                r.metragem,
+                r.status,
+                r.produto_id,
+                r.locacao,
+                p.codigo as produto_codigo,
+                p.loja,
+                p.descricao as produto_descricao,
+                CHAR_LENGTH(r.codigo_retalho) as tamanho_codigo
+            FROM retalhos r
+            LEFT JOIN produtos p ON r.produto_id = p.id
+            ORDER BY r.id DESC
+            LIMIT 50
+        `);
+        
+        // 2. Buscar especificamente RET-CIA-000013
+        const [retalho13_exato] = await db.query(
+            'SELECT * FROM retalhos WHERE codigo_retalho = ?',
+            ['RET-CIA-000013']
+        );
+        
+        // 3. Buscar com LIKE
+        const [retalho13_like] = await db.query(
+            "SELECT * FROM retalhos WHERE codigo_retalho LIKE '%000013%'"
+        );
+        
+        // 4. Buscar por ID = 13
+        const [retalho_id13] = await db.query(
+            'SELECT * FROM retalhos WHERE id = 13'
+        );
+        
+        // 5. Estatísticas
+        const [[stats]] = await db.query(`
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN status = 'Disponível' THEN 1 END) as disponiveis,
+                COUNT(CASE WHEN status = 'Esgotado' THEN 1 END) as esgotados,
+                COUNT(CASE WHEN codigo_retalho LIKE 'RET-CIA-%' THEN 1 END) as loja_cia,
+                COUNT(CASE WHEN codigo_retalho LIKE 'RET-PLA-%' THEN 1 END) as loja_pla,
+                COUNT(CASE WHEN codigo_retalho IS NULL OR codigo_retalho = '' THEN 1 END) as sem_codigo
+            FROM retalhos
+        `);
+        
+        res.json({
+            success: true,
+            diagnostico: {
+                busca_ret_cia_000013_exato: {
+                    encontrado: retalho13_exato.length > 0,
+                    quantidade: retalho13_exato.length,
+                    dados: retalho13_exato[0] || null
+                },
+                busca_ret_cia_000013_like: {
+                    encontrado: retalho13_like.length > 0,
+                    quantidade: retalho13_like.length,
+                    dados: retalho13_like[0] || null
+                },
+                busca_id_13: {
+                    encontrado: retalho_id13.length > 0,
+                    dados: retalho_id13[0] || null
+                },
+                estatisticas: stats,
+                todos_retalhos: todos.map(r => ({
+                    id: r.id,
+                    codigo_retalho: r.codigo_retalho,
+                    tamanho_codigo: r.tamanho_codigo,
+                    codigo_hex: Buffer.from(r.codigo_retalho || '').toString('hex'),
+                    metragem: r.metragem,
+                    status: r.status,
+                    loja: r.loja,
+                    produto: r.produto_descricao
+                }))
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro no diagnóstico completo:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 console.log('✅ Mobile v2.0 routes carregadas');
 
 module.exports = router;
