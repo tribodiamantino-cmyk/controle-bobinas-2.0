@@ -1,6 +1,18 @@
 exports.up = async function(db) {
     console.log('📦 Inserindo locações iniciais...');
     
+    // Verificar se tabela existe
+    try {
+        const [tables] = await db.query(`SHOW TABLES LIKE 'locacoes'`);
+        if (tables.length === 0) {
+            console.log('⏭️  Tabela locacoes não existe ainda (será criada pela migration 038)');
+            return;
+        }
+    } catch (err) {
+        console.log('⚠️  Erro ao verificar tabela:', err.message);
+        return;
+    }
+    
     const locacoes = [
         // Corredor A - Prateleira 1
         ['A1-B1-C1', 'Corredor A - Prateleira 1 - Posição B1-C1', 'A', '1', 'B1-C1'],

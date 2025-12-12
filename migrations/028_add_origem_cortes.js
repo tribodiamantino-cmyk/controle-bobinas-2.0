@@ -21,53 +21,44 @@ exports.up = async function(db) {
     `);
     
     if (columns.length > 0) {
-        console.log('⚠️ Campos de origem já existem em cortes_realizados');
+        console.log('⏭️  Campos de origem já existem em cortes_realizados');
         return;
     }
     
-    // Adicionar colunas
-    await db.query(`
-        ALTER TABLE cortes_realizados 
-        ADD COLUMN bobina_origem_id INT NULL AFTER item_plano_id,
-        ADD COLUMN retalho_origem_id INT NULL AFTER bobina_origem_id,
-        ADD COLUMN placa_origem VARCHAR(50) NULL AFTER retalho_origem_id,
-        ADD COLUMN codigo_origem VARCHAR(50) NULL AFTER placa_origem
-    `);
+    // Adicionar colunas uma por uma para maior robustez
+    const colunas = [
+        { nome: 'bobina_origem_id', sql: 'ADD COLUMN bobina_origem_id INT NULL' },
+        { nome: 'retalho_origem_id', sql: 'ADD COLUMN retalho_origem_id INT NULL' },
+        { nome: 'placa_origem', sql: 'ADD COLUMN placa_origem VARCHAR(50) NULL' },
+        { nome: 'codigo_origem', sql: 'ADD COLUMN codigo_origem VARCHAR(50) NULL' }
+    ];
     
-    console.log('✅ Colunas de origem adicionadas');
-    
-    // Adicionar foreign keys
-    try {
-        await db.query(`
-            ALTER TABLE cortes_realizados 
-            ADD CONSTRAINT fk_corte_bobina_origem 
-            FOREIGN KEY (bobina_origem_id) REFERENCES bobinas(id) ON DELETE SET NULL
-        `);
-        console.log('✅ FK bobina_origem_id criada');
-    } catch (err) {
-        console.log('⚠️ FK bobina_origem_id já existe ou erro:', err.message);
+    for (const col of colunas) {
+        try {
+            await db.query(`ALTER TABLE cortes_realizados ${col.sql}`);
+            console.log(`✅ Coluna ${col.nome} adicionada`);
+        } catch (err) {
+            if (err.code === 'ER_DUP_FIELDNAME') {
+                console.log(`⏭️  Coluna ${col.nome} já existe`);
+            } else {
+                console.log(`⚠️  Erro em ${col.nome}:`, err.message);
+            }
+        }
     }
     
-    try {
-        await db.query(`
-            ALTER TABLE cortes_realizados 
-            ADD CONSTRAINT fk_corte_retalho_origem 
-            FOREIGN KEY (retalho_origem_id) REFERENCES retalhos(id) ON DELETE SET NULL
-        `);
-        console.log('✅ FK retalho_origem_id criada');
-    } catch (err) {
-        console.log('⚠️ FK retalho_origem_id já existe ou erro:', err.message);
-    }
-    
-    // Criar índices para consultas de garantia
+    // Criar índice para consultas de garantia
     try {
         await db.query(`CREATE INDEX idx_corte_placa_origem ON cortes_realizados(placa_origem)`);
         console.log('✅ Índice placa_origem criado');
     } catch (err) {
-        console.log('⚠️ Índice já existe:', err.message);
+        if (err.code === 'ER_DUP_KEYNAME') {
+            console.log('⏭️  Índice placa_origem já existe');
+        } else {
+            console.log('⚠️  Erro no índice:', err.message);
+        }
     }
     
-    console.log('✅ Migration 028 concluída: campos de origem em cortes_realizados');
+    console.log('✅ Migration 028 concluída');
 };
 
 exports.down = async function(db) {
