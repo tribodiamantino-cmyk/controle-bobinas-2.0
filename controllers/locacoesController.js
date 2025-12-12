@@ -1,5 +1,41 @@
 const db = require('../config/database');
 
+/**
+ * Gera variações de código de locação para busca
+ * Ex: "1-A-1" → ["1-A-1", "0001-A-0001", "01-A-01", "001-A-001"]
+ * Ex: "0001-A-0001" → ["0001-A-0001", "1-A-1", "01-A-01", "001-A-001"]
+ */
+function gerarVariacoesLocacao(codigo) {
+    const partes = codigo.split('-');
+    if (partes.length !== 3) return [codigo];
+    
+    const setor = parseInt(partes[0], 10);
+    const corredor = partes[1];
+    const posicao = parseInt(partes[2], 10);
+    
+    if (isNaN(setor) || isNaN(posicao)) return [codigo];
+    
+    // Gerar todas as variações possíveis
+    const variacoes = new Set();
+    
+    // Formato sem zeros: 1-A-1
+    variacoes.add(`${setor}-${corredor}-${posicao}`);
+    
+    // Formato com 2 dígitos: 01-A-01
+    variacoes.add(`${String(setor).padStart(2, '0')}-${corredor}-${String(posicao).padStart(2, '0')}`);
+    
+    // Formato com 3 dígitos: 001-A-001
+    variacoes.add(`${String(setor).padStart(3, '0')}-${corredor}-${String(posicao).padStart(3, '0')}`);
+    
+    // Formato com 4 dígitos: 0001-A-0001
+    variacoes.add(`${String(setor).padStart(4, '0')}-${corredor}-${String(posicao).padStart(4, '0')}`);
+    
+    // Adicionar código original caso tenha formato misto
+    variacoes.add(codigo);
+    
+    return Array.from(variacoes);
+}
+
 // Listar todas as locações (ativas e inativas)
 exports.listarLocacoes = async (req, res) => {
     try {
@@ -253,7 +289,11 @@ exports.detalhesParaMobile = async (req, res) => {
             });
         }
         
-        // Buscar bobinas nesta locação (exceto esgotadas)
+        // Gerar variações do código para busca (1-A-1 e 0001-A-0001 são equivalentes)
+        const variacoes = gerarVariacoesLocacao(codigoLocacao);
+        console.log(`🔍 Buscando variações:`, variacoes);
+        
+        // Buscar bobinas nesta locação (exceto esgotadas) - usando IN para múltiplas variações
         const [bobinas] = await db.query(`
             SELECT 
                 b.id,
@@ -262,6 +302,7 @@ exports.detalhesParaMobile = async (req, res) => {
                 b.metragem_atual as metragem,
                 b.status,
                 b.loja,
+                b.locacao,
                 p.fabricante,
                 c.nome_cor,
                 g.gramatura
@@ -269,9 +310,9 @@ exports.detalhesParaMobile = async (req, res) => {
             JOIN produtos p ON b.produto_id = p.id
             LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
             LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-            WHERE b.locacao = ? AND b.status != 'Esgotado'
+            WHERE b.locacao IN (?) AND b.status != 'Esgotado'
             ORDER BY b.codigo_interno
-        `, [codigoLocacao]);
+        `, [variacoes]);
         
         // Buscar retalhos nesta locação (exceto esgotados)
         const [retalhos] = await db.query(`
@@ -281,6 +322,7 @@ exports.detalhesParaMobile = async (req, res) => {
                 'retalho' as tipo,
                 r.metragem as metragem,
                 r.status,
+                r.locacao,
                 p.loja,
                 p.fabricante,
                 c.nome_cor,
@@ -289,9 +331,9 @@ exports.detalhesParaMobile = async (req, res) => {
             JOIN produtos p ON r.produto_id = p.id
             LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
             LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
-            WHERE r.locacao = ? AND r.status != 'Esgotado'
+            WHERE r.locacao IN (?) AND r.status != 'Esgotado'
             ORDER BY r.codigo_retalho
-        `, [codigoLocacao]);
+        `, [variacoes]);
         
         // Combinar itens
         const itens = [...bobinas, ...retalhos];
