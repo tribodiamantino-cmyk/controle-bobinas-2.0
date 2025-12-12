@@ -788,6 +788,7 @@ function renderizarEstoque(produtos) {
                         <span class="badge badge-info">🏪 ${produto.loja}</span>
                         <span class="badge badge-secondary">🏭 ${produto.fabricante}</span>
                         <span class="codigo-produto">🔢 ${produto.codigo}</span>
+                        <button class="btn btn-sm btn-info ms-2" onclick="event.stopPropagation(); HistoricoModal.mostrar('produto', ${produto.id})" title="Ver histórico do produto">📜</button>
                     </div>
                     <button class="btn-expand" id="btn-expand-${produto.id}">▼</button>
                 </div>
@@ -1061,6 +1062,7 @@ function renderizarItemBobina(bobina) {
                 </div>
             </div>
             <div class="bobina-actions">
+                <button class="btn btn-sm btn-info" onclick="HistoricoModal.mostrar('bobina', ${bobina.id})" title="Ver histórico">📜</button>
                 <button class="btn btn-sm btn-warning" onclick="converterEmRetalho(${bobina.id}, '${bobina.codigo_interno}')" title="Converter em retalho">📐</button>
                 <button class="btn btn-sm btn-secondary" onclick="ImpressaoEtiquetas.abrirModal('bobina', ${bobina.id})" title="Imprimir etiqueta">🖨️</button>
                 <button class="btn btn-sm btn-danger" onclick="excluirBobina(${bobina.id})" title="Excluir bobina">🗑️</button>
@@ -1138,6 +1140,7 @@ function renderizarItemRetalho(retalho) {
                 </div>
             </div>
             <div class="bobina-actions">
+                <button class="btn btn-sm btn-info" onclick="HistoricoModal.mostrar('retalho', ${retalho.id})" title="Ver histórico">📜</button>
                 <button class="btn btn-sm btn-secondary" onclick="ImpressaoEtiquetas.abrirModal('retalho', ${retalho.id})" title="Imprimir etiqueta">🖨️</button>
                 <button class="btn btn-sm btn-danger" onclick="excluirRetalho(${retalho.id})" title="Excluir retalho">🗑️</button>
             </div>

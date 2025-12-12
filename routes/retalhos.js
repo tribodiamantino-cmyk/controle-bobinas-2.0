@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const retalhosController = require('../controllers/retalhosController');
+const historicoController = require('../controllers/historicoController');
 
 // Listar todos os retalhos
 router.get('/', retalhosController.listarRetalhos);
@@ -22,6 +23,9 @@ router.put('/:id', retalhosController.atualizarRetalho);
 
 // Histórico de localização
 router.get('/:id/historico-localizacao', retalhosController.obterHistoricoLocalizacao);
+
+// Histórico de movimentações (cortes, origem)
+router.get('/:id/historico', historicoController.historicoRetalho);
 
 // Excluir retalho
 router.delete('/:id', retalhosController.excluirRetalho);
