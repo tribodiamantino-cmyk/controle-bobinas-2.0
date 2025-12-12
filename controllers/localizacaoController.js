@@ -103,5 +103,5 @@ async function obterHistorico(req, res) {
 module.exports = {
     atualizarLocalizacao,
     obterHistorico,
-    validarLocalizacao
+    validarLocacao  // Usa função do utilitário
 };
