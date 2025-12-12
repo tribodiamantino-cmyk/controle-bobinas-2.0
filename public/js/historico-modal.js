@@ -7,6 +7,8 @@
 
 const HistoricoModal = {
     modalElement: null,
+    tipoAtual: null,
+    idAtual: null,
 
     /**
      * Inicializa o modal (cria o HTML se não existir)
@@ -28,6 +30,31 @@ const HistoricoModal = {
                         <!-- Cabeçalho com info da entidade -->
                         <div id="historicoHeader" class="p-3 bg-light border-bottom">
                             <!-- Preenchido dinamicamente -->
+                        </div>
+                        
+                        <!-- Filtro de Datas -->
+                        <div id="historicoFiltros" class="p-3 border-bottom bg-white">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label small mb-1">Data Início</label>
+                                    <input type="date" class="form-control form-control-sm" id="historicoDataInicio">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small mb-1">Data Fim</label>
+                                    <input type="date" class="form-control form-control-sm" id="historicoDataFim">
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-sm btn-primary w-100" onclick="HistoricoModal.aplicarFiltro()">
+                                        <i class="bi bi-funnel me-1"></i>Filtrar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-secondary me-1" onclick="HistoricoModal.filtroRapido('hoje')">Hoje</button>
+                                <button class="btn btn-sm btn-outline-secondary me-1" onclick="HistoricoModal.filtroRapido('semana')">Última Semana</button>
+                                <button class="btn btn-sm btn-outline-secondary me-1" onclick="HistoricoModal.filtroRapido('mes')">Último Mês</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="HistoricoModal.filtroRapido('todos')">Todos</button>
+                            </div>
                         </div>
                         
                         <!-- Resumo -->
@@ -157,12 +184,25 @@ const HistoricoModal = {
      * Mostra o modal de histórico
      * @param {string} tipo - 'bobina', 'retalho' ou 'produto'
      * @param {number} id - ID da entidade
+     * @param {string} dataInicio - Data início (opcional)
+     * @param {string} dataFim - Data fim (opcional)
      */
-    async mostrar(tipo, id) {
+    async mostrar(tipo, id, dataInicio = null, dataFim = null) {
         this.init();
+        this.tipoAtual = tipo;
+        this.idAtual = id;
         
         const modal = new bootstrap.Modal(document.getElementById('historicoModal'));
         modal.show();
+        
+        // Limpar filtros de data se não especificados
+        if (!dataInicio && !dataFim) {
+            document.getElementById('historicoDataInicio').value = '';
+            document.getElementById('historicoDataFim').value = '';
+        } else {
+            if (dataInicio) document.getElementById('historicoDataInicio').value = dataInicio;
+            if (dataFim) document.getElementById('historicoDataFim').value = dataFim;
+        }
 
         // Limpar conteúdo anterior
         document.getElementById('historicoHeader').innerHTML = '<div class="text-muted">Carregando...</div>';
@@ -187,14 +227,20 @@ const HistoricoModal = {
         `;
 
         try {
-            // Buscar dados da API
+            // Montar URL com filtros
             const endpoints = {
                 bobina: `/api/bobinas/${id}/historico`,
                 retalho: `/api/retalhos/${id}/historico`,
                 produto: `/api/produtos/${id}/historico`
             };
+            
+            let url = endpoints[tipo];
+            const params = new URLSearchParams();
+            if (dataInicio) params.append('data_inicio', dataInicio);
+            if (dataFim) params.append('data_fim', dataFim);
+            if (params.toString()) url += '?' + params.toString();
 
-            const response = await fetch(endpoints[tipo]);
+            const response = await fetch(url);
             const result = await response.json();
 
             if (!result.success) {
@@ -215,6 +261,100 @@ const HistoricoModal = {
                 </div>
             `;
         }
+    },
+    
+    /**
+     * Aplica o filtro de datas
+     */
+    aplicarFiltro() {
+        const dataInicio = document.getElementById('historicoDataInicio').value || null;
+        const dataFim = document.getElementById('historicoDataFim').value || null;
+        
+        if (this.tipoAtual && this.idAtual) {
+            // Apenas recarregar os dados, não recriar o modal
+            this.recarregarDados(dataInicio, dataFim);
+        }
+    },
+    
+    /**
+     * Recarrega os dados com filtros
+     */
+    async recarregarDados(dataInicio, dataFim) {
+        document.getElementById('historicoTimeline').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="text-muted mt-2">Filtrando...</p>
+            </div>
+        `;
+        
+        try {
+            const endpoints = {
+                bobina: `/api/bobinas/${this.idAtual}/historico`,
+                retalho: `/api/retalhos/${this.idAtual}/historico`,
+                produto: `/api/produtos/${this.idAtual}/historico`
+            };
+            
+            let url = endpoints[this.tipoAtual];
+            const params = new URLSearchParams();
+            if (dataInicio) params.append('data_inicio', dataInicio);
+            if (dataFim) params.append('data_fim', dataFim);
+            if (params.toString()) url += '?' + params.toString();
+
+            const response = await fetch(url);
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Erro ao carregar histórico');
+            }
+
+            this.renderizarResumo(this.tipoAtual, result.data.resumo);
+            this.renderizarTimeline(result.data.eventos);
+
+        } catch (error) {
+            console.error('Erro ao filtrar histórico:', error);
+            document.getElementById('historicoTimeline').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Erro ao filtrar: ${error.message}
+                </div>
+            `;
+        }
+    },
+    
+    /**
+     * Aplica filtros rápidos de data
+     */
+    filtroRapido(periodo) {
+        const hoje = new Date();
+        let dataInicio = null;
+        let dataFim = hoje.toISOString().split('T')[0];
+        
+        switch (periodo) {
+            case 'hoje':
+                dataInicio = dataFim;
+                break;
+            case 'semana':
+                const semanaAtras = new Date(hoje);
+                semanaAtras.setDate(hoje.getDate() - 7);
+                dataInicio = semanaAtras.toISOString().split('T')[0];
+                break;
+            case 'mes':
+                const mesAtras = new Date(hoje);
+                mesAtras.setMonth(hoje.getMonth() - 1);
+                dataInicio = mesAtras.toISOString().split('T')[0];
+                break;
+            case 'todos':
+                dataInicio = null;
+                dataFim = null;
+                break;
+        }
+        
+        document.getElementById('historicoDataInicio').value = dataInicio || '';
+        document.getElementById('historicoDataFim').value = dataFim || '';
+        
+        this.recarregarDados(dataInicio, dataFim);
     },
 
     /**

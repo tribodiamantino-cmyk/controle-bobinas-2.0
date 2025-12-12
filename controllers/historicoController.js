@@ -180,6 +180,7 @@ module.exports.registrarMovimentacao = exports.registrar;
 exports.historicoBobina = async (req, res) => {
     try {
         const { id } = req.params;
+        const { data_inicio, data_fim } = req.query;
 
         // 1. Dados da bobina
         const [bobinas] = await db.query(`
@@ -189,7 +190,7 @@ exports.historicoBobina = async (req, res) => {
                 b.metragem_inicial,
                 b.metragem_atual,
                 b.status,
-                b.created_at as data_entrada,
+                b.data_entrada,
                 b.nota_fiscal,
                 b.loja,
                 p.fabricante,
@@ -209,8 +210,8 @@ exports.historicoBobina = async (req, res) => {
 
         const bobina = bobinas[0];
 
-        // 2. Cortes realizados desta bobina
-        const [cortes] = await db.query(`
+        // 2. Cortes realizados desta bobina (com filtro de data opcional)
+        let sqlCortes = `
             SELECT 
                 cr.id,
                 cr.codigo_corte,
@@ -225,8 +226,20 @@ exports.historicoBobina = async (req, res) => {
             FROM cortes_realizados cr
             LEFT JOIN planos_corte pc ON cr.plano_corte_id = pc.id
             WHERE cr.origem_tipo = 'bobina' AND cr.bobina_id = ?
-            ORDER BY cr.data_corte DESC
-        `, [id]);
+        `;
+        const paramsCortes = [id];
+        
+        if (data_inicio) {
+            sqlCortes += ` AND cr.data_corte >= ?`;
+            paramsCortes.push(data_inicio);
+        }
+        if (data_fim) {
+            sqlCortes += ` AND cr.data_corte <= ?`;
+            paramsCortes.push(data_fim + ' 23:59:59');
+        }
+        sqlCortes += ` ORDER BY cr.data_corte DESC`;
+        
+        const [cortes] = await db.query(sqlCortes, paramsCortes);
 
         // 3. Retalhos gerados desta bobina
         const [retalhos] = await db.query(`
@@ -235,10 +248,10 @@ exports.historicoBobina = async (req, res) => {
                 r.codigo_retalho,
                 r.metragem,
                 r.status,
-                r.created_at as data_criacao
+                r.data_entrada as data_criacao
             FROM retalhos r
             WHERE r.bobina_origem_id = ?
-            ORDER BY r.created_at DESC
+            ORDER BY r.data_entrada DESC
         `, [id]);
 
         // 4. Montar timeline de eventos
@@ -342,6 +355,7 @@ exports.historicoBobina = async (req, res) => {
 exports.historicoRetalho = async (req, res) => {
     try {
         const { id } = req.params;
+        const { data_inicio, data_fim } = req.query;
 
         // 1. Dados do retalho
         const [retalhos] = await db.query(`
@@ -351,7 +365,7 @@ exports.historicoRetalho = async (req, res) => {
                 r.metragem,
                 r.metragem_original,
                 r.status,
-                r.created_at as data_criacao,
+                r.data_entrada as data_criacao,
                 r.bobina_origem_id,
                 b.codigo_interno as bobina_codigo,
                 p.fabricante,
@@ -373,8 +387,8 @@ exports.historicoRetalho = async (req, res) => {
 
         const retalho = retalhos[0];
 
-        // 2. Cortes realizados deste retalho
-        const [cortes] = await db.query(`
+        // 2. Cortes realizados deste retalho (com filtro de data opcional)
+        let sqlCortes = `
             SELECT 
                 cr.id,
                 cr.codigo_corte,
@@ -389,8 +403,20 @@ exports.historicoRetalho = async (req, res) => {
             FROM cortes_realizados cr
             LEFT JOIN planos_corte pc ON cr.plano_corte_id = pc.id
             WHERE cr.origem_tipo = 'retalho' AND cr.retalho_id = ?
-            ORDER BY cr.data_corte DESC
-        `, [id]);
+        `;
+        const paramsCortes = [id];
+        
+        if (data_inicio) {
+            sqlCortes += ` AND cr.data_corte >= ?`;
+            paramsCortes.push(data_inicio);
+        }
+        if (data_fim) {
+            sqlCortes += ` AND cr.data_corte <= ?`;
+            paramsCortes.push(data_fim + ' 23:59:59');
+        }
+        sqlCortes += ` ORDER BY cr.data_corte DESC`;
+        
+        const [cortes] = await db.query(sqlCortes, paramsCortes);
 
         // 3. Montar timeline
         const eventos = [];
@@ -482,6 +508,7 @@ exports.historicoRetalho = async (req, res) => {
 exports.historicoProduto = async (req, res) => {
     try {
         const { id } = req.params;
+        const { data_inicio, data_fim } = req.query;
 
         // 1. Dados do produto
         const [produtos] = await db.query(`
@@ -513,11 +540,11 @@ exports.historicoProduto = async (req, res) => {
                 b.metragem_inicial,
                 b.metragem_atual,
                 b.status,
-                b.created_at as data_entrada,
+                b.data_entrada,
                 b.nota_fiscal
             FROM bobinas b
             WHERE b.produto_id = ?
-            ORDER BY b.created_at DESC
+            ORDER BY b.data_entrada DESC
         `, [id]);
 
         // 3. Todos os retalhos deste produto
@@ -527,15 +554,15 @@ exports.historicoProduto = async (req, res) => {
                 r.codigo_retalho,
                 r.metragem,
                 r.status,
-                r.created_at as data_criacao,
+                r.data_entrada as data_criacao,
                 r.bobina_origem_id
             FROM retalhos r
             WHERE r.produto_id = ?
-            ORDER BY r.created_at DESC
+            ORDER BY r.data_entrada DESC
         `, [id]);
 
-        // 4. Todos os cortes (bobinas e retalhos)
-        const [todosCortes] = await db.query(`
+        // 4. Todos os cortes (bobinas e retalhos) com filtro de data opcional
+        let sqlCortes = `
             SELECT 
                 cr.id,
                 cr.codigo_corte,
@@ -554,10 +581,22 @@ exports.historicoProduto = async (req, res) => {
             LEFT JOIN bobinas b ON cr.bobina_id = b.id
             LEFT JOIN retalhos r ON cr.retalho_id = r.id
             LEFT JOIN planos_corte pc ON cr.plano_corte_id = pc.id
-            WHERE (cr.origem_tipo = 'bobina' AND b.produto_id = ?)
-               OR (cr.origem_tipo = 'retalho' AND r.produto_id = ?)
-            ORDER BY cr.data_corte DESC
-        `, [id, id]);
+            WHERE ((cr.origem_tipo = 'bobina' AND b.produto_id = ?)
+               OR (cr.origem_tipo = 'retalho' AND r.produto_id = ?))
+        `;
+        const paramsCortes = [id, id];
+        
+        if (data_inicio) {
+            sqlCortes += ` AND cr.data_corte >= ?`;
+            paramsCortes.push(data_inicio);
+        }
+        if (data_fim) {
+            sqlCortes += ` AND cr.data_corte <= ?`;
+            paramsCortes.push(data_fim + ' 23:59:59');
+        }
+        sqlCortes += ` ORDER BY cr.data_corte DESC`;
+        
+        const [todosCortes] = await db.query(sqlCortes, paramsCortes);
 
         // 5. Montar timeline consolidada
         const eventos = [];
