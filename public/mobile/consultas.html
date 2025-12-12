@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2c3e50">
+    <title>Consultas - Controle de Bobinas</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="mobile-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <button class="btn btn-back" onclick="window.location.href='index.html'">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <h1 class="flex-grow-1 text-center mb-0">🔍 CONSULTAS</h1>
+            <div style="width: 50px;"></div>
+        </div>
+    </header>
+
+    <main class="container mt-3 mb-5">
+        <!-- Scanner Section -->
+        <div id="scannerSection" class="mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center p-4">
+                    <h3 class="mb-3">Escanear Código de Barras</h3>
+                    <p class="text-muted mb-4">
+                        <small>Tipos suportados: BOB, RET, COR, LOC</small>
+                    </p>
+                    
+                    <button id="btnScan" class="btn btn-primary btn-lg btn-icon w-100 mb-3">
+                        <i class="bi bi-camera"></i>
+                        <span>INICIAR SCANNER</span>
+                    </button>
+
+                    <div class="text-muted mb-2">ou</div>
+
+                    <div class="input-group">
+                        <input type="text" 
+                               id="inputManual" 
+                               class="form-control form-control-lg" 
+                               placeholder="Digite o código..."
+                               autocomplete="off">
+                        <button class="btn btn-secondary" id="btnBuscar">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Section (inicialmente oculto) -->
+        <div id="detailsSection" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Detalhes</h4>
+                <button class="btn btn-outline-secondary btn-sm" id="btnNovaBusca">
+                    <i class="bi bi-arrow-left"></i> Nova busca
+                </button>
+            </div>
+            
+            <!-- Container de detalhes (será preenchido dinamicamente) -->
+            <div id="detailsContainer"></div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay (será criado via JS) -->
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/scanner.js"></script>
+    <script src="js/consultas.js"></script>
+</body>
+</html>
