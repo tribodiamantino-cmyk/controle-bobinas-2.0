@@ -276,6 +276,34 @@ class PDCModule {
     }
 
     /**
+     * Valida origem via campo de texto manual
+     */
+    async validarOrigemManual() {
+        const input = document.getElementById('codigoOrigemManual');
+        const codigo = input.value.trim().toUpperCase();
+        
+        if (!codigo) {
+            Utils.mostrarErro('Digite o código da origem');
+            input.focus();
+            return;
+        }
+        
+        debugLog('Validando origem manual:', codigo);
+        
+        // Valida formato básico (BOB-XXX-XXXXXX ou RET-XXX-XXXXXX)
+        if (!codigo.match(/^(BOB|RET)-[A-Z]{3}-\d{6}$/)) {
+            Utils.mostrarErro('Formato inválido. Use: BOB-PLA-000001 ou RET-CIA-000001');
+            return;
+        }
+        
+        // Usa a mesma função de validação do scanner
+        await this.validarOrigemEscaneada(codigo);
+        
+        // Limpa o campo após validação
+        input.value = '';
+    }
+
+    /**
      * Processa scan (validação de origem ou locação)
      */
     async processarScan(codigo) {
@@ -614,21 +642,63 @@ class PDCModule {
     }
 
     /**
+     * Adiciona locação via campo de texto manual
+     */
+    async adicionarLocacaoManual() {
+        const input = document.getElementById('locacaoManual');
+        let codigo = input.value.trim().toUpperCase();
+        
+        if (!codigo) {
+            Utils.mostrarErro('Digite a locação');
+            input.focus();
+            return;
+        }
+        
+        debugLog('Adicionando locação manual:', codigo);
+        
+        // Se não começar com LOC-, verifica se é formato de locação N-X-N
+        if (!codigo.startsWith('LOC-')) {
+            // Verifica formato N-X-N (ex: 1-A-1, 01-B-23, 0001-C-0001)
+            if (codigo.match(/^\d{1,4}-[A-Z]-\d{1,4}$/)) {
+                // Normaliza para formato padrão
+                if (typeof Utils.normalizarLocacao === 'function') {
+                    codigo = Utils.normalizarLocacao(codigo);
+                }
+                // Converte para código LOC- (simplificado: usa o próprio código)
+                // Na prática, seria necessário buscar o ID da locação no banco
+                // Por enquanto, permite usar o formato direto
+            } else {
+                Utils.mostrarErro('Formato inválido. Use: LOC-5 ou 1-A-1');
+                return;
+            }
+        }
+        
+        // Usa a mesma função de adicionar locação do scanner
+        await this.adicionarLocacaoFinalizacao(codigo);
+        
+        // Limpa o campo após adicionar
+        input.value = '';
+    }
+
+    /**
      * Adiciona locação escaneada
      */
     async adicionarLocacaoFinalizacao(codigo) {
         try {
-            // Valida se é locação
-            if (!codigo.startsWith('LOC-')) {
+            // Valida se é locação (LOC-X ou formato N-X-N)
+            const isLocCode = codigo.startsWith('LOC-');
+            const isLocFormat = codigo.match(/^\d{4}-[A-Z]-\d{4}$/);
+            
+            if (!isLocCode && !isLocFormat) {
                 Utils.feedbackErro();
-                Utils.mostrarErro('Código inválido. Use LOC-XXX');
+                Utils.mostrarErro('Código inválido. Use LOC-5 ou 0001-A-0001');
                 return;
             }
 
             // Verifica duplicação
             if (this.locacoesFinalizacao.includes(codigo)) {
                 Utils.feedbackErro();
-                Utils.mostrarAviso('Locação já escaneada');
+                Utils.mostrarAviso('Locação já adicionada');
                 return;
             }
 
