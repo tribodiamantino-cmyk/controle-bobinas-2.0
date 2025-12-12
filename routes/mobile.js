@@ -2169,13 +2169,26 @@ router.get('/validar-codigo/:codigo', async (req, res) => {
 
         if (!id || !dados) {
             console.log(`❌ ${tipo?.toUpperCase() || 'ITEM'} não encontrado no banco:`, codigo);
+            
+            // Mensagens de ajuda específicas por tipo
+            let dica = 'Verifique se o código está correto ou se o item existe no sistema';
+            let endpoint_debug = null;
+            
+            if (tipo === 'retalho') {
+                dica = '💡 Use o endpoint de debug para ver códigos disponíveis: GET /api/mobile/debug/retalho/' + codigo;
+                endpoint_debug = `/api/mobile/debug/retalho/${codigo}`;
+            } else if (tipo === 'bobina') {
+                dica = '💡 Verifique se a bobina foi cadastrada e não está esgotada';
+            }
+            
             return res.json({
                 success: false,
                 error: `${tipo?.toUpperCase() || 'ITEM'} não encontrado: ${codigo}`,
                 details: {
                     codigo,
                     tipo,
-                    message: 'Verifique se o código está correto ou se o item existe no sistema'
+                    message: dica,
+                    endpoint_debug
                 }
             });
         }
@@ -2704,6 +2717,9 @@ router.post('/imprimir', async (req, res) => {
 /**
  * DEBUG: Endpoint para verificar existência de retalho
  * GET /api/mobile/debug/retalho/:codigo
+ * 
+ * Retorna informações detalhadas sobre um retalho específico
+ * Se não encontrado, sugere códigos válidos da mesma loja
  */
 router.get('/debug/retalho/:codigo', async (req, res) => {
     try {
@@ -2716,30 +2732,74 @@ router.get('/debug/retalho/:codigo', async (req, res) => {
             SELECT 
                 r.*,
                 p.codigo as produto_codigo,
-                p.loja
+                p.loja,
+                p.descricao as produto_descricao,
+                p.fabricante
             FROM retalhos r
             LEFT JOIN produtos p ON r.produto_id = p.id
             WHERE r.codigo_retalho = ?
         `, [codigo]);
         
         if (retalhos.length === 0) {
-            // Tenta buscar todos retalhos similares
+            // Extrai loja do código (ex: RET-CIA-000013 → CIA)
+            const partesCodeigo = codigo.split('-');
+            const loja = partesCodeigo.length >= 2 ? partesCodeigo[1] : null;
+            
+            console.log(`⚠️ Retalho ${codigo} não encontrado. Buscando sugestões...`);
+            
+            // Busca códigos similares da mesma loja
             const [similares] = await db.query(`
-                SELECT codigo_retalho, id, status, metragem
-                FROM retalhos
-                WHERE codigo_retalho LIKE ?
+                SELECT 
+                    r.codigo_retalho, 
+                    r.id, 
+                    r.status, 
+                    r.metragem,
+                    p.loja,
+                    p.descricao as produto_descricao
+                FROM retalhos r
+                LEFT JOIN produtos p ON r.produto_id = p.id
+                WHERE r.codigo_retalho LIKE ?
+                ORDER BY r.id DESC
                 LIMIT 10
-            `, [`%${codigo.split('-').pop()}%`]);
+            `, [loja ? `RET-${loja}-%` : 'RET-%']);
+            
+            // Lista todos os retalhos disponíveis (não esgotados)
+            const [disponiveis] = await db.query(`
+                SELECT 
+                    r.codigo_retalho,
+                    r.status,
+                    r.metragem,
+                    p.loja,
+                    p.descricao as produto_descricao
+                FROM retalhos r
+                LEFT JOIN produtos p ON r.produto_id = p.id
+                WHERE r.status != 'Esgotado'
+                ORDER BY r.id DESC
+                LIMIT 20
+            `);
+            
+            const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM retalhos');
+            const [[{ disponiveis_count }]] = await db.query(
+                "SELECT COUNT(*) as disponiveis_count FROM retalhos WHERE status != 'Esgotado'"
+            );
             
             return res.json({
                 success: false,
                 encontrado: false,
                 codigo_buscado: codigo,
+                loja_extraida: loja,
                 similares,
-                total_retalhos: await db.query('SELECT COUNT(*) as total FROM retalhos')
-                    .then(([r]) => r[0].total)
+                retalhos_disponiveis: disponiveis,
+                estatisticas: {
+                    total_retalhos: total,
+                    disponiveis: disponiveis_count,
+                    esgotados: total - disponiveis_count
+                },
+                dica: `💡 Use um dos códigos listados em 'retalhos_disponiveis' para testar o scanner`
             });
         }
+        
+        console.log(`✅ Retalho ${codigo} encontrado:`, retalhos[0].id);
         
         res.json({
             success: true,
