@@ -2361,34 +2361,42 @@ router.get('/pdcs/:id/origens', async (req, res) => {
         // Busca alocações (origens) agrupadas
         const [alocacoes] = await db.query(`
             SELECT 
-                ac.origem_tipo,
-                ac.origem_id,
+                ac.tipo_origem as origem_tipo,
                 CASE 
-                    WHEN ac.origem_tipo = 'bobina' THEN b.codigo_interno
-                    WHEN ac.origem_tipo = 'retalho' THEN r.codigo_retalho
+                    WHEN ac.tipo_origem = 'bobina' THEN ac.bobina_id
+                    WHEN ac.tipo_origem = 'retalho' THEN ac.retalho_id
+                END as origem_id,
+                CASE 
+                    WHEN ac.tipo_origem = 'bobina' THEN b.codigo_interno
+                    WHEN ac.tipo_origem = 'retalho' THEN r.codigo_retalho
                 END as codigo,
                 CASE 
-                    WHEN ac.origem_tipo = 'bobina' THEN b.locacao
-                    WHEN ac.origem_tipo = 'retalho' THEN r.locacao
+                    WHEN ac.tipo_origem = 'bobina' THEN b.locacao
+                    WHEN ac.tipo_origem = 'retalho' THEN r.locacao
                 END as locacao,
                 p.descricao as produto,
                 COUNT(DISTINCT ipc.id) as total_cortes,
                 COUNT(DISTINCT cr.id) as cortes_concluidos
             FROM alocacoes_corte ac
             JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_id
-            LEFT JOIN bobinas b ON ac.origem_tipo = 'bobina' AND ac.origem_id = b.id
-            LEFT JOIN retalhos r ON ac.origem_tipo = 'retalho' AND ac.origem_id = r.id
+            LEFT JOIN bobinas b ON ac.tipo_origem = 'bobina' AND ac.bobina_id = b.id
+            LEFT JOIN retalhos r ON ac.tipo_origem = 'retalho' AND ac.retalho_id = r.id
             LEFT JOIN produtos p ON (b.produto_id = p.id OR r.produto_id = p.id)
             LEFT JOIN cortes_realizados cr ON cr.item_plano_corte_id = ipc.id 
-                AND cr.origem_tipo = ac.origem_tipo 
-                AND cr.origem_id = ac.origem_id
+                AND cr.origem_tipo = ac.tipo_origem 
+                AND ((cr.bobina_id = ac.bobina_id AND ac.tipo_origem = 'bobina')
+                     OR (cr.retalho_id = ac.retalho_id AND ac.tipo_origem = 'retalho'))
             WHERE ipc.plano_corte_id = ?
-            GROUP BY ac.origem_tipo, ac.origem_id
-            ORDER BY ac.origem_tipo, codigo
+            GROUP BY ac.tipo_origem, CASE WHEN ac.tipo_origem = 'bobina' THEN ac.bobina_id ELSE ac.retalho_id END
+            ORDER BY ac.tipo_origem, codigo
         `, [pdcId]);
 
         // Para cada origem, busca seus cortes
         const origensComCortes = await Promise.all(alocacoes.map(async (origem) => {
+            const whereConditions = origem.origem_tipo === 'bobina' 
+                ? 'AND ac.bobina_id = ?' 
+                : 'AND ac.retalho_id = ?';
+            
             const [cortes] = await db.query(`
                 SELECT 
                     ipc.id as item_id,
@@ -2399,11 +2407,12 @@ router.get('/pdcs/:id/origens', async (req, res) => {
                 FROM itens_plano_corte ipc
                 JOIN alocacoes_corte ac ON ac.item_plano_id = ipc.id
                 LEFT JOIN cortes_realizados cr ON cr.item_plano_corte_id = ipc.id
-                    AND cr.origem_tipo = ac.origem_tipo
-                    AND cr.origem_id = ac.origem_id
+                    AND cr.origem_tipo = ac.tipo_origem
+                    AND ((cr.bobina_id = ac.bobina_id AND ac.tipo_origem = 'bobina')
+                         OR (cr.retalho_id = ac.retalho_id AND ac.tipo_origem = 'retalho'))
                 WHERE ipc.plano_corte_id = ?
-                    AND ac.origem_tipo = ?
-                    AND ac.origem_id = ?
+                    AND ac.tipo_origem = ?
+                    ${whereConditions}
                 ORDER BY ipc.id
             `, [pdcId, origem.origem_tipo, origem.origem_id]);
 
