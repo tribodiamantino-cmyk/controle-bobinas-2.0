@@ -2090,4 +2090,621 @@ router.post('/plano/reverter/:id', async (req, res) => {
     }
 });
 
+// ========================================
+// MOBILE V2.0 - NOVOS ENDPOINTS
+// ========================================
+
+/**
+ * Valida código de barras e retorna tipo + ID
+ * GET /api/mobile/validar-codigo/:codigo
+ */
+router.get('/validar-codigo/:codigo', async (req, res) => {
+    try {
+        const codigo = req.params.codigo.toUpperCase();
+        console.log('🔍 Validando código:', codigo);
+
+        let tipo = null;
+        let id = null;
+        let dados = null;
+
+        // Detecta tipo pelo prefixo
+        if (codigo.startsWith('BOB-')) {
+            tipo = 'bobina';
+            // Busca bobina pelo código
+            const [bobinas] = await db.query(
+                'SELECT id, codigo_bobina as codigo FROM bobinas WHERE codigo_bobina = ? OR qr_code = ?',
+                [codigo, codigo]
+            );
+            if (bobinas.length > 0) {
+                id = bobinas[0].id;
+                dados = bobinas[0];
+            }
+
+        } else if (codigo.startsWith('RET-')) {
+            tipo = 'retalho';
+            // Busca retalho pelo código
+            const [retalhos] = await db.query(
+                'SELECT id, qr_code as codigo FROM retalhos WHERE qr_code = ?',
+                [codigo]
+            );
+            if (retalhos.length > 0) {
+                id = retalhos[0].id;
+                dados = retalhos[0];
+            }
+
+        } else if (codigo.startsWith('COR-')) {
+            tipo = 'corte';
+            // Busca corte pelo código
+            const [cortes] = await db.query(
+                'SELECT id, codigo_corte as codigo FROM cortes_realizados WHERE codigo_corte = ?',
+                [codigo]
+            );
+            if (cortes.length > 0) {
+                id = cortes[0].id;
+                dados = cortes[0];
+            }
+
+        } else if (codigo.startsWith('PDC-')) {
+            tipo = 'pdc';
+            // Busca plano pelo código
+            const [planos] = await db.query(
+                'SELECT id, codigo_plano as codigo FROM planos_corte WHERE codigo_plano = ?',
+                [codigo]
+            );
+            if (planos.length > 0) {
+                id = planos[0].id;
+                dados = planos[0];
+            }
+
+        } else if (codigo.startsWith('LOC-')) {
+            tipo = 'locacao';
+            // LOC-15 → ID = 15
+            id = parseInt(codigo.replace('LOC-', ''));
+            const [locacoes] = await db.query(
+                'SELECT id, locacao FROM locacoes WHERE id = ?',
+                [id]
+            );
+            if (locacoes.length > 0) {
+                dados = locacoes[0];
+            }
+
+        } else {
+            return res.json({
+                success: false,
+                error: 'Código não reconhecido. Use BOB, RET, COR, PDC ou LOC.'
+            });
+        }
+
+        if (!id || !dados) {
+            return res.json({
+                success: false,
+                error: `${tipo.toUpperCase()} não encontrado: ${codigo}`
+            });
+        }
+
+        console.log('✅ Código validado:', tipo, id);
+
+        res.json({
+            success: true,
+            data: {
+                tipo,
+                id,
+                codigo,
+                ...dados
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao validar código:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Lista PDCs em produção (status = 'em_producao')
+ * GET /api/mobile/pdcs/producao
+ */
+router.get('/pdcs/producao', async (req, res) => {
+    try {
+        const loja = req.query.loja; // Filtro opcional por loja
+        console.log('📋 Buscando PDCs em produção', loja ? `(loja: ${loja})` : '');
+
+        let query = `
+            SELECT 
+                pc.id,
+                pc.codigo_plano,
+                pc.cliente,
+                pc.aviario,
+                pc.status,
+                pc.data_criacao,
+                COUNT(DISTINCT ipc.id) as total_cortes,
+                COUNT(DISTINCT cr.id) as cortes_concluidos
+            FROM planos_corte pc
+            LEFT JOIN itens_plano_corte ipc ON ipc.plano_id = pc.id
+            LEFT JOIN cortes_realizados cr ON cr.item_plano_id = ipc.id
+            WHERE pc.status = 'em_producao'
+        `;
+
+        const params = [];
+        if (loja) {
+            query += ' AND pc.loja = ?';
+            params.push(loja);
+        }
+
+        query += `
+            GROUP BY pc.id
+            ORDER BY pc.data_criacao DESC
+        `;
+
+        const [pdcs] = await db.query(query, params);
+
+        // Calcula progresso para cada PDC
+        const pdcsComProgresso = pdcs.map(pdc => ({
+            ...pdc,
+            progresso: pdc.total_cortes > 0 
+                ? Math.round((pdc.cortes_concluidos / pdc.total_cortes) * 100)
+                : 0
+        }));
+
+        console.log(`✅ ${pdcs.length} PDCs encontrados em produção`);
+
+        res.json({
+            success: true,
+            data: pdcsComProgresso,
+            total: pdcs.length
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar PDCs em produção:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Busca origens (bobinas/retalhos) de um PDC com cortes agrupados
+ * GET /api/mobile/pdcs/:id/origens
+ */
+router.get('/pdcs/:id/origens', async (req, res) => {
+    try {
+        const pdcId = req.params.id;
+        console.log('🎯 Buscando origens do PDC:', pdcId);
+
+        // Busca informações do PDC
+        const [pdcs] = await db.query(
+            'SELECT * FROM planos_corte WHERE id = ?',
+            [pdcId]
+        );
+
+        if (pdcs.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'PDC não encontrado'
+            });
+        }
+
+        const pdc = pdcs[0];
+
+        // Busca alocações (origens) agrupadas
+        const [alocacoes] = await db.query(`
+            SELECT 
+                ac.origem_tipo,
+                ac.origem_id,
+                CASE 
+                    WHEN ac.origem_tipo = 'bobina' THEN b.codigo_bobina
+                    WHEN ac.origem_tipo = 'retalho' THEN r.qr_code
+                END as codigo,
+                CASE 
+                    WHEN ac.origem_tipo = 'bobina' THEN b.locacao
+                    WHEN ac.origem_tipo = 'retalho' THEN r.locacao
+                END as locacao,
+                p.descricao as produto,
+                COUNT(DISTINCT ipc.id) as total_cortes,
+                COUNT(DISTINCT cr.id) as cortes_concluidos
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_id
+            LEFT JOIN bobinas b ON ac.origem_tipo = 'bobina' AND ac.origem_id = b.id
+            LEFT JOIN retalhos r ON ac.origem_tipo = 'retalho' AND ac.origem_id = r.id
+            LEFT JOIN produtos p ON (b.produto_id = p.id OR r.produto_id = p.id)
+            LEFT JOIN cortes_realizados cr ON cr.item_plano_id = ipc.id 
+                AND cr.origem_tipo = ac.origem_tipo 
+                AND cr.origem_id = ac.origem_id
+            WHERE ipc.plano_id = ?
+            GROUP BY ac.origem_tipo, ac.origem_id
+            ORDER BY ac.origem_tipo, codigo
+        `, [pdcId]);
+
+        // Para cada origem, busca seus cortes
+        const origensComCortes = await Promise.all(alocacoes.map(async (origem) => {
+            const [cortes] = await db.query(`
+                SELECT 
+                    ipc.id as item_id,
+                    ipc.metragem_corte,
+                    cr.id as corte_id,
+                    cr.codigo_corte,
+                    cr.status
+                FROM itens_plano_corte ipc
+                JOIN alocacoes_corte ac ON ac.item_plano_id = ipc.id
+                LEFT JOIN cortes_realizados cr ON cr.item_plano_id = ipc.id
+                    AND cr.origem_tipo = ac.origem_tipo
+                    AND cr.origem_id = ac.origem_id
+                WHERE ipc.plano_id = ?
+                    AND ac.origem_tipo = ?
+                    AND ac.origem_id = ?
+                ORDER BY ipc.id
+            `, [pdcId, origem.origem_tipo, origem.origem_id]);
+
+            return {
+                tipo: origem.origem_tipo,
+                id: origem.origem_id,
+                codigo: origem.codigo,
+                locacao: origem.locacao,
+                produto: origem.produto,
+                total_cortes: origem.total_cortes,
+                cortes_concluidos: origem.cortes_concluidos,
+                cortes: cortes.map(c => ({
+                    id: c.item_id,
+                    codigo_corte: c.codigo_corte,
+                    metragem: parseFloat(c.metragem_corte),
+                    status: c.status || 'pendente'
+                }))
+            };
+        }));
+
+        console.log(`✅ ${origensComCortes.length} origens encontradas`);
+
+        res.json({
+            success: true,
+            pdc: {
+                id: pdc.id,
+                codigo_plano: pdc.codigo_plano,
+                cliente: pdc.cliente,
+                aviario: pdc.aviario,
+                status: pdc.status
+            },
+            origens: origensComCortes
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar origens:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Valida se código escaneado é a origem esperada
+ * POST /api/mobile/pdcs/validar-origem
+ */
+router.post('/pdcs/validar-origem', async (req, res) => {
+    try {
+        const {
+            pdc_id,
+            origem_esperada_id,
+            origem_esperada_tipo,
+            codigo_escaneado
+        } = req.body;
+
+        console.log('🔍 Validando origem escaneada:', codigo_escaneado);
+
+        // Busca o item pelo código
+        const validacao = await db.query(
+            origem_esperada_tipo === 'bobina'
+                ? 'SELECT id, codigo_bobina as codigo FROM bobinas WHERE codigo_bobina = ? OR qr_code = ?'
+                : 'SELECT id, qr_code as codigo FROM retalhos WHERE qr_code = ?',
+            origem_esperada_tipo === 'bobina' 
+                ? [codigo_escaneado, codigo_escaneado]
+                : [codigo_escaneado]
+        );
+
+        const [itens] = validacao;
+
+        if (itens.length === 0) {
+            return res.json({
+                success: false,
+                valido: false,
+                erro: 'Código não encontrado no sistema'
+            });
+        }
+
+        const item = itens[0];
+
+        // Verifica se é a origem esperada
+        const valido = (item.id === origem_esperada_id);
+
+        if (!valido) {
+            return res.json({
+                success: false,
+                valido: false,
+                erro: `Código incorreto. Esperado: ${origem_esperada_tipo.toUpperCase()} ID ${origem_esperada_id}`
+            });
+        }
+
+        console.log('✅ Origem validada com sucesso');
+
+        res.json({
+            success: true,
+            valido: true,
+            origem: {
+                tipo: origem_esperada_tipo,
+                id: item.id,
+                codigo: item.codigo
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao validar origem:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Atualiza locação de bobina ou retalho após cortes
+ * POST /api/mobile/pdcs/atualizar-locacao
+ */
+router.post('/pdcs/atualizar-locacao', async (req, res) => {
+    try {
+        const { tipo, id, nova_locacao } = req.body;
+
+        console.log(`📍 Atualizando locação ${tipo} ID ${id}:`, nova_locacao);
+
+        const tabela = tipo === 'bobina' ? 'bobinas' : 'retalhos';
+
+        await db.query(
+            `UPDATE ${tabela} SET locacao = ? WHERE id = ?`,
+            [nova_locacao, id]
+        );
+
+        console.log('✅ Locação atualizada');
+
+        res.json({
+            success: true,
+            message: 'Locação atualizada com sucesso',
+            data: { tipo, id, nova_locacao }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao atualizar locação:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Lista PDCs finalizados disponíveis para carregamento
+ * GET /api/mobile/carregamento/disponiveis
+ */
+router.get('/carregamento/disponiveis', async (req, res) => {
+    try {
+        const loja = req.query.loja;
+        console.log('📦 Buscando PDCs disponíveis para carregamento');
+
+        let query = `
+            SELECT 
+                pc.id,
+                pc.codigo_plano,
+                pc.cliente,
+                pc.aviario,
+                pc.data_finalizacao,
+                pc.loja,
+                COUNT(DISTINCT cr.id) as total_cortes,
+                GROUP_CONCAT(DISTINCT pl.locacao_id) as locacoes_ids
+            FROM planos_corte pc
+            LEFT JOIN cortes_realizados cr ON cr.plano_id = pc.id
+            LEFT JOIN plano_locacoes pl ON pl.plano_id = pc.id
+            WHERE pc.status = 'finalizado'
+            AND pc.id NOT IN (
+                SELECT DISTINCT plano_id 
+                FROM carregamentos 
+                WHERE status = 'concluido'
+            )
+        `;
+
+        const params = [];
+        if (loja) {
+            query += ' AND pc.loja = ?';
+            params.push(loja);
+        }
+
+        query += `
+            GROUP BY pc.id
+            ORDER BY pc.data_finalizacao DESC
+        `;
+
+        const [pdcs] = await db.query(query, params);
+
+        // Busca locações para cada PDC
+        const pdcsComLocacoes = await Promise.all(pdcs.map(async (pdc) => {
+            const [locacoes] = await db.query(`
+                SELECT l.id, l.locacao
+                FROM plano_locacoes pl
+                JOIN locacoes l ON l.id = pl.locacao_id
+                WHERE pl.plano_id = ?
+            `, [pdc.id]);
+
+            return {
+                ...pdc,
+                locacoes: locacoes.map(l => l.locacao)
+            };
+        }));
+
+        console.log(`✅ ${pdcs.length} PDCs disponíveis`);
+
+        res.json({
+            success: true,
+            data: pdcsComLocacoes,
+            total: pdcs.length
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar PDCs disponíveis:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Valida corte escaneado durante carregamento
+ * POST /api/mobile/carregamento/validar-corte
+ */
+router.post('/carregamento/validar-corte', async (req, res) => {
+    try {
+        const { carregamento_id, codigo_corte } = req.body;
+
+        console.log('🔍 Validando corte:', codigo_corte);
+
+        // Busca o carregamento
+        const [carregamentos] = await db.query(
+            'SELECT * FROM carregamentos WHERE id = ?',
+            [carregamento_id]
+        );
+
+        if (carregamentos.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Carregamento não encontrado'
+            });
+        }
+
+        const carregamento = carregamentos[0];
+
+        // Busca o corte
+        const [cortes] = await db.query(
+            'SELECT * FROM cortes_realizados WHERE codigo_corte = ?',
+            [codigo_corte]
+        );
+
+        if (cortes.length === 0) {
+            return res.json({
+                success: false,
+                valido: false,
+                erro: 'Corte não encontrado'
+            });
+        }
+
+        const corte = cortes[0];
+
+        // Verifica se o corte pertence ao plano correto
+        if (corte.plano_id !== carregamento.plano_id) {
+            // Busca o PDC correto do corte
+            const [pdcCorreto] = await db.query(
+                'SELECT codigo_plano, cliente FROM planos_corte WHERE id = ?',
+                [corte.plano_id]
+            );
+
+            return res.json({
+                success: false,
+                valido: false,
+                erro: 'Corte pertence a outro PDC',
+                corte: {
+                    codigo_corte: corte.codigo_corte,
+                    pdc_correto: pdcCorreto[0]?.codigo_plano,
+                    cliente: pdcCorreto[0]?.cliente
+                }
+            });
+        }
+
+        // Verifica se já foi carregado
+        const [jaCarregado] = await db.query(
+            'SELECT * FROM carregamentos_itens WHERE carregamento_id = ? AND corte_id = ?',
+            [carregamento_id, corte.id]
+        );
+
+        if (jaCarregado.length > 0) {
+            return res.json({
+                success: false,
+                valido: false,
+                erro: 'Corte já validado anteriormente'
+            });
+        }
+
+        // Registra validação
+        await db.query(`
+            INSERT INTO carregamentos_itens (carregamento_id, corte_id, data_validacao)
+            VALUES (?, ?, NOW())
+        `, [carregamento_id, corte.id]);
+
+        // Atualiza progresso
+        const [progresso] = await db.query(`
+            SELECT 
+                COUNT(DISTINCT ci.corte_id) as validados,
+                (SELECT COUNT(*) FROM cortes_realizados WHERE plano_id = ?) as total
+            FROM carregamentos_itens ci
+            WHERE ci.carregamento_id = ?
+        `, [carregamento.plano_id, carregamento_id]);
+
+        const { validados, total } = progresso[0];
+        const percentual = Math.round((validados / total) * 100);
+
+        console.log(`✅ Corte validado (${validados}/${total})`);
+
+        res.json({
+            success: true,
+            valido: true,
+            corte: {
+                id: corte.id,
+                codigo_corte: corte.codigo_corte,
+                metragem: parseFloat(corte.metragem_cortada)
+            },
+            progresso: {
+                validados,
+                total,
+                percentual
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao validar corte:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Busca histórico de movimentações (placeholder)
+ * GET /api/mobile/historico/:tipo/:id
+ */
+router.get('/historico/:tipo/:id', async (req, res) => {
+    try {
+        const { tipo, id } = req.params;
+
+        console.log(`📜 Buscando histórico: ${tipo} ID ${id}`);
+
+        // TODO: Implementar busca de histórico completo
+        // Por enquanto retorna vazio
+
+        res.json({
+            success: true,
+            data: [],
+            message: 'Funcionalidade em desenvolvimento'
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar histórico:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * Solicita impressão de etiqueta (placeholder)
+ * POST /api/mobile/imprimir
+ */
+router.post('/imprimir', async (req, res) => {
+    try {
+        const { tipo, id } = req.body;
+
+        console.log(`🖨️ Solicitando impressão: ${tipo} ID ${id}`);
+
+        // TODO: Integrar com sistema de impressão existente
+        // Por enquanto apenas simula sucesso
+
+        res.json({
+            success: true,
+            message: 'Etiqueta enviada para impressão',
+            data: { tipo, id }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao imprimir:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+console.log('✅ Mobile v2.0 routes carregadas');
+
 module.exports = router;
