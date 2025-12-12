@@ -388,19 +388,42 @@ exports.excluirBobina = async (req, res) => {
         if (forcado === 'true') {
             console.log(`⚠️ Exclusão forçada da bobina ID ${id} - removendo dependências...`);
             
-            // 1. Excluir retalhos vinculados
+            let totalDependencias = 0;
+            
+            // 1. Buscar alocações vinculadas para excluir cortes primeiro
+            const [alocacoes] = await db.query(
+                'SELECT id FROM alocacoes_corte WHERE bobina_id = ?',
+                [id]
+            );
+            
+            if (alocacoes.length > 0) {
+                const alocacaoIds = alocacoes.map(a => a.id);
+                console.log(`📋 ${alocacoes.length} alocação(ões) encontrada(s)`);
+                
+                // 1.1. Excluir cortes realizados vinculados às alocações
+                const [cortesExcluidos] = await db.query(
+                    'DELETE FROM cortes_realizados WHERE alocacao_corte_id IN (?)',
+                    [alocacaoIds]
+                );
+                console.log(`✓ ${cortesExcluidos.affectedRows} corte(s) realizado(s) excluído(s)`);
+                totalDependencias += cortesExcluidos.affectedRows;
+                
+                // 1.2. Agora pode excluir as alocações
+                const [alocacoesExcluidas] = await db.query(
+                    'DELETE FROM alocacoes_corte WHERE bobina_id = ?',
+                    [id]
+                );
+                console.log(`✓ ${alocacoesExcluidas.affectedRows} alocação(ões) excluída(s)`);
+                totalDependencias += alocacoesExcluidas.affectedRows;
+            }
+            
+            // 2. Excluir retalhos vinculados
             const [retalhosExcluidos] = await db.query(
                 'DELETE FROM retalhos WHERE bobina_origem_id = ?',
                 [id]
             );
             console.log(`✓ ${retalhosExcluidos.affectedRows} retalho(s) excluído(s)`);
-            
-            // 2. Excluir alocações em planos de corte
-            const [alocacoesExcluidas] = await db.query(
-                'DELETE FROM alocacoes_corte WHERE bobina_id = ?',
-                [id]
-            );
-            console.log(`✓ ${alocacoesExcluidas.affectedRows} alocação(ões) excluída(s)`);
+            totalDependencias += retalhosExcluidos.affectedRows;
             
             // 3. Excluir a bobina
             await db.query('DELETE FROM bobinas WHERE id = ?', [id]);
@@ -408,11 +431,14 @@ exports.excluirBobina = async (req, res) => {
             
             return res.json({ 
                 success: true, 
-                message: `Bobina e ${retalhosExcluidos.affectedRows} dependência(s) excluídas com sucesso!` 
+                message: `Bobina e ${totalDependencias} dependência(s) excluídas com sucesso!` 
             });
         }
         
         // Exclusão normal - verificar dependências
+        console.log(`🔍 Verificando dependências da bobina ID ${id}...`);
+        
+        const dependencias = [];
         
         // Verificar se existem retalhos vinculados
         const [retalhos] = await db.query(
@@ -421,22 +447,41 @@ exports.excluirBobina = async (req, res) => {
         );
         
         if (retalhos[0].total > 0) {
-            return res.status(400).json({
-                success: false,
-                error: `Não é possível excluir esta bobina pois existem ${retalhos[0].total} retalho(s) vinculado(s) a ela.`
-            });
+            dependencias.push(`${retalhos[0].total} retalho(s)`);
         }
         
         // Verificar se existem alocações em planos de corte
-        const [alocacoes] = await db.query(
-            'SELECT COUNT(*) as total FROM alocacoes_corte WHERE bobina_id = ?',
-            [id]
-        );
+        const [alocacoes] = await db.query(`
+            SELECT COUNT(*) as total, 
+                   GROUP_CONCAT(DISTINCT pc.codigo_plano SEPARATOR ', ') as planos
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ac.item_plano_id = ipc.id
+            JOIN planos_corte pc ON ipc.plano_corte_id = pc.id
+            WHERE ac.bobina_id = ?
+        `, [id]);
         
         if (alocacoes[0].total > 0) {
+            dependencias.push(`${alocacoes[0].total} alocação(ões) em planos: ${alocacoes[0].planos}`);
+        }
+        
+        // Verificar se existem cortes realizados
+        const [cortes] = await db.query(`
+            SELECT COUNT(*) as total
+            FROM cortes_realizados cr
+            JOIN alocacoes_corte ac ON cr.alocacao_corte_id = ac.id
+            WHERE ac.bobina_id = ?
+        `, [id]);
+        
+        if (cortes[0].total > 0) {
+            dependencias.push(`${cortes[0].total} corte(s) realizado(s)`);
+        }
+        
+        if (dependencias.length > 0) {
             return res.status(400).json({
                 success: false,
-                error: 'Não é possível excluir esta bobina pois ela está alocada em planos de corte. Remova as alocações primeiro.'
+                error: `Não é possível excluir esta bobina pois existem dependências:`,
+                dependencias: dependencias,
+                hint: 'Use a exclusão forçada (forcado=true) para remover todas as dependências automaticamente.'
             });
         }
         
