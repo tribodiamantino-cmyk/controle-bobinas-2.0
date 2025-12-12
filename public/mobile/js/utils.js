@@ -336,6 +336,82 @@ const Utils = {
         }
         
         return new Blob([ab], { type: mimeType });
+    },
+
+    /**
+     * Aplica auto-hífen durante digitação de locação
+     * Insere hífen automaticamente na transição número→letra e letra→número
+     * @param {string} valor - Valor digitado
+     * @returns {string} - Valor com hífens automáticos
+     */
+    aplicarAutoHifenLocacao(valor) {
+        if (!valor) return '';
+        
+        // Mantém prefixo LOC- se existir
+        let prefixo = '';
+        let resto = valor.toUpperCase();
+        
+        if (resto.startsWith('LOC-')) {
+            prefixo = 'LOC-';
+            resto = resto.substring(4);
+        } else if (resto.startsWith('LOC')) {
+            prefixo = 'LOC-';
+            resto = resto.substring(3);
+        }
+        
+        // Remove tudo que não é número ou letra
+        let limpo = resto.replace(/[^0-9A-Z]/g, '');
+        
+        let resultado = '';
+        let ultimoTipo = null; // 'numero' ou 'letra'
+        
+        for (let i = 0; i < limpo.length; i++) {
+            const char = limpo[i];
+            const tipoAtual = /[0-9]/.test(char) ? 'numero' : 'letra';
+            
+            // Se mudou de tipo (número→letra ou letra→número), insere hífen
+            if (ultimoTipo && ultimoTipo !== tipoAtual) {
+                resultado += '-';
+            }
+            
+            resultado += char;
+            ultimoTipo = tipoAtual;
+        }
+        
+        return prefixo + resultado;
+    },
+
+    /**
+     * Normaliza locação para formato padrão 0000-X-0000
+     * @param {string} locacao - Locação em qualquer formato
+     * @returns {string|null} - Locação normalizada ou null se inválido
+     */
+    normalizarLocacao(locacao) {
+        if (!locacao) return null;
+        
+        let codigo = locacao.trim().toUpperCase();
+        codigo = codigo.replace(/^LOC-?/, '');
+        codigo = codigo.replace(/[^0-9A-Z-]/g, '');
+        
+        const match = codigo.match(/^(\d{1,4})-?([A-Z])-?(\d{1,4})$/);
+        if (!match) return null;
+        
+        const area = match[1].padStart(4, '0');
+        const corredor = match[2];
+        const posicao = match[3].padStart(4, '0');
+        
+        return `${area}-${corredor}-${posicao}`;
+    },
+
+    /**
+     * Valida se uma locação está em formato válido
+     * @param {string} locacao - Locação para validar
+     * @returns {boolean} - True se válido
+     */
+    validarLocacao(locacao) {
+        if (!locacao) return false;
+        const codigo = locacao.trim().toUpperCase().replace(/^LOC-?/, '');
+        return /^\d{1,4}-?[A-Z]-?\d{1,4}$/.test(codigo);
     }
 };
 

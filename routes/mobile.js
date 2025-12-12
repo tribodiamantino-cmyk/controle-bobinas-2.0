@@ -1,6 +1,7 @@
 ﻿const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
+const { normalizarLocacao, gerarVariacoesLocacao, validarLocacao } = require('../utils/locacao');
 
 router.get('/bobina/:id', async (req, res) => {
     try {
@@ -2156,57 +2157,71 @@ router.get('/validar-codigo/:codigo', async (req, res) => {
             const codigoLocacao = codigo.substring(4);
             console.log('🔍 Buscando itens na locação:', codigoLocacao);
             
+            // Gera todas as variações para encontrar itens
+            const variacoes = gerarVariacoesLocacao(codigoLocacao);
+            console.log('🔍 Variações de busca:', variacoes);
+            
             // Busca itens (bobinas/retalhos) que estão nessa locação
             // Locação não precisa estar cadastrada, é referência livre
             const [bobinas] = await db.query(
-                'SELECT COUNT(*) as total FROM bobinas WHERE locacao = ? AND status != "Esgotado"',
-                [codigoLocacao]
+                'SELECT COUNT(*) as total FROM bobinas WHERE locacao IN (?) AND status != "Esgotado"',
+                [variacoes]
             );
             const [retalhos] = await db.query(
-                'SELECT COUNT(*) as total FROM retalhos WHERE locacao = ? AND status != "Esgotado"',
-                [codigoLocacao]
+                'SELECT COUNT(*) as total FROM retalhos WHERE locacao IN (?) AND status != "Esgotado"',
+                [variacoes]
             );
             
             const totalItens = (bobinas[0]?.total || 0) + (retalhos[0]?.total || 0);
             
+            // Normaliza código para exibição
+            const codigoNormalizado = normalizarLocacao(codigoLocacao) || codigoLocacao;
+            
             // Se encontrou itens OU locação é válida (formato correto), aceita
-            if (totalItens > 0 || /^\d{1,4}-[A-Z]-\d{1,4}$/.test(codigoLocacao)) {
-                id = codigoLocacao; // ID é o próprio código (locação livre)
+            if (totalItens > 0 || validarLocacao(codigoLocacao)) {
+                id = codigoNormalizado; // ID é o código normalizado
                 dados = { 
-                    codigo: codigoLocacao, 
+                    codigo: codigoNormalizado, 
                     total_itens: totalItens,
                     vazia: totalItens === 0
                 };
-                console.log(`✅ Locação ${codigoLocacao}: ${totalItens} item(ns)`);
+                console.log(`✅ Locação ${codigoNormalizado}: ${totalItens} item(ns)`);
             } else {
                 console.log(`❌ Formato inválido: ${codigoLocacao}`);
             }
 
-        } else if (/^\d{1,4}-[A-Z]-\d{1,4}$/.test(codigo)) {
+        } else if (/^\d{1,4}-?[A-Z]-?\d{1,4}$/i.test(codigo)) {
             // Formato N-X-N sem prefixo (backward compatible)
-            // Aceita: 1-A-1, 12-B-34, 123-C-456, 0001-A-0001, etc
+            // Aceita: 1-A-1, 12-B-34, 123-C-456, 0001-A-0001, 1a1, etc
             tipo = 'locacao';
             console.log('🔍 Buscando itens na locação (sem prefixo):', codigo);
             
+            // Gera todas as variações para encontrar itens
+            const variacoes = gerarVariacoesLocacao(codigo);
+            console.log('🔍 Variações de busca:', variacoes);
+            
             // Busca itens (bobinas/retalhos) que estão nessa locação
             const [bobinas] = await db.query(
-                'SELECT COUNT(*) as total FROM bobinas WHERE locacao = ? AND status != "Esgotado"',
-                [codigo]
+                'SELECT COUNT(*) as total FROM bobinas WHERE locacao IN (?) AND status != "Esgotado"',
+                [variacoes]
             );
             const [retalhos] = await db.query(
-                'SELECT COUNT(*) as total FROM retalhos WHERE locacao = ? AND status != "Esgotado"',
-                [codigo]
+                'SELECT COUNT(*) as total FROM retalhos WHERE locacao IN (?) AND status != "Esgotado"',
+                [variacoes]
             );
             
             const totalItens = (bobinas[0]?.total || 0) + (retalhos[0]?.total || 0);
             
-            id = codigo; // ID é o próprio código (locação livre)
+            // Normaliza código para exibição
+            const codigoNormalizado = normalizarLocacao(codigo) || codigo;
+            
+            id = codigoNormalizado; // ID é o código normalizado
             dados = { 
-                codigo: codigo, 
+                codigo: codigoNormalizado, 
                 total_itens: totalItens,
                 vazia: totalItens === 0
             };
-            console.log(`✅ Locação ${codigo}: ${totalItens} item(ns)`);
+            console.log(`✅ Locação ${codigoNormalizado}: ${totalItens} item(ns)`);
 
         } else {
             return res.json({

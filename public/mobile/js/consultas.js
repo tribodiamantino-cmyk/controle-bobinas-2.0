@@ -48,6 +48,15 @@ class ConsultasModule {
             }
         });
 
+        // Auto-hífen para locação durante digitação
+        document.getElementById('inputManual')?.addEventListener('input', (e) => {
+            const valor = e.target.value;
+            // Se parece ser uma locação (começa com número ou LOC), aplica auto-hífen
+            if (/^(LOC|loc|\d)/i.test(valor)) {
+                e.target.value = Utils.aplicarAutoHifenLocacao(valor);
+            }
+        });
+
         // Botão nova busca
         document.getElementById('btnNovaBusca')?.addEventListener('click', () => {
             this.voltarParaScanner();

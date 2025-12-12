@@ -11,6 +11,109 @@ function debounce(func, wait) {
     };
 }
 
+// ========== UTILITÁRIOS DE LOCAÇÃO (AUTO-HÍFEN) ==========
+
+/**
+ * Aplica auto-hífen durante digitação de locação
+ * Insere hífen automaticamente na transição número→letra e letra→número
+ * @param {string} valor - Valor digitado
+ * @returns {string} - Valor com hífens automáticos
+ */
+function aplicarAutoHifenLocacao(valor) {
+    if (!valor) return '';
+    
+    // Remove tudo que não é número ou letra
+    let limpo = valor.toUpperCase().replace(/[^0-9A-Z]/g, '');
+    
+    let resultado = '';
+    let ultimoTipo = null; // 'numero' ou 'letra'
+    
+    for (let i = 0; i < limpo.length; i++) {
+        const char = limpo[i];
+        const tipoAtual = /[0-9]/.test(char) ? 'numero' : 'letra';
+        
+        // Se mudou de tipo (número→letra ou letra→número), insere hífen
+        if (ultimoTipo && ultimoTipo !== tipoAtual) {
+            resultado += '-';
+        }
+        
+        resultado += char;
+        ultimoTipo = tipoAtual;
+    }
+    
+    return resultado;
+}
+
+/**
+ * Normaliza locação para formato padrão 0000-X-0000
+ * Aceita qualquer formato válido e converte para padronizado
+ * @param {string} locacao - Locação em qualquer formato
+ * @returns {string|null} - Locação normalizada ou null se inválido
+ */
+function normalizarLocacao(locacao) {
+    if (!locacao) return null;
+    
+    // Remove espaços e converte para maiúsculo
+    let codigo = locacao.trim().toUpperCase();
+    
+    // Remove prefixo LOC- se existir
+    codigo = codigo.replace(/^LOC-?/, '');
+    
+    // Remove caracteres inválidos (mantém só números, letras e hífens)
+    codigo = codigo.replace(/[^0-9A-Z-]/g, '');
+    
+    // Tenta extrair padrão: números + letra + números (com ou sem hífens)
+    const match = codigo.match(/^(\d{1,4})-?([A-Z])-?(\d{1,4})$/);
+    
+    if (!match) return null;
+    
+    // Normaliza para 4 dígitos com zeros à esquerda
+    const area = match[1].padStart(4, '0');
+    const corredor = match[2];
+    const posicao = match[3].padStart(4, '0');
+    
+    return `${area}-${corredor}-${posicao}`;
+}
+
+/**
+ * Valida se uma locação está em formato válido (flexível)
+ * @param {string} locacao - Locação para validar
+ * @returns {boolean} - True se válido
+ */
+function validarLocacao(locacao) {
+    if (!locacao) return false;
+    const codigo = locacao.trim().toUpperCase().replace(/^LOC-?/, '');
+    return /^\d{1,4}-?[A-Z]-?\d{1,4}$/.test(codigo);
+}
+
+/**
+ * Configura input com auto-hífen para locação
+ * @param {HTMLInputElement} input - Elemento input
+ */
+function configurarInputLocacao(input) {
+    if (!input) return;
+    
+    input.addEventListener('input', function(e) {
+        const cursorPos = this.selectionStart;
+        const valorAnterior = this.value;
+        const valorNovo = aplicarAutoHifenLocacao(this.value);
+        
+        this.value = valorNovo;
+        
+        // Ajusta posição do cursor se necessário
+        const diff = valorNovo.length - valorAnterior.length;
+        const novaPosicao = Math.max(0, cursorPos + diff);
+        this.setSelectionRange(novaPosicao, novaPosicao);
+    });
+    
+    // Normaliza ao sair do campo (blur)
+    input.addEventListener('blur', function() {
+        if (this.value && validarLocacao(this.value)) {
+            this.value = normalizarLocacao(this.value);
+        }
+    });
+}
+
 // Estado global
 let produtosEstoque = [];
 let produtoSelecionado = null;
@@ -1397,32 +1500,32 @@ function cancelarEdicaoLocalizacaoRetalho(retalhoId) {
     document.getElementById(`loc-edit-ret-${retalhoId}`).style.display = 'none';
 }
 
-// Aplicar máscara de localização em retalho (flexível N-X-N)
+// Aplicar máscara de localização em retalho (auto-hífen)
 function aplicarMascaraLocalizacaoRetalho(retalhoId) {
     const input = document.getElementById(`input-loc-ret-${retalhoId}`);
-    let valor = input.value.toUpperCase().replace(/[^0-9A-Z-]/g, '');
-    
-    // Permite digitação livre no formato N-X-N
-    input.value = valor;
+    // Aplica auto-hífen na transição número↔letra
+    input.value = aplicarAutoHifenLocacao(input.value);
 }
 
 // Salvar localização de retalho
 async function salvarLocalizacaoRetalho(retalhoId) {
-    const novaLocalizacao = document.getElementById(`input-loc-ret-${retalhoId}`).value.trim().toUpperCase();
+    const valorDigitado = document.getElementById(`input-loc-ret-${retalhoId}`).value.trim();
     
-    // Validar formato flexível: 1-A-1 até 9999-Z-9999
-    const regex = /^\d{1,4}-[A-Z]-\d{1,4}$/;
-    if (novaLocalizacao && !regex.test(novaLocalizacao)) {
+    // Validar formato usando função utilitária
+    if (valorDigitado && !validarLocacao(valorDigitado)) {
         mostrarAlerta('Formato de localização inválido! Use: N-X-N (ex: 1-A-1, 150-B-320)', 'warning');
         return;
     }
+    
+    // Normaliza para formato padrão antes de salvar
+    const novaLocalizacao = valorDigitado ? normalizarLocacao(valorDigitado) : null;
     
     try {
         const response = await fetch(`/api/retalhos/${retalhoId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                locacao: novaLocalizacao || null
+                locacao: novaLocalizacao
             })
         });
         
@@ -1473,13 +1576,11 @@ async function verHistoricoLocalizacaoRetalho(retalhoId) {
     }
 }
 
-// Aplicar máscara em input genérico (para modal) - flexível N-X-N
+// Aplicar máscara em input genérico (para modal) - auto-hífen
 function aplicarMascaraLocalizacaoInput(inputId) {
     const input = document.getElementById(inputId);
-    let valor = input.value.toUpperCase().replace(/[^0-9A-Z-]/g, '');
-    
-    // Permite digitação livre no formato N-X-N
-    input.value = valor;
+    // Aplica auto-hífen na transição número↔letra
+    input.value = aplicarAutoHifenLocacao(input.value);
 }
 
 // === FUNÇÕES DE EDIÇÃO DE METRAGEM DE RETALHOS ===
@@ -1796,38 +1897,36 @@ function cancelarEdicaoLocalizacao(bobinaId) {
 // Aplicar máscara de localização: N-X-N (flexível de 1-A-1 até 9999-Z-9999)
 function aplicarMascaraLocalizacao(bobinaId) {
     const input = document.getElementById(`input-loc-${bobinaId}`);
-    let valor = input.value.toUpperCase().replace(/[^0-9A-Z-]/g, '');
-    
-    // Permite digitação livre no formato N-X-N
-    // Remove caracteres inválidos mas mantém hífens
-    input.value = valor;
+    // Aplica auto-hífen na transição número↔letra
+    input.value = aplicarAutoHifenLocacao(input.value);
 }
 
 // Validar formato de localização (flexível)
 function validarLocalizacao(localizacao) {
     if (!localizacao) return true; // Vazio é permitido
-    // Aceita de 1-A-1 até 9999-Z-9999
-    const regex = /^\d{1,4}-[A-Z]-\d{1,4}$/;
-    return regex.test(localizacao);
+    return validarLocacao(localizacao);
 }
 
 // Salvar localização
 async function salvarLocalizacao(bobinaId) {
     const input = document.getElementById(`input-loc-${bobinaId}`);
-    const novaLocalizacao = input.value.trim().toUpperCase();
+    const valorDigitado = input.value.trim();
     
     // Validar formato
-    if (novaLocalizacao && !validarLocalizacao(novaLocalizacao)) {
+    if (valorDigitado && !validarLocacao(valorDigitado)) {
         mostrarAlerta('Formato inválido! Use: N-X-N (ex: 1-A-1, 150-B-320)', 'danger');
         input.focus();
         return;
     }
     
+    // Normaliza para formato padrão antes de salvar
+    const novaLocalizacao = valorDigitado ? normalizarLocacao(valorDigitado) : null;
+    
     try {
         const response = await fetch(`/api/localizacao/${bobinaId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ localizacao: novaLocalizacao || null })
+            body: JSON.stringify({ localizacao: novaLocalizacao })
         });
         
         const data = await response.json();

@@ -1,40 +1,5 @@
 const db = require('../config/database');
-
-/**
- * Gera variações de código de locação para busca
- * Ex: "1-A-1" → ["1-A-1", "0001-A-0001", "01-A-01", "001-A-001"]
- * Ex: "0001-A-0001" → ["0001-A-0001", "1-A-1", "01-A-01", "001-A-001"]
- */
-function gerarVariacoesLocacao(codigo) {
-    const partes = codigo.split('-');
-    if (partes.length !== 3) return [codigo];
-    
-    const setor = parseInt(partes[0], 10);
-    const corredor = partes[1];
-    const posicao = parseInt(partes[2], 10);
-    
-    if (isNaN(setor) || isNaN(posicao)) return [codigo];
-    
-    // Gerar todas as variações possíveis
-    const variacoes = new Set();
-    
-    // Formato sem zeros: 1-A-1
-    variacoes.add(`${setor}-${corredor}-${posicao}`);
-    
-    // Formato com 2 dígitos: 01-A-01
-    variacoes.add(`${String(setor).padStart(2, '0')}-${corredor}-${String(posicao).padStart(2, '0')}`);
-    
-    // Formato com 3 dígitos: 001-A-001
-    variacoes.add(`${String(setor).padStart(3, '0')}-${corredor}-${String(posicao).padStart(3, '0')}`);
-    
-    // Formato com 4 dígitos: 0001-A-0001
-    variacoes.add(`${String(setor).padStart(4, '0')}-${corredor}-${String(posicao).padStart(4, '0')}`);
-    
-    // Adicionar código original caso tenha formato misto
-    variacoes.add(codigo);
-    
-    return Array.from(variacoes);
-}
+const { normalizarLocacao, validarLocacao, gerarVariacoesLocacao } = require('../utils/locacao');
 
 // Listar todas as locações (ativas e inativas)
 exports.listarLocacoes = async (req, res) => {
@@ -94,24 +59,26 @@ exports.buscarLocacao = async (req, res) => {
 // Criar nova locação
 exports.criarLocacao = async (req, res) => {
     try {
-        const { codigo, descricao, capacidade } = req.body;
+        const { descricao, capacidade } = req.body;
         
         // Validação: código obrigatório
-        if (!codigo) {
+        if (!req.body.codigo) {
             return res.status(400).json({ 
                 success: false, 
                 error: 'Código da locação é obrigatório' 
             });
         }
         
-        // Validação: formato flexível N-X-N (1-4 dígitos em cada parte)
-        const mascaraRegex = /^[0-9]{1,4}-[A-Z]-[0-9]{1,4}$/;
-        if (!mascaraRegex.test(codigo)) {
+        // Validação e normalização
+        if (!validarLocacao(req.body.codigo)) {
             return res.status(400).json({ 
                 success: false, 
                 error: 'Código deve seguir o formato N-X-N (ex: 1-A-1, 12-B-34, 0001-A-0001)' 
             });
         }
+        
+        // Normaliza para formato padrão
+        const codigo = normalizarLocacao(req.body.codigo);
         
         const [result] = await db.query(`
             INSERT INTO locacoes (codigo, descricao, capacidade, ativa)
@@ -148,17 +115,18 @@ exports.criarLocacao = async (req, res) => {
 exports.atualizarLocacao = async (req, res) => {
     try {
         const { id } = req.params;
-        const { codigo, descricao, capacidade, ativa } = req.body;
+        const { descricao, capacidade, ativa } = req.body;
         
-        // Se forneceu código, validar formato flexível N-X-N (1-4 dígitos)
-        if (codigo) {
-            const mascaraRegex = /^[0-9]{1,4}-[A-Z]-[0-9]{1,4}$/;
-            if (!mascaraRegex.test(codigo)) {
+        // Se forneceu código, validar e normalizar
+        let codigo = null;
+        if (req.body.codigo) {
+            if (!validarLocacao(req.body.codigo)) {
                 return res.status(400).json({ 
                     success: false, 
                     error: 'Código deve seguir o formato N-X-N (ex: 1-A-1, 12-B-34, 0001-A-0001)' 
                 });
             }
+            codigo = normalizarLocacao(req.body.codigo);
         }
         
         await db.query(`

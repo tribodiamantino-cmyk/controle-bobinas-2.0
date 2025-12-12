@@ -1,28 +1,5 @@
 const db = require('../config/database');
-
-// Validar formato de localização: 0000-X-0000
-function validarLocalizacao(localizacao) {
-    if (!localizacao) return true; // Localização pode ser nula
-    
-    // Formato: 0001-A-0001 até 9999-Z-9999
-    const regex = /^\d{4}-[A-Z]-\d{4}$/;
-    return regex.test(localizacao);
-}
-
-// Formatar localização para padrão com zeros
-function formatarLocacao(valor) {
-    if (!valor) return null;
-    
-    // Remove não alfanuméricos e converte para maiúscula
-    const limpo = valor.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
-    
-    // Extrai partes (números, letra, números)
-    const match = limpo.match(/^(\d{1,4})([A-Z])(\d{1,4})$/);
-    if (!match) return valor;
-    
-    const [, area, corredor, posicao] = match;
-    return `${area.padStart(4, '0')}-${corredor}-${posicao.padStart(4, '0')}`;
-}
+const { normalizarLocacao, validarLocacao } = require('../utils/locacao');
 
 // Atualizar localização de uma bobina
 async function atualizarLocalizacao(req, res) {
@@ -30,14 +7,14 @@ async function atualizarLocalizacao(req, res) {
     let { localizacao } = req.body;
     
     try {
-        // Formatar localização
-        localizacao = formatarLocacao(localizacao);
+        // Normaliza localização para formato padrão
+        localizacao = normalizarLocacao(localizacao);
         
-        // Validar formato
-        if (localizacao && !validarLocalizacao(localizacao)) {
+        // Se foi digitado algo mas não é válido
+        if (req.body.localizacao && !localizacao) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Formato de localização inválido. Use: 0000-X-0000 (ex: 0150-B-0320)' 
+                error: 'Formato de localização inválido. Use: N-X-N (ex: 1-A-1, 150-B-320)' 
             });
         }
         

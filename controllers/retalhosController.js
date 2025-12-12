@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { normalizarLocacao } = require('../utils/locacao');
 
 // Gerar código QR único para retalho (formato: RET-{LOJA}-{SEQUENCIAL})
 // Conforme PADRONIZACAO_CODIGOS.md
@@ -45,7 +46,9 @@ async function gerarCodigoRetalho(loja, connection = null) {
 // Criar retalho manualmente
 exports.criarRetalho = async (req, res) => {
     try {
-        const { produto_id, metragem, locacao, observacoes } = req.body;
+        const { produto_id, metragem, observacoes } = req.body;
+        // Normaliza locação para formato padrão
+        const locacao = normalizarLocacao(req.body.locacao);
         
         if (!produto_id || !metragem) {
             return res.status(400).json({ 
@@ -499,7 +502,9 @@ exports.buscarRetalhoPorCodigo = async (req, res) => {
 exports.atualizarRetalho = async (req, res) => {
     try {
         const { id } = req.params;
-        const { locacao, metragem, observacoes } = req.body;
+        const { metragem, observacoes } = req.body;
+        // Normaliza locação para formato padrão
+        const locacao = req.body.locacao !== undefined ? normalizarLocacao(req.body.locacao) : undefined;
         
         // Verificar se retalho existe
         const [retalhos] = await db.query(

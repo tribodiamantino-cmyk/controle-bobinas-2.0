@@ -13,11 +13,65 @@ let selecionados = new Set();
 let locacoesLista = [];
 
 // =============================================================================
+// UTILITÁRIOS DE LOCAÇÃO (AUTO-HÍFEN)
+// =============================================================================
+
+/**
+ * Aplica auto-hífen durante digitação de locação
+ * @param {string} valor - Valor digitado
+ * @returns {string} - Valor com hífens automáticos
+ */
+function aplicarAutoHifenLocacao(valor) {
+    if (!valor) return '';
+    
+    // Remove tudo que não é número ou letra
+    let limpo = valor.toUpperCase().replace(/[^0-9A-Z]/g, '');
+    
+    let resultado = '';
+    let ultimoTipo = null;
+    
+    for (let i = 0; i < limpo.length; i++) {
+        const char = limpo[i];
+        const tipoAtual = /[0-9]/.test(char) ? 'numero' : 'letra';
+        
+        if (ultimoTipo && ultimoTipo !== tipoAtual) {
+            resultado += '-';
+        }
+        
+        resultado += char;
+        ultimoTipo = tipoAtual;
+    }
+    
+    return resultado;
+}
+
+/**
+ * Normaliza locação para formato padrão 0000-X-0000
+ */
+function normalizarLocacao(locacao) {
+    if (!locacao) return null;
+    
+    let codigo = locacao.trim().toUpperCase().replace(/[^0-9A-Z-]/g, '');
+    const match = codigo.match(/^(\d{1,4})-?([A-Z])-?(\d{1,4})$/);
+    if (!match) return null;
+    
+    return `${match[1].padStart(4, '0')}-${match[2]}-${match[3].padStart(4, '0')}`;
+}
+
+// =============================================================================
 // INICIALIZAÇÃO
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🏷️ Central de Etiquetas iniciada');
+    
+    // Configurar auto-hífen no input de locação
+    const locacaoInput = document.getElementById('locacaoInput');
+    if (locacaoInput) {
+        locacaoInput.addEventListener('input', function(e) {
+            e.target.value = aplicarAutoHifenLocacao(e.target.value);
+        });
+    }
     
     // Carregar contadores
     await carregarContadores();
@@ -480,19 +534,22 @@ async function adicionarSelecionadosAFila() {
 
 function adicionarLocacao() {
     const input = document.getElementById('locacaoInput');
-    const codigo = input.value.trim().toUpperCase();
+    const valorDigitado = input.value.trim();
     
-    if (!codigo) {
+    if (!valorDigitado) {
         input.focus();
         return;
     }
     
     // Validar formato básico
-    if (!validarFormatoLocacao(codigo)) {
-        alert('Formato inválido. Use: 0001-A-0001 (SETOR-CORREDOR-POSIÇÃO)');
+    if (!validarFormatoLocacao(valorDigitado)) {
+        alert('Formato inválido. Use: N-X-N (ex: 1-A-1, 150-B-320)');
         input.select();
         return;
     }
+    
+    // Normaliza para formato padrão
+    const codigo = normalizarLocacao(valorDigitado);
     
     // Verificar duplicata
     if (locacoesLista.includes(codigo)) {
