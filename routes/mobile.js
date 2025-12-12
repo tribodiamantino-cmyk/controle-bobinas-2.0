@@ -2374,7 +2374,7 @@ router.get('/pdcs/:id/origens', async (req, res) => {
                     WHEN ac.tipo_origem = 'bobina' THEN b.locacao
                     WHEN ac.tipo_origem = 'retalho' THEN r.locacao
                 END as locacao,
-                p.descricao as produto,
+                CONCAT(p.codigo, ' - ', c.nome_cor, ' ', g.gramatura, 'g/m²') as produto,
                 COUNT(DISTINCT ipc.id) as total_cortes,
                 COUNT(DISTINCT cr.id) as cortes_concluidos
             FROM alocacoes_corte ac
@@ -2382,6 +2382,8 @@ router.get('/pdcs/:id/origens', async (req, res) => {
             LEFT JOIN bobinas b ON ac.tipo_origem = 'bobina' AND ac.bobina_id = b.id
             LEFT JOIN retalhos r ON ac.tipo_origem = 'retalho' AND ac.retalho_id = r.id
             LEFT JOIN produtos p ON (b.produto_id = p.id OR r.produto_id = p.id)
+            LEFT JOIN configuracoes_cores c ON c.id = p.cor_id
+            LEFT JOIN configuracoes_gramaturas g ON g.id = p.gramatura_id
             LEFT JOIN cortes_realizados cr ON cr.item_plano_corte_id = ipc.id 
                 AND cr.origem_tipo = ac.tipo_origem 
                 AND ((cr.bobina_id = ac.bobina_id AND ac.tipo_origem = 'bobina')
