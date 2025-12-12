@@ -222,7 +222,7 @@ exports.historicoBobina = async (req, res) => {
                 pc.id as plano_id,
                 pc.codigo_plano,
                 pc.cliente,
-                pc.obra
+                pc.aviario
             FROM cortes_realizados cr
             LEFT JOIN planos_corte pc ON cr.plano_corte_id = pc.id
             WHERE cr.origem_tipo = 'bobina' AND cr.bobina_id = ?
@@ -283,7 +283,7 @@ exports.historicoBobina = async (req, res) => {
                     plano_id: c.plano_id,
                     plano_codigo: c.codigo_plano,
                     cliente: c.cliente,
-                    obra: c.obra,
+                    aviario: c.aviario,
                     operador: c.operador_nome,
                     status: c.corte_status
                 }
@@ -363,7 +363,6 @@ exports.historicoRetalho = async (req, res) => {
                 r.id,
                 r.codigo_retalho,
                 r.metragem,
-                r.metragem_original,
                 r.status,
                 r.data_entrada as data_criacao,
                 r.bobina_origem_id,
@@ -399,7 +398,7 @@ exports.historicoRetalho = async (req, res) => {
                 pc.id as plano_id,
                 pc.codigo_plano,
                 pc.cliente,
-                pc.obra
+                pc.aviario
             FROM cortes_realizados cr
             LEFT JOIN planos_corte pc ON cr.plano_corte_id = pc.id
             WHERE cr.origem_tipo = 'retalho' AND cr.retalho_id = ?
@@ -430,7 +429,7 @@ exports.historicoRetalho = async (req, res) => {
                 ? `Retalho gerado da bobina ${retalho.bobina_codigo}`
                 : 'Retalho cadastrado manualmente',
             detalhes: {
-                metragem_original: retalho.metragem_original || retalho.metragem,
+                metragem_inicial: retalho.metragem,
                 bobina_origem_id: retalho.bobina_origem_id,
                 bobina_codigo: retalho.bobina_codigo
             }
@@ -450,7 +449,7 @@ exports.historicoRetalho = async (req, res) => {
                     plano_id: c.plano_id,
                     plano_codigo: c.codigo_plano,
                     cliente: c.cliente,
-                    obra: c.obra,
+                    aviario: c.aviario,
                     operador: c.operador_nome,
                     status: c.corte_status
                 }
