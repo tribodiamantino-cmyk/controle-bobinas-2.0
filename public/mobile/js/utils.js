@@ -185,6 +185,50 @@ const Utils = {
     },
 
     /**
+     * Preenche um input com valor e dispara evento de Enter após delay
+     * Usado pelo scanner para dar feedback visual antes de processar
+     * @param {string} inputId - ID do elemento input
+     * @param {string} valor - Valor a ser preenchido
+     * @param {number} delay - Delay em ms antes de disparar Enter (default: 300)
+     */
+    preencherInputEDisparar(inputId, valor, delay = 300) {
+        const input = document.getElementById(inputId);
+        if (!input) {
+            console.warn('Utils: Input não encontrado:', inputId);
+            return false;
+        }
+
+        // Preenche o valor
+        input.value = valor.toUpperCase();
+        
+        // Dispara evento de input para atualizar bindings
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Foca no input para mostrar que algo aconteceu
+        input.focus();
+        
+        // Após delay, dispara Enter
+        setTimeout(() => {
+            const enterEvent = new KeyboardEvent('keypress', {
+                key: 'Enter',
+                code: 'Enter',
+                keyCode: 13,
+                which: 13,
+                bubbles: true
+            });
+            input.dispatchEvent(enterEvent);
+            
+            // Também tenta clicar no botão de busca se existir
+            const btnBuscar = document.getElementById('btnBuscar');
+            if (btnBuscar) {
+                btnBuscar.click();
+            }
+        }, delay);
+        
+        return true;
+    },
+
+    /**
      * Valida formato de código de barras
      * Aceita formato completo (com zeros) ou compacto (sem zeros)
      */

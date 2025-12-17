@@ -18,13 +18,34 @@ class ConsultasModule {
     init() {
         debugLog('Iniciando módulo CONSULTAS');
         
-        // Inicializa scanner
-        this.scanner = new Scanner((codigo) => this.processarCodigo(codigo));
+        // Inicializa scanner com callback que preenche o input
+        this.scanner = new Scanner((codigo) => this.onCodigoEscaneado(codigo));
         
         // Event listeners
         this.attachEventListeners();
         
         debugLog('Módulo CONSULTAS inicializado');
+    }
+
+    /**
+     * Callback quando scanner lê um código
+     * Preenche o input e depois processa
+     */
+    async onCodigoEscaneado(codigo) {
+        debugLog('Código escaneado:', codigo);
+        
+        // Preenche o input para feedback visual
+        const input = document.getElementById('inputManual');
+        if (input) {
+            input.value = codigo.toUpperCase();
+            input.focus();
+        }
+        
+        // Pequeno delay para usuário ver o código
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Processa o código
+        await this.processarCodigo(codigo);
     }
 
     /**

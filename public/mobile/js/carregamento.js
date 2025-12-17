@@ -24,13 +24,30 @@ class CarregamentoModule {
     init() {
         debugLog('Iniciando módulo CARREGAMENTO');
         
-        // Inicializa scanner
-        this.scanner = new Scanner((codigo) => this.processarScan(codigo));
+        // Inicializa scanner com callback que mostra feedback
+        this.scanner = new Scanner((codigo) => this.onCodigoEscaneado(codigo));
         
         // Carrega lista
         this.carregarLista();
         
         debugLog('Módulo CARREGAMENTO inicializado');
+    }
+
+    /**
+     * Callback quando scanner lê um código
+     * Mostra feedback visual e depois processa
+     */
+    async onCodigoEscaneado(codigo) {
+        debugLog('Código escaneado:', codigo);
+        
+        // Mostra toast com código lido para feedback
+        Utils.mostrarSucesso(`Lido: ${codigo}`, 500);
+        
+        // Pequeno delay para usuário ver o código
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Processa o scan
+        await this.processarScan(codigo);
     }
 
     /**
@@ -214,18 +231,22 @@ class CarregamentoModule {
         try {
             debugLog('Validando corte:', codigo);
 
-            // Valida se é um corte (COR-XXXX-XXXXX)
+            // Valida se é um corte (COR-XXX-X-X ou COR-XXX-XXX-XX)
             if (!codigo.startsWith('COR-')) {
                 Utils.feedbackErro();
-                Utils.mostrarErro('Código inválido. Escaneie um código de CORTE (COR-XXXX-XXXXX)');
+                Utils.mostrarErro('Código inválido. Escaneie um código de CORTE (COR-PLA-1-1)');
                 return;
             }
+
+            // Normaliza código compacto para formato completo
+            const codigoNormalizado = Utils.normalizarCodigo(codigo);
+            debugLog('Código normalizado:', codigoNormalizado);
 
             Utils.mostrarLoading('Validando corte...');
 
             const response = await API.validarCorteCarregamento(
                 this.carregamentoAtual.id,
-                codigo
+                codigoNormalizado
             );
 
             Utils.esconderLoading();

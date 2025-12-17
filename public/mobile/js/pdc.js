@@ -28,13 +28,34 @@ class PDCModule {
         debugLog('Iniciando módulo PDC');
         
         // Inicializa scanner e câmera
-        this.scanner = new Scanner((codigo) => this.processarScan(codigo));
+        this.scanner = new Scanner((codigo) => this.onCodigoEscaneado(codigo));
         this.camera = new Camera();
         
         // Carrega lista de PDCs
         this.carregarLista();
         
         debugLog('Módulo PDC inicializado');
+    }
+
+    /**
+     * Callback quando scanner lê um código
+     * Preenche o input para feedback visual e depois processa
+     */
+    async onCodigoEscaneado(codigo) {
+        debugLog('Código escaneado:', codigo);
+        
+        // Preenche o input de origem manual para feedback visual
+        const input = document.getElementById('codigoOrigemManual');
+        if (input) {
+            input.value = codigo.toUpperCase();
+            input.focus();
+        }
+        
+        // Pequeno delay para usuário ver o código
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Processa o scan
+        await this.processarScan(codigo);
     }
 
     /**
@@ -290,14 +311,19 @@ class PDCModule {
         
         debugLog('Validando origem manual:', codigo);
         
-        // Valida formato básico (BOB-XXX-XXXXXX ou RET-XXX-XXXXXX)
-        if (!codigo.match(/^(BOB|RET)-[A-Z]{3}-\d{6}$/)) {
-            Utils.mostrarErro('Formato inválido. Use: BOB-PLA-000001 ou RET-CIA-000001');
+        // Valida formato básico (aceita com ou sem zeros)
+        // BOB-PLA-1 ou BOB-PLA-000001, RET-CIA-42 ou RET-CIA-000042
+        if (!codigo.match(/^(BOB|RET)-[A-Z]{3}-\d{1,6}$/)) {
+            Utils.mostrarErro('Formato inválido. Use: BOB-PLA-1 ou RET-CIA-42');
             return;
         }
         
+        // Normaliza código compacto para formato completo
+        const codigoNormalizado = Utils.normalizarCodigo(codigo);
+        debugLog('Código normalizado:', codigoNormalizado);
+        
         // Usa a mesma função de validação do scanner
-        await this.validarOrigemEscaneada(codigo);
+        await this.validarOrigemEscaneada(codigoNormalizado);
         
         // Limpa o campo após validação
         input.value = '';
@@ -315,8 +341,12 @@ class PDCModule {
             return;
         }
 
+        // Normaliza código compacto para formato completo
+        const codigoNormalizado = Utils.normalizarCodigo(codigo);
+        debugLog('Código normalizado:', codigoNormalizado);
+
         // Senão, é validação de origem
-        await this.validarOrigemEscaneada(codigo);
+        await this.validarOrigemEscaneada(codigoNormalizado);
     }
 
     /**

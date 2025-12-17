@@ -80,6 +80,27 @@
         }
         
         console.log('📱 ========================================');
+        
+        // ============ HANDLER BOTÃO VOLTAR ANDROID ============
+        if (Capacitor.isNativePlatform()) {
+            const { App } = Capacitor.Plugins;
+            if (App) {
+                App.addListener('backButton', ({ canGoBack }) => {
+                    console.log('📱 Botão voltar pressionado, canGoBack:', canGoBack);
+                    
+                    // Se tem histórico de navegação, volta
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    } else {
+                        // Confirma se quer sair do app
+                        if (confirm('Deseja sair do aplicativo?')) {
+                            App.exitApp();
+                        }
+                    }
+                });
+                console.log('✅ Handler do botão voltar configurado');
+            }
+        }
     });
     
     // ============ PREVENIR ZOOM ============
