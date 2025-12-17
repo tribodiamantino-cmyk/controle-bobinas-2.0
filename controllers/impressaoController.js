@@ -642,8 +642,9 @@ async function buscarDadosCorte(id) {
  * Dados para etiqueta de Locação
  * Layout simplificado: só código + barcode grande
  * 
- * Formato no banco: 0000-X-0000
- * Formato no código de barras: LOC-0000-X-0000
+ * Formato no banco: 0000-X-0000 (com zeros)
+ * Formato no display: 0000-X-0000 (legível, com zeros)
+ * Formato no código de barras: LOC-1-A-1 (compacto, sem zeros)
  */
 async function buscarDadosLocacao(id) {
     const [rows] = await db.query(`
@@ -676,30 +677,35 @@ async function buscarDadosLocacao(id) {
         codigoBanco = `${setor}-${corredor}-${posicao}`;
     }
     
-    // Garante que o código está no formato 0000-X-0000
-    // Se estiver em formato curto (1-A-1), converte para longo (0001-A-0001)
+    // Garante que o código está no formato 0000-X-0000 (para display)
     const partes = codigoBanco.split('-');
+    let codigoDisplay = codigoBanco;
+    let codigoCompacto = codigoBanco;
+    
     if (partes.length === 3) {
         const setor = partes[0].padStart(4, '0');
         const corredor = partes[1].toUpperCase();
         const posicao = partes[2].padStart(4, '0');
-        codigoBanco = `${setor}-${corredor}-${posicao}`;
+        codigoDisplay = `${setor}-${corredor}-${posicao}`;
+        
+        // Versão compacta para código de barras (sem zeros à esquerda)
+        codigoCompacto = `${parseInt(partes[0])}-${corredor}-${parseInt(partes[2])}`;
     }
     
-    // Código de barras: LOC-0000-X-0000 (prefixo LOC- para identificação no scanner)
-    const codigoBarras = `LOC-${codigoBanco}`;
+    // Código de barras: LOC-1-A-1 (compacto, sem zeros - economiza espaço)
+    const codigoBarras = `LOC-${codigoCompacto}`;
 
     return {
         tipo: 'locacao',
-        codigo: codigoBarras, // Código de barras com prefixo LOC-
+        codigo: codigoBarras, // Código de barras compacto
         loja,
-        linha1: codigoBanco, // Display na etiqueta SEM prefixo (mais legível)
-        linha2_barcode: codigoBarras, // Barcode COM prefixo LOC-
+        linha1: codigoDisplay, // Display na etiqueta COM zeros (mais legível/organizado)
+        linha2_barcode: codigoBarras, // Barcode compacto LOC-1-A-1
         // Locação tem layout 50/50 (código grande + barcode grande)
         layout: '50-50',
         raw: {
             id: l.id,
-            codigo_banco: codigoBanco, // Código sem prefixo (para referência e busca)
+            codigo_banco: codigoDisplay, // Código com zeros (para referência e busca)
             corredor: l.corredor,
             coluna: l.coluna,
             andar: l.andar,

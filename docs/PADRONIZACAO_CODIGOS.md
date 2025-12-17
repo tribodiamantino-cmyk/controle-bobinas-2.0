@@ -192,9 +192,9 @@ COR-{LOJA}-{PLANO}-{SEQUENCIAL}
 
 ## 6. Locação
 
-### Formato no Banco de Dados (Referência)
+### Formato no Banco de Dados e Display
 ```
-{SETOR}-{CORREDOR}-{POSICAO}
+{0000}-{X}-{0000}
 ```
 
 | Componente | Descrição | Formato | Exemplo |
@@ -203,46 +203,45 @@ COR-{LOJA}-{PLANO}-{SEQUENCIAL}
 | CORREDOR | Identificador do corredor | 1 letra (A-Z) | A |
 | POSICAO | Posição na prateleira | 4 dígitos (0001-9999) | 0001 |
 
-### Formato no Código de Barras (Etiqueta)
+### Formato no Código de Barras (Compacto)
 ```
-LOC-{SETOR}-{CORREDOR}-{POSICAO}
+LOC-{N}-{X}-{N}
 ```
 
 | Componente | Descrição | Formato | Exemplo |
 |------------|-----------|---------|---------|
 | LOC | Prefixo fixo | 3 letras | LOC |
-| SETOR | Área do galpão | 4 dígitos | 0001 |
+| SETOR | Área do galpão | 1-4 dígitos (sem zeros) | 1 |
 | CORREDOR | Identificador do corredor | 1 letra (A-Z) | A |
-| POSICAO | Posição na prateleira | 4 dígitos | 0001 |
+| POSICAO | Posição na prateleira | 1-4 dígitos (sem zeros) | 1 |
 
-> **⚠️ IMPORTANTE:** O prefixo `LOC-` é usado **APENAS no código de barras** para distinguir de outros tipos durante a leitura. No banco de dados, armazena-se apenas `0001-A-0001`.
+> **⚠️ IMPORTANTE:** 
+> - **Display na etiqueta:** `0001-A-0001` (com zeros, mais legível)
+> - **Código de barras:** `LOC-1-A-1` (compacto, sem zeros à esquerda)
+> - **Banco de dados:** `0001-A-0001` (formato padronizado)
 
 ### Exemplos
 
-**No Banco de Dados:**
-- `0001-A-0001` → Setor 1, Corredor A, Posição 1
-- `0012-B-0034` → Setor 12, Corredor B, Posição 34
-- `0150-C-0999` → Setor 150, Corredor C, Posição 999
-
-**No Código de Barras (Etiqueta):**
-- `LOC-0001-A-0001` → Setor 1, Corredor A, Posição 1
-- `LOC-0012-B-0034` → Setor 12, Corredor B, Posição 34
-- `LOC-0150-C-0999` → Setor 150, Corredor C, Posição 999
+| Banco de Dados | Display na Etiqueta | Código de Barras |
+|----------------|---------------------|------------------|
+| `0001-A-0001` | `0001-A-0001` | `LOC-1-A-1` |
+| `0012-B-0034` | `0012-B-0034` | `LOC-12-B-34` |
+| `0150-C-0999` | `0150-C-0999` | `LOC-150-C-999` |
 
 ### Regras CRÍTICAS
 1. **🆓 Referência LIVRE:** Locação NÃO precisa estar cadastrada previamente
-2. **📍 Armazenada nos itens:** Campo `locacao` em bobinas/retalhos/PDC (sem prefixo LOC-)
-3. **🔄 Formato padronizado:** `0000-X-0000` (4 dígitos, 1 letra, 4 dígitos)
-4. **🏷️ Prefixo LOC-:** Adicionado **APENAS no código de barras** para identificação no scanner
-5. **✅ Validação na leitura:** Sistema remove prefixo LOC- ao processar código escaneado
+2. **📍 Armazenada nos itens:** Campo `locacao` em bobinas/retalhos/PDC (formato com zeros)
+3. **🔄 Formato no banco:** `0000-X-0000` (4 dígitos, 1 letra, 4 dígitos)
+4. **🏷️ Código de barras compacto:** `LOC-N-X-N` (sem zeros à esquerda)
+5. **✅ Normalização automática:** Sistema converte `LOC-1-A-1` → `0001-A-0001` na busca
 6. **📦 Tabela opcional:** Pode existir tabela `locacoes` para catálogo, mas NÃO é obrigatória
 
 ### Fluxo de Leitura no Scanner
 
 ```
-1. Scanner lê: LOC-0001-A-0001
+1. Scanner lê: LOC-1-A-1 (código compacto)
 2. Sistema identifica: "É uma locação" (prefixo LOC-)
-3. Sistema extrai: 0001-A-0001
+3. Sistema normaliza: 0001-A-0001 (adiciona zeros)
 4. Busca no banco: WHERE locacao = '0001-A-0001'
 ```
 

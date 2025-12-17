@@ -182,57 +182,60 @@ Exemplo: `COR-PLA-001-01` (14 caracteres)
 
 ## 4. Locação
 
-### Código no Banco de Dados
+### Código no Banco de Dados e Display
 ```
 {0000}-{X}-{0000}
 ```
 Exemplo: `0001-A-0001` (11 caracteres)
 
-### Código no Código de Barras (Etiqueta)
+### Código no Código de Barras (Compacto)
 ```
-LOC-{0000}-{X}-{0000}
+LOC-{N}-{X}-{N}
 ```
-Exemplo: `LOC-0001-A-0001` (15 caracteres)
+Exemplo: `LOC-1-A-1` (9 caracteres)
 
-> **⚠️ IMPORTANTE:** O prefixo `LOC-` é usado **APENAS no código de barras** para distinguir de outros tipos durante a leitura no scanner. No banco de dados, armazena-se apenas `0001-A-0001`.
+> **⚠️ FORMATOS:**
+> - **Display na etiqueta:** `0001-A-0001` (com zeros, mais legível)
+> - **Código de barras:** `LOC-1-A-1` (compacto, economiza espaço)
+> - **Banco de dados:** `0001-A-0001` (formato padronizado)
 
 ### Layout Visual (60x30mm) - **SIMPLIFICADO 50/50**
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                                                          │
-│                    0001-A-0001                           │ 15mm - Código GRANDE
+│                    0001-A-0001                           │ 15mm - Código GRANDE (com zeros)
 │                                                          │
 ├──────────────────────────────────────────────────────────┤
-│       ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║           │
-│       ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║           │ 15mm - Barcode GRANDE
+│         ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║                   │
+│         ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║                   │ 15mm - Barcode COMPACTO
 └──────────────────────────────────────────────────────────┘
-         (código de barras contém: LOC-0001-A-0001)
+           (código de barras contém: LOC-1-A-1)
 ```
 
 ### Especificações
 
 | Linha | Conteúdo | Altura | Fonte |
 |-------|----------|--------|-------|
-| 1 | Código da locação (visual) | 15mm (50%) | Courier, Negrito, **26px** |
-| 2 | Code 128 (LOC-0000-X-0000) | 15mm (50%) | Altura 45px |
+| 1 | Código da locação (com zeros) | 15mm (50%) | Courier, Negrito, **26px** |
+| 2 | Code 128 (LOC-N-X-N compacto) | 15mm (50%) | Altura 45px |
 
 > **Diferença:** Layout mais simples com apenas 2 elementos, ambos grandes para fácil visualização no galpão.
 
-### Componentes do Código
+### Componentes do Código de Barras
 
 | Campo | Descrição | Formato |
 |-------|-----------|---------|
-| LOC | Prefixo (apenas no barcode) | 3 letras |
-| SETOR | Área do galpão | 4 dígitos (0001-9999) |
+| LOC | Prefixo identificador | 3 letras |
+| SETOR | Área do galpão | 1-4 dígitos (sem zeros) |
 | CORREDOR | Identificador | 1 letra (A-Z) |
-| POSIÇÃO | Local na prateleira | 4 dígitos (0001-9999) |
+| POSIÇÃO | Local na prateleira | 1-4 dígitos (sem zeros) |
 
 ### Fluxo de Leitura
 
 ```
-1. Scanner lê código de barras: LOC-0001-A-0001
+1. Scanner lê código de barras: LOC-1-A-1 (compacto)
 2. Sistema identifica prefixo LOC- → É uma locação
-3. Sistema extrai valor: 0001-A-0001
+3. Sistema normaliza: 0001-A-0001 (adiciona zeros)
 4. Busca no banco: WHERE locacao = '0001-A-0001'
 ```
 

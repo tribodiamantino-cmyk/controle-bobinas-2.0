@@ -656,14 +656,22 @@ async function imprimirLocacoes() {
     }
     
     // Para locações, gerar etiqueta com prefixo LOC- no código de barras
-    // Display mostra: 0001-A-0001 (legível)
-    // Código de barras contém: LOC-0001-A-0001 (para identificação no scanner)
-    const etiquetas = locacoesLista.map(codigo => ({
-        tipo: 'locacao',
-        codigo: `LOC-${codigo}`,
-        linha1: codigo, // Display na etiqueta (sem prefixo)
-        linha2_barcode: `LOC-${codigo}` // Código de barras COM prefixo LOC-
-    }));
+    // Display mostra: 0001-A-0001 (legível, com zeros)
+    // Código de barras contém: LOC-1-A-1 (compacto, sem zeros à esquerda)
+    const etiquetas = locacoesLista.map(codigo => {
+        // Gera versão compacta removendo zeros à esquerda
+        const partes = codigo.split('-');
+        const compacto = partes.length === 3 
+            ? `${parseInt(partes[0])}-${partes[1]}-${parseInt(partes[2])}`
+            : codigo;
+        
+        return {
+            tipo: 'locacao',
+            codigo: `LOC-${compacto}`,
+            linha1: codigo, // Display na etiqueta (formato completo com zeros)
+            linha2_barcode: `LOC-${compacto}` // Código de barras compacto
+        };
+    });
     
     // Usar função de lote do módulo
     ImpressaoEtiquetas.abrirJanelaImpressaoLote(etiquetas);
