@@ -655,12 +655,14 @@ async function imprimirLocacoes() {
         return;
     }
     
-    // Para locações, precisamos gerar preview manualmente (não têm ID no banco)
+    // Para locações, gerar etiqueta com prefixo LOC- no código de barras
+    // Display mostra: 0001-A-0001 (legível)
+    // Código de barras contém: LOC-0001-A-0001 (para identificação no scanner)
     const etiquetas = locacoesLista.map(codigo => ({
         tipo: 'locacao',
-        codigo: codigo,
-        linha1: codigo,
-        linha2_barcode: codigo.replace(/-/g, '') // Remove hífens para barcode
+        codigo: `LOC-${codigo}`,
+        linha1: codigo, // Display na etiqueta (sem prefixo)
+        linha2_barcode: `LOC-${codigo}` // Código de barras COM prefixo LOC-
     }));
     
     // Usar função de lote do módulo
