@@ -3,6 +3,47 @@ const router = express.Router();
 const db = require('../config/database');
 const { normalizarLocacao, gerarVariacoesLocacao, validarLocacao } = require('../utils/locacao');
 
+/**
+ * Normaliza código compacto para formato completo (com zeros à esquerda)
+ * BOB-PLA-1 → BOB-PLA-000001
+ * RET-CIA-42 → RET-CIA-000042
+ * COR-PLA-1-1 → COR-PLA-001-01
+ */
+function normalizarCodigoBarras(codigo) {
+    if (!codigo) return codigo;
+    
+    // BOB-PLA-1 → BOB-PLA-000001
+    if (/^BOB-[A-Z]{3}-\d+$/i.test(codigo)) {
+        const partes = codigo.split('-');
+        const numero = partes[2].padStart(6, '0');
+        return `${partes[0].toUpperCase()}-${partes[1].toUpperCase()}-${numero}`;
+    }
+    
+    // RET-CIA-42 → RET-CIA-000042
+    if (/^RET-[A-Z]{3}-\d+$/i.test(codigo)) {
+        const partes = codigo.split('-');
+        const numero = partes[2].padStart(6, '0');
+        return `${partes[0].toUpperCase()}-${partes[1].toUpperCase()}-${numero}`;
+    }
+    
+    // COR-PLA-1-1 → COR-PLA-001-01
+    if (/^COR-[A-Z]{3}-\d+-\d+$/i.test(codigo)) {
+        const partes = codigo.split('-');
+        const plano = partes[2].padStart(3, '0');
+        const seq = partes[3].padStart(2, '0');
+        return `${partes[0].toUpperCase()}-${partes[1].toUpperCase()}-${plano}-${seq}`;
+    }
+    
+    // PDC-PLA-1 → PDC-PLA-001
+    if (/^PDC-[A-Z]{3}-\d+$/i.test(codigo)) {
+        const partes = codigo.split('-');
+        const numero = partes[2].padStart(3, '0');
+        return `${partes[0].toUpperCase()}-${partes[1].toUpperCase()}-${numero}`;
+    }
+    
+    return codigo.toUpperCase();
+}
+
 router.get('/bobina/:id', async (req, res) => {
     try {
         const bobinaId = req.params.id;
@@ -605,6 +646,10 @@ router.post('/validar-qr-bobina', async (req, res) => {
     try {
         const { alocacao_id, qr_escaneado } = req.body;
         
+        // Normaliza código escaneado (compacto → completo)
+        const codigoNormalizado = normalizarCodigoBarras(qr_escaneado);
+        console.log('🔍 Validando QR:', qr_escaneado, '→', codigoNormalizado);
+        
         const [alocacao] = await db.query(`
             SELECT ac.*, 
                 COALESCE(b.codigo_interno, r.codigo_retalho) as origem_codigo_esperado
@@ -618,13 +663,14 @@ router.post('/validar-qr-bobina', async (req, res) => {
             return res.json({ success: false, validado: false, erro: 'Alocação não encontrada' });
         }
         
-        const validado = alocacao[0].origem_codigo_esperado === qr_escaneado;
+        // Compara código normalizado com o esperado
+        const validado = alocacao[0].origem_codigo_esperado === codigoNormalizado;
         
         res.json({ 
             success: true, 
             validado,
             bobina: validado ? alocacao[0] : null,
-            erro: validado ? null : 'Código QR não corresponde à origem esperada'
+            erro: validado ? null : `Código QR não corresponde. Esperado: ${alocacao[0].origem_codigo_esperado}, Lido: ${codigoNormalizado}`
         });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -2089,11 +2135,14 @@ router.post('/plano/reverter/:id', async (req, res) => {
 /**
  * Valida código de barras e retorna tipo + ID
  * GET /api/mobile/validar-codigo/:codigo
+ * Suporta códigos compactos (sem zeros) e completos (com zeros)
  */
 router.get('/validar-codigo/:codigo', async (req, res) => {
     try {
-        const codigo = req.params.codigo.toUpperCase();
-        console.log('🔍 Validando código:', codigo);
+        const codigoOriginal = req.params.codigo.toUpperCase();
+        // Normaliza código compacto para formato completo
+        const codigo = normalizarCodigoBarras(codigoOriginal);
+        console.log('🔍 Validando código:', codigoOriginal, '→', codigo);
 
         let tipo = null;
         let id = null;

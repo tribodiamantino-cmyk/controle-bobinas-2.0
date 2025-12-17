@@ -105,12 +105,16 @@ class ConsultasModule {
                 return;
             }
 
+            // Normaliza código compacto para formato completo
+            const codigoNormalizado = Utils.normalizarCodigo(codigo);
+            debugLog('Código normalizado:', codigoNormalizado);
+
             // Detecta tipo
             const tipo = Utils.detectarTipoCodigo(codigo);
             debugLog('Tipo detectado:', tipo);
 
-            // Busca dados na API
-            await this.buscarDados(tipo, codigo);
+            // Busca dados na API (usa código normalizado)
+            await this.buscarDados(tipo, codigoNormalizado);
 
         } catch (error) {
             console.error('Erro ao processar código:', error);

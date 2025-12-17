@@ -186,20 +186,81 @@ const Utils = {
 
     /**
      * Valida formato de código de barras
+     * Aceita formato completo (com zeros) ou compacto (sem zeros)
      */
     validarCodigoBarras(codigo) {
         if (!codigo) return false;
         
         const padroes = [
-            /^BOB-[A-Z]{3}-\d{6}$/,           // BOB-PLA-000001
-            /^RET-[A-Z]{3}-\d{6}$/,           // RET-CIA-000042
-            /^COR-\d{4}-\d{5}$/,              // COR-2025-00001
-            /^PDC-[A-Z]{3}-\d{3}$/,           // PDC-PLA-015
+            /^BOB-[A-Z]{3}-\d{1,6}$/,         // BOB-PLA-1 até BOB-PLA-000001
+            /^RET-[A-Z]{3}-\d{1,6}$/,         // RET-CIA-42 até RET-CIA-000042
+            /^COR-[A-Z]{3}-\d{1,3}-\d{1,2}$/, // COR-PLA-1-1 até COR-PLA-001-01
+            /^PDC-[A-Z]{3}-\d{1,3}$/,         // PDC-PLA-1 até PDC-PLA-015
             /^LOC-\d{1,4}-[A-Z]-\d{1,4}$/,    // LOC-1-A-1 até LOC-9999-Z-9999
             /^\d{1,4}-[A-Z]-\d{1,4}$/         // 1-A-1 até 9999-Z-9999 (sem prefixo)
         ];
         
         return padroes.some(padrao => padrao.test(codigo));
+    },
+
+    /**
+     * Normaliza código compacto para formato completo (com zeros)
+     * BOB-PLA-1 → BOB-PLA-000001
+     * RET-CIA-42 → RET-CIA-000042
+     * COR-PLA-1-1 → COR-PLA-001-01
+     * LOC-1-A-1 → 0001-A-0001
+     */
+    normalizarCodigo(codigo) {
+        if (!codigo) return codigo;
+        
+        // BOB-PLA-1 → BOB-PLA-000001
+        if (/^BOB-[A-Z]{3}-\d+$/.test(codigo)) {
+            const partes = codigo.split('-');
+            const numero = partes[2].padStart(6, '0');
+            return `${partes[0]}-${partes[1]}-${numero}`;
+        }
+        
+        // RET-CIA-42 → RET-CIA-000042
+        if (/^RET-[A-Z]{3}-\d+$/.test(codigo)) {
+            const partes = codigo.split('-');
+            const numero = partes[2].padStart(6, '0');
+            return `${partes[0]}-${partes[1]}-${numero}`;
+        }
+        
+        // COR-PLA-1-1 → COR-PLA-001-01
+        if (/^COR-[A-Z]{3}-\d+-\d+$/.test(codigo)) {
+            const partes = codigo.split('-');
+            const plano = partes[2].padStart(3, '0');
+            const seq = partes[3].padStart(2, '0');
+            return `${partes[0]}-${partes[1]}-${plano}-${seq}`;
+        }
+        
+        // PDC-PLA-1 → PDC-PLA-001
+        if (/^PDC-[A-Z]{3}-\d+$/.test(codigo)) {
+            const partes = codigo.split('-');
+            const numero = partes[2].padStart(3, '0');
+            return `${partes[0]}-${partes[1]}-${numero}`;
+        }
+        
+        // LOC-1-A-1 → 0001-A-0001 (remove prefixo e adiciona zeros)
+        if (/^LOC-\d+-[A-Z]-\d+$/.test(codigo)) {
+            const partes = codigo.split('-');
+            const setor = partes[1].padStart(4, '0');
+            const corredor = partes[2];
+            const posicao = partes[3].padStart(4, '0');
+            return `${setor}-${corredor}-${posicao}`;
+        }
+        
+        // 1-A-1 → 0001-A-0001 (locação sem prefixo)
+        if (/^\d+-[A-Z]-\d+$/.test(codigo)) {
+            const partes = codigo.split('-');
+            const setor = partes[0].padStart(4, '0');
+            const corredor = partes[1];
+            const posicao = partes[2].padStart(4, '0');
+            return `${setor}-${corredor}-${posicao}`;
+        }
+        
+        return codigo;
     },
 
     /**
