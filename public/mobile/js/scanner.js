@@ -1,145 +1,215 @@
-﻿// MOBILE V2.0 - SCANNER MODULE
+﻿// SCANNER MODULE - MLKit Barcode Scanning
 // Plugin: @capacitor-mlkit/barcode-scanning
 
 class Scanner {
     constructor(callback) {
         this.callback = callback;
         this.isScanning = false;
-        this.permissaoSolicitada = false;
+        this.plugin = null;
     }
 
     async estaDisponivel() {
         try {
-            if (typeof Capacitor === 'undefined' || !Capacitor.isNativePlatform()) {
-                console.warn('Scanner: Nao esta em ambiente nativo Capacitor');
+            console.log('Scanner: Verificando disponibilidade...');
+            
+            // Verificar se Capacitor está disponível
+            if (typeof Capacitor === 'undefined') {
+                console.warn('Scanner: Capacitor não definido - rodando no navegador?');
                 return false;
             }
-            if (typeof Capacitor.Plugins.BarcodeScanning === 'undefined') {
-                console.warn('Scanner: Plugin MLKit nao encontrado');
+            
+            console.log('Scanner: Plataforma:', Capacitor.getPlatform());
+            console.log('Scanner: É nativo?', Capacitor.isNativePlatform());
+            console.log('Scanner: Plugins disponíveis:', Object.keys(Capacitor.Plugins || {}));
+            
+            // Tentar obter o plugin
+            this.plugin = this.getPlugin();
+            
+            if (!this.plugin) {
+                console.error('Scanner: Plugin BarcodeScanner NÃO encontrado!');
+                console.error('Scanner: Verifique se o plugin foi instalado e sincronizado corretamente');
                 return false;
             }
+            
+            console.log('Scanner: ✅ Plugin encontrado!');
+            
+            // Verificar se o método scan existe
+            if (typeof this.plugin.scan !== 'function') {
+                console.error('Scanner: Método scan() não disponível no plugin');
+                return false;
+            }
+            
+            console.log('Scanner: ✅ Método scan() disponível');
             return true;
+            
         } catch (error) {
-            console.error('Scanner: Erro:', error);
+            console.error('Scanner: Erro ao verificar disponibilidade:', error);
             return false;
         }
     }
 
     getPlugin() {
-        if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.BarcodeScanning) {
-            return Capacitor.Plugins.BarcodeScanning;
+        // Método 1: Acesso via Capacitor.Plugins (mais comum)
+        if (typeof Capacitor !== 'undefined' && Capacitor.Plugins) {
+            // O MLKit registra como 'BarcodeScanner'
+            if (Capacitor.Plugins.BarcodeScanner) {
+                console.log('Scanner: Plugin encontrado via Capacitor.Plugins.BarcodeScanner');
+                return Capacitor.Plugins.BarcodeScanner;
+            }
+            
+            // Algumas versões registram como 'BarcodeScannerPlugin'
+            if (Capacitor.Plugins.BarcodeScannerPlugin) {
+                console.log('Scanner: Plugin encontrado via Capacitor.Plugins.BarcodeScannerPlugin');
+                return Capacitor.Plugins.BarcodeScannerPlugin;
+            }
+            
+            // MLKit pode registrar como 'MLKitBarcodeScanner'
+            if (Capacitor.Plugins.MLKitBarcodeScanner) {
+                console.log('Scanner: Plugin encontrado via Capacitor.Plugins.MLKitBarcodeScanner');
+                return Capacitor.Plugins.MLKitBarcodeScanner;
+            }
         }
+        
+        // Método 2: Variável global (alguns plugins expõem assim)
+        if (typeof BarcodeScanner !== 'undefined') {
+            console.log('Scanner: Plugin encontrado via variável global BarcodeScanner');
+            return BarcodeScanner;
+        }
+        
+        // Método 3: capacitorBarcodeScanner (nome usado no bundle)
+        if (typeof capacitorBarcodeScanner !== 'undefined' && capacitorBarcodeScanner.BarcodeScanner) {
+            console.log('Scanner: Plugin encontrado via capacitorBarcodeScanner');
+            return capacitorBarcodeScanner.BarcodeScanner;
+        }
+        
+        console.error('Scanner: Nenhum método de acesso ao plugin funcionou');
         return null;
     }
 
     async solicitarPermissoes() {
         try {
-            const plugin = this.getPlugin();
-            if (!plugin) return false;
+            if (!this.plugin) {
+                this.plugin = this.getPlugin();
+                if (!this.plugin) return false;
+            }
 
-            const { camera } = await plugin.checkPermissions();
-            if (camera === 'granted') {
-                this.permissaoSolicitada = true;
+            console.log('Scanner: Verificando permissões de câmera...');
+            
+            // Verificar permissões atuais
+            const status = await this.plugin.checkPermissions();
+            console.log('Scanner: Status da permissão:', status);
+            
+            if (status.camera === 'granted') {
+                console.log('Scanner: ✅ Permissão já concedida');
                 return true;
             }
             
-            const result = await plugin.requestPermissions();
+            // Solicitar permissão se necessário
+            console.log('Scanner: Solicitando permissão...');
+            const result = await this.plugin.requestPermissions();
+            console.log('Scanner: Resultado da solicitação:', result);
+            
             if (result.camera === 'granted') {
-                this.permissaoSolicitada = true;
+                console.log('Scanner: ✅ Permissão concedida');
                 return true;
             }
             
-            Utils.mostrarErro('Permissao de camera negada');
+            console.warn('Scanner: ⚠️ Permissão negada pelo usuário');
             return false;
-        } catch (error) {
-            console.error('Scanner: Erro permissoes:', error);
-            return false;
-        }
-    }
-
-    async verificarGooglePlayServices() {
-        try {
-            const plugin = this.getPlugin();
-            if (!plugin || !plugin.isGoogleBarcodeScannerModuleAvailable) return true;
             
-            const { available } = await plugin.isGoogleBarcodeScannerModuleAvailable();
-            if (!available) {
-                await plugin.installGoogleBarcodeScannerModule();
-            }
-            return true;
         } catch (error) {
-            return true;
+            console.error('Scanner: Erro ao solicitar permissões:', error);
+            return false;
         }
     }
 
     async iniciar() {
         try {
+            console.log('Scanner: ========== INICIANDO SCANNER ==========');
+            
+            // Verificar disponibilidade
             if (!await this.estaDisponivel()) {
-                Utils.mostrarAviso('Scanner nao disponivel. Digite o codigo manualmente.');
+                const msg = 'Scanner não disponível neste dispositivo. Use o campo de texto para digitar o código manualmente.';
+                if (typeof Utils !== 'undefined' && Utils.mostrarAviso) {
+                    Utils.mostrarAviso(msg);
+                } else {
+                    alert(msg);
+                }
                 return;
             }
 
-            if (!await this.solicitarPermissoes()) return;
-            await this.verificarGooglePlayServices();
+            // Solicitar permissões
+            if (!await this.solicitarPermissoes()) {
+                const msg = 'Permissão de câmera negada. Por favor, permita o acesso à câmera nas configurações do app.';
+                if (typeof Utils !== 'undefined' && Utils.mostrarErro) {
+                    Utils.mostrarErro(msg);
+                } else {
+                    alert(msg);
+                }
+                return;
+            }
 
-            console.log('Scanner: Iniciando...');
             this.isScanning = true;
-
-            const plugin = this.getPlugin();
-            const { barcodes } = await plugin.scan({
+            
+            console.log('Scanner: Abrindo câmera para scan...');
+            
+            // Executar scan com opções
+            const result = await this.plugin.scan({
                 formats: ['QR_CODE', 'CODE_128', 'CODE_39', 'EAN_13', 'EAN_8']
             });
 
-            if (barcodes && barcodes.length > 0) {
-                const codigo = barcodes[0].rawValue || barcodes[0].displayValue;
-                console.log('Scanner: Codigo:', codigo);
+            console.log('Scanner: Resultado do scan:', result);
+            
+            // Processar resultado
+            if (result && result.barcodes && result.barcodes.length > 0) {
+                const codigo = result.barcodes[0].rawValue || result.barcodes[0].displayValue;
+                console.log('Scanner: ✅ Código lido:', codigo);
+                
+                // Feedback visual/sonoro (se disponível)
+                if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                    navigator.vibrate(100);
+                }
+                
                 await this.processarCodigo(codigo);
+            } else {
+                console.log('Scanner: Nenhum código detectado');
             }
+            
         } catch (error) {
-            if (error.message && !error.message.includes('cancel')) {
-                Utils.mostrarErro('Erro ao escanear');
+            console.error('Scanner: Erro durante scan:', error);
+            
+            // Ignorar erro de cancelamento pelo usuário
+            if (error.message && error.message.toLowerCase().includes('cancel')) {
+                console.log('Scanner: Scan cancelado pelo usuário');
+                return;
+            }
+            
+            const msg = 'Erro ao escanear: ' + (error.message || 'Erro desconhecido');
+            if (typeof Utils !== 'undefined' && Utils.mostrarErro) {
+                Utils.mostrarErro(msg);
+            } else {
+                alert(msg);
             }
         } finally {
             this.isScanning = false;
+            console.log('Scanner: ========== SCAN FINALIZADO ==========');
         }
-    }
-
-    async parar() {
-        try {
-            if (this.isScanning) {
-                const plugin = this.getPlugin();
-                if (plugin && plugin.stopScan) await plugin.stopScan();
-                this.isScanning = false;
-            }
-        } catch (error) {}
     }
 
     async processarCodigo(codigo) {
-        try {
-            if (!codigo) {
-                Utils.mostrarErro('Codigo vazio');
-                return;
-            }
-            codigo = codigo.trim().toUpperCase();
-
-            if (typeof Utils.feedbackSucesso === 'function') {
-                Utils.feedbackSucesso();
-            }
-
-            if (this.callback) {
-                await this.callback(codigo);
-            }
-        } catch (error) {
-            Utils.mostrarErro('Erro ao processar codigo');
+        console.log('Scanner: Processando código:', codigo);
+        if (this.callback && typeof this.callback === 'function') {
+            await this.callback(codigo);
         }
     }
 
-    async toggleFlash() {
-        try {
-            const plugin = this.getPlugin();
-            if (plugin && plugin.toggleTorch) await plugin.toggleTorch();
-        } catch (error) {}
+    parar() {
+        this.isScanning = false;
+        console.log('Scanner: Parado');
     }
 }
 
-console.log('Scanner Module v2.0 carregado');
+// Exportar globalmente
+window.Scanner = Scanner;
+
+console.log('✅ Scanner module carregado');
