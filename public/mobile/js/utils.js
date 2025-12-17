@@ -4,6 +4,137 @@
  * Funções utilitárias compartilhadas entre todos os módulos
  */
 
+// ========================================
+// SISTEMA DE LOGS EM TEMPO REAL
+// ========================================
+const AppLogs = {
+    logs: [],
+    maxLogs: 200,
+    
+    add(tipo, mensagem, dados = null) {
+        const entry = {
+            timestamp: new Date().toISOString(),
+            tipo,
+            mensagem,
+            dados: dados ? JSON.stringify(dados).substring(0, 500) : null
+        };
+        this.logs.unshift(entry);
+        if (this.logs.length > this.maxLogs) {
+            this.logs.pop();
+        }
+        // Salva no localStorage para persistir entre reloads
+        try {
+            localStorage.setItem('app_logs', JSON.stringify(this.logs.slice(0, 50)));
+        } catch (e) {}
+    },
+    
+    info(msg, dados) { this.add('INFO', msg, dados); },
+    warn(msg, dados) { this.add('WARN', msg, dados); },
+    error(msg, dados) { this.add('ERROR', msg, dados); },
+    
+    getLogs() { return this.logs; },
+    
+    clear() { 
+        this.logs = []; 
+        localStorage.removeItem('app_logs');
+    },
+    
+    // Carrega logs do localStorage
+    load() {
+        try {
+            const saved = localStorage.getItem('app_logs');
+            if (saved) this.logs = JSON.parse(saved);
+        } catch (e) {}
+    },
+    
+    // Mostra painel de logs na tela
+    mostrarPainel() {
+        let painel = document.getElementById('logsPainel');
+        if (painel) {
+            painel.remove();
+            return;
+        }
+        
+        painel = document.createElement('div');
+        painel.id = 'logsPainel';
+        painel.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95); color: #0f0; font-family: monospace;
+            font-size: 11px; padding: 10px; overflow: auto; z-index: 99999;
+        `;
+        
+        const header = `
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                <b>📋 LOGS DO APP (${this.logs.length})</b>
+                <div>
+                    <button onclick="AppLogs.clear();AppLogs.mostrarPainel();AppLogs.mostrarPainel();" 
+                            style="margin-right:5px;padding:5px 10px;">Limpar</button>
+                    <button onclick="AppLogs.copiarLogs();" 
+                            style="margin-right:5px;padding:5px 10px;">Copiar</button>
+                    <button onclick="document.getElementById('logsPainel').remove();" 
+                            style="padding:5px 10px;">✕ Fechar</button>
+                </div>
+            </div>
+        `;
+        
+        const logsHtml = this.logs.map(log => {
+            const cor = log.tipo === 'ERROR' ? '#f55' : log.tipo === 'WARN' ? '#ff0' : '#0f0';
+            const time = log.timestamp.split('T')[1].split('.')[0];
+            return `<div style="color:${cor};margin:2px 0;border-bottom:1px solid #333;padding:3px 0;">
+                <b>[${time}] ${log.tipo}:</b> ${log.mensagem}
+                ${log.dados ? `<div style="color:#888;font-size:10px;margin-left:10px;">${log.dados}</div>` : ''}
+            </div>`;
+        }).join('');
+        
+        painel.innerHTML = header + (logsHtml || '<p style="color:#888;">Nenhum log registrado</p>');
+        document.body.appendChild(painel);
+    },
+    
+    copiarLogs() {
+        const texto = this.logs.map(l => 
+            `[${l.timestamp}] ${l.tipo}: ${l.mensagem}${l.dados ? '\n  ' + l.dados : ''}`
+        ).join('\n');
+        navigator.clipboard.writeText(texto).then(() => alert('Logs copiados!'));
+    }
+};
+
+// Carrega logs salvos
+AppLogs.load();
+
+// Intercepta console.log/warn/error para capturar logs
+const originalConsoleLog = console.log;
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+
+console.log = function(...args) {
+    AppLogs.info(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+    originalConsoleLog.apply(console, args);
+};
+
+console.warn = function(...args) {
+    AppLogs.warn(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+    originalConsoleWarn.apply(console, args);
+};
+
+console.error = function(...args) {
+    AppLogs.error(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+    originalConsoleError.apply(console, args);
+};
+
+// Captura erros não tratados
+window.onerror = function(msg, url, line, col, error) {
+    AppLogs.error(`UNCAUGHT: ${msg} at ${url}:${line}:${col}`, error?.stack);
+};
+
+window.onunhandledrejection = function(event) {
+    AppLogs.error(`UNHANDLED PROMISE: ${event.reason}`, event.reason?.stack);
+};
+
+// Expõe globalmente
+window.AppLogs = AppLogs;
+
+// ========================================
+
 const Utils = {
     /**
      * Formata metragem para exibição

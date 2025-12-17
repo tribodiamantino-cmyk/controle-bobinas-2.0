@@ -136,6 +136,45 @@ class Camera {
         this.ultimaFoto = null;
     }
 
+    /**
+     * Alias para limparFoto (compatibilidade)
+     */
+    limparUltimaFoto() {
+        this.limparFoto();
+    }
+
+    /**
+     * Cria FormData com a foto e dados adicionais
+     * @param {Blob|null} fotoBlob - Se null, usa ultimaFoto
+     * @param {string} fieldName - Nome do campo da foto (default: 'foto')
+     * @param {Object} dadosAdicionais - Dados extras para incluir no FormData
+     */
+    async criarFormData(fotoBlob = null, fieldName = 'foto', dadosAdicionais = {}) {
+        try {
+            const formData = new FormData();
+            
+            // Se não passou blob, converte a última foto
+            if (!fotoBlob && this.ultimaFoto) {
+                fotoBlob = await this.converterParaBlob(this.ultimaFoto.base64);
+            }
+            
+            if (fotoBlob) {
+                const filename = `foto_${Date.now()}.jpg`;
+                formData.append(fieldName, fotoBlob, filename);
+            }
+            
+            // Adiciona dados extras
+            for (const [key, value] of Object.entries(dadosAdicionais)) {
+                formData.append(key, value);
+            }
+            
+            return formData;
+        } catch (error) {
+            console.error('Camera: Erro ao criar FormData:', error);
+            throw error;
+        }
+    }
+
     async converterParaBlob(base64) {
         try {
             const byteString = atob(base64);
