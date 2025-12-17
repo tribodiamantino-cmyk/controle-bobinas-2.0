@@ -125,6 +125,13 @@ class Camera {
         return this.ultimaFoto;
     }
 
+    /**
+     * Verifica se existe uma foto capturada
+     */
+    temFoto() {
+        return this.ultimaFoto !== null && this.ultimaFoto.base64 !== null;
+    }
+
     limparFoto() {
         this.ultimaFoto = null;
     }
