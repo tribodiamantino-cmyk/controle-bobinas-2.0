@@ -285,21 +285,23 @@ module.exports = router;
 
 ### Códigos Gerados
 
-| Entidade | Formato | Exemplo |
-|----------|---------|---------|
+| Entidade | Banco de Dados | Código de Barras (Compacto) |
+|----------|----------------|----------------------------|
 | Produto | `{LOJA}-{00000}` | `PLA-00123` |
-| Bobina | `BOB-{LOJA}-{000000}` | `BOB-PLA-000001` |
-| Retalho | `RET-{LOJA}-{000000}` | `RET-CIA-000042` |
-| Plano | `PDC-{LOJA}-{000}` | `PDC-PLA-001` |
-| Corte | `COR-{LOJA}-{PDC}-{00}` | `COR-PLA-001-01` |
-| Locação | `LOC-{N}-{X}-{N}` | `LOC-1-A-1` |
+| Bobina | `BOB-{LOJA}-{000000}` | `BOB-PLA-1` |
+| Retalho | `RET-{LOJA}-{000000}` | `RET-CIA-42` |
+| Plano | `PDC-{LOJA}-{000}` | `PDC-PLA-001` (não imprime) |
+| Corte | `COR-{LOJA}-{PDC}-{00}` | `COR-PLA-1-1` |
+| Locação | `0001-A-0001` | `LOC-1-A-1` |
 | Carregamento | `CAR-{ANO}-{00000}` | `CAR-2025-00001` |
 
-> **⚠️ Locação:** 
-> - **Código de barras:** `LOC-1-A-1` (compacto, sem zeros)
-> - **Display na etiqueta:** `0001-A-0001` (com zeros, legível)
-> - **Banco de dados:** `0001-A-0001` (formato padronizado)
-> - Sistema normaliza automaticamente na leitura.
+> **⚠️ Formato Compacto nos Códigos de Barras:** 
+> - Remove zeros à esquerda para caber na etiqueta 60x30mm
+> - **Bobina:** `BOB-PLA-000001` → `BOB-PLA-1`
+> - **Retalho:** `RET-CIA-000042` → `RET-CIA-42`
+> - **Corte:** `COR-PLA-001-01` → `COR-PLA-1-1`
+> - **Locação:** `0001-A-0001` → `LOC-1-A-1`
+> - Sistema normaliza automaticamente na leitura/busca.
 
 ### Fluxo de Cortes (Mobile)
 

@@ -404,6 +404,32 @@ const preview = async (req, res) => {
 // ============================================
 
 /**
+ * Compacta código removendo zeros à esquerda do número sequencial
+ * BOB-PLA-000001 → BOB-PLA-1
+ * RET-CIA-000042 → RET-CIA-42
+ * COR-PLA-001-01 → COR-PLA-1-1
+ * @param {string} codigo - Código original
+ * @returns {string} - Código compacto
+ */
+function compactarCodigo(codigo) {
+    if (!codigo) return codigo;
+    
+    // Divide o código em partes
+    const partes = codigo.split('-');
+    
+    // Compacta cada parte numérica removendo zeros à esquerda
+    const compactadas = partes.map(parte => {
+        // Se for apenas números, remove zeros à esquerda
+        if (/^\d+$/.test(parte)) {
+            return String(parseInt(parte, 10));
+        }
+        return parte;
+    });
+    
+    return compactadas.join('-');
+}
+
+/**
  * Busca dados formatados para etiqueta baseado no tipo
  */
 async function buscarDadosEtiqueta(tipo, id) {
@@ -456,6 +482,10 @@ async function buscarDadosBobina(id) {
     // O código no banco é a fonte da verdade
     const codigo = b.codigo_interno;
     
+    // Código compacto para etiqueta (sem zeros à esquerda)
+    // BOB-PLA-000001 → BOB-PLA-1
+    const codigoCompacto = compactarCodigo(codigo);
+    
     // Extrair loja do código para uso na fila de impressão
     const lojaPrefix = converterLojaParaFila(b.loja);
 
@@ -481,15 +511,16 @@ async function buscarDadosBobina(id) {
 
     return {
         tipo: 'bobina',
-        codigo,
+        codigo: codigoCompacto,
         loja: lojaPrefix,
-        linha1: codigo,
-        linha2_barcode: codigo,
+        linha1: codigoCompacto,
+        linha2_barcode: codigoCompacto,
         linha3: linhaProduto.trim(),
         linha4: linhaDetalhes,
         // Dados brutos para referência
         raw: {
             id: b.id,
+            codigo_original: codigo, // Código completo para referência
             metragem: b.metragem_atual,
             fabricante: b.fabricante,
             placa: b.placa,
@@ -539,6 +570,10 @@ async function buscarDadosRetalho(id) {
     // O código no banco é a fonte da verdade
     const codigo = r.codigo_retalho;
     
+    // Código compacto para etiqueta (sem zeros à esquerda)
+    // RET-PLA-000042 → RET-PLA-42
+    const codigoCompacto = compactarCodigo(codigo);
+    
     // Extrair loja do código para uso na fila de impressão
     const lojaPrefix = converterLojaParaFila(r.loja);
 
@@ -557,14 +592,15 @@ async function buscarDadosRetalho(id) {
 
     return {
         tipo: 'retalho',
-        codigo,
+        codigo: codigoCompacto,
         loja: lojaPrefix,
-        linha1: codigo,
-        linha2_barcode: codigo,
+        linha1: codigoCompacto,
+        linha2_barcode: codigoCompacto,
         linha3: linhaProduto.trim(),
         linha4: linhaDetalhes,
         raw: {
             id: r.id,
+            codigo_original: codigo, // Código completo para referência
             metragem: r.metragem,
             fabricante: r.fabricante,
             produto: r.produto_codigo,
@@ -606,8 +642,12 @@ async function buscarDadosCorte(id) {
     const c = rows[0];
     
     // ✅ USAR O CÓDIGO DO BANCO - NUNCA GERAR NA ETIQUETA
-    // O campo codigo_corte é a fonte da verdade (formato: COR-YYYY-XXXXX)
+    // O campo codigo_corte é a fonte da verdade (formato: COR-PLA-001-01)
     const codigo = c.codigo_corte;
+    
+    // Código compacto para etiqueta (sem zeros à esquerda)
+    // COR-PLA-001-01 → COR-PLA-1-1
+    const codigoCompacto = compactarCodigo(codigo);
     
     // Extrair loja para uso na fila de impressão
     const lojaPrefix = converterLojaParaFila(c.loja);
@@ -621,14 +661,15 @@ async function buscarDadosCorte(id) {
 
     return {
         tipo: 'corte',
-        codigo,
+        codigo: codigoCompacto,
         loja: lojaPrefix,
-        linha1: codigo,
-        linha2_barcode: codigo,
+        linha1: codigoCompacto,
+        linha2_barcode: codigoCompacto,
         linha3: linhaProduto,
         linha4: linhaDetalhes,
         raw: {
             id: c.id,
+            codigo_original: codigo, // Código completo para referência
             plano: c.plano_codigo,
             cliente: c.cliente,
             obra: c.obra,

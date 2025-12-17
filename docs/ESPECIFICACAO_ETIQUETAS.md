@@ -71,16 +71,18 @@ Exemplo: `Preta/Prata 220x80x80cm 190gr`
 ## 1. Bobina
 
 ### Código
-```
-BOB-{LOJA}-{000000}
-```
-Exemplo: `BOB-PLA-000001` (14 caracteres)
+
+**Banco de dados:** `BOB-{LOJA}-{000000}` → Ex: `BOB-PLA-000001` (14 caracteres)
+
+**Código de barras (compacto):** `BOB-{LOJA}-{N}` → Ex: `BOB-PLA-1` (9 caracteres)
+
+> **⚠️ Formato compacto:** Remove zeros à esquerda para caber na etiqueta 60x30mm
 
 ### Layout Visual (60x30mm)
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    BOB-PLA-000001                        │ 6mm  - Código
-│       ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║           │ 10mm - Barcode
+│                    BOB-PLA-000001                        │ 6mm  - Código (com zeros)
+│       ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║           │ 10mm - Barcode (BOB-PLA-1)
 │         Preta/Prata 190cm Cano/Cano 190gr                │ 7mm  - Produto
 │           PROPEX | ABC-1234 | 150,00m                    │ 7mm  - Detalhes
 └──────────────────────────────────────────────────────────┘
@@ -108,16 +110,18 @@ Exemplo: `BOB-PLA-000001` (14 caracteres)
 ## 2. Retalho
 
 ### Código
-```
-RET-{LOJA}-{000000}
-```
-Exemplo: `RET-PLA-000001` (14 caracteres)
+
+**Banco de dados:** `RET-{LOJA}-{000000}` → Ex: `RET-PLA-000001` (14 caracteres)
+
+**Código de barras (compacto):** `RET-{LOJA}-{N}` → Ex: `RET-PLA-1` (9 caracteres)
+
+> **⚠️ Formato compacto:** Remove zeros à esquerda para caber na etiqueta 60x30mm
 
 ### Layout Visual (60x30mm)
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    RET-PLA-000001                        │ 6mm  - Código
-│       ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║           │ 10mm - Barcode
+│                    RET-PLA-000001                        │ 6mm  - Código (com zeros)
+│       ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║           │ 10mm - Barcode (RET-PLA-1)
 │         Preta/Prata 190cm Cano/Cano 190gr                │ 7mm  - Produto
 │                  PROPEX | 35,50m                         │ 7mm  - Detalhes
 └──────────────────────────────────────────────────────────┘
@@ -146,16 +150,18 @@ Exemplo: `RET-PLA-000001` (14 caracteres)
 ## 3. Corte
 
 ### Código
-```
-COR-{LOJA}-{PDC}-{00}
-```
-Exemplo: `COR-PLA-001-01` (14 caracteres)
+
+**Banco de dados:** `COR-{LOJA}-{PDC}-{00}` → Ex: `COR-PLA-001-01` (14 caracteres)
+
+**Código de barras (compacto):** `COR-{LOJA}-{N}-{N}` → Ex: `COR-PLA-1-1` (11 caracteres)
+
+> **⚠️ Formato compacto:** Remove zeros à esquerda para caber na etiqueta 60x30mm
 
 ### Layout Visual (60x30mm)
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    COR-PLA-001-01                        │ 6mm  - Código
-│       ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║           │ 10mm - Barcode
+│                    COR-PLA-001-01                        │ 6mm  - Código (com zeros)
+│       ║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║║           │ 10mm - Barcode (COR-PLA-1-1)
 │         Preta/Prata 190cm Cano/Cano 190gr                │ 7mm  - Produto
 │           25,00m | JOÃO SILVA | AV-03                    │ 7mm  - Detalhes
 └──────────────────────────────────────────────────────────┘

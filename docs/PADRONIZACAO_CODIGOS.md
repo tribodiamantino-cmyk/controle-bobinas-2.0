@@ -60,7 +60,7 @@
 
 ## 2. Bobina
 
-### Formato
+### Formato no Banco de Dados
 ```
 BOB-{LOJA}-{SEQUENCIAL}
 ```
@@ -71,28 +71,44 @@ BOB-{LOJA}-{SEQUENCIAL}
 | LOJA | Prefixo da empresa | 3 letras | CIA, PLA |
 | SEQUENCIAL | Número sequencial global | 6 dígitos (000001-999999) | 000042 |
 
+### Formato no Código de Barras (Compacto)
+```
+BOB-{LOJA}-{N}
+```
+
+| Componente | Descrição | Formato | Exemplo |
+|------------|-----------|---------|---------|
+| BOB | Prefixo fixo | 3 letras | BOB |
+| LOJA | Prefixo da empresa | 3 letras | CIA, PLA |
+| SEQUENCIAL | Número sem zeros à esquerda | 1-6 dígitos | 42 |
+
 ### Exemplos
-- `BOB-PLA-000001` → 1ª bobina do sistema (Cortinave)
-- `BOB-CIA-000002` → 2ª bobina do sistema (BN)
-- `BOB-PLA-000003` → 3ª bobina do sistema (Cortinave)
+
+| Banco de Dados | Código de Barras |
+|----------------|------------------|
+| `BOB-PLA-000001` | `BOB-PLA-1` |
+| `BOB-CIA-000042` | `BOB-CIA-42` |
+| `BOB-PLA-001234` | `BOB-PLA-1234` |
 
 ### Regras
 1. **Geração:** Automática pelo sistema
 2. **Sequencial:** Único global (não reinicia por ano, não separa por loja)
 3. **Loja:** Definida automaticamente baseado no usuário/contexto
+4. **🏷️ Código de barras compacto:** Sem zeros à esquerda para caber na etiqueta 60x30mm
 
 ### Etiqueta
 ✅ **Possui etiqueta física**
 
 ### Caracteres
-- **Total:** 14 caracteres
+- **No banco:** 14 caracteres (`BOB-PLA-000001`)
+- **No barcode:** 8-14 caracteres (`BOB-PLA-1` a `BOB-PLA-999999`)
 - **Compatível com Code 128:** ✅ Sim
 
 ---
 
 ## 3. Retalho
 
-### Formato
+### Formato no Banco de Dados
 ```
 RET-{LOJA}-{SEQUENCIAL}
 ```
@@ -103,21 +119,37 @@ RET-{LOJA}-{SEQUENCIAL}
 | LOJA | Prefixo da empresa | 3 letras | CIA, PLA |
 | SEQUENCIAL | Número sequencial global | 6 dígitos (000001-999999) | 000042 |
 
+### Formato no Código de Barras (Compacto)
+```
+RET-{LOJA}-{N}
+```
+
+| Componente | Descrição | Formato | Exemplo |
+|------------|-----------|---------|---------|
+| RET | Prefixo fixo | 3 letras | RET |
+| LOJA | Prefixo da empresa | 3 letras | CIA, PLA |
+| SEQUENCIAL | Número sem zeros à esquerda | 1-6 dígitos | 42 |
+
 ### Exemplos
-- `RET-PLA-000001` → 1º retalho do sistema (Cortinave)
-- `RET-CIA-000002` → 2º retalho do sistema (BN)
-- `RET-PLA-000003` → 3º retalho do sistema (Cortinave)
+
+| Banco de Dados | Código de Barras |
+|----------------|------------------|
+| `RET-PLA-000001` | `RET-PLA-1` |
+| `RET-CIA-000042` | `RET-CIA-42` |
+| `RET-PLA-001234` | `RET-PLA-1234` |
 
 ### Regras
 1. **Geração:** Automática pelo sistema (quando sobra material de um corte)
 2. **Sequencial:** Único global (não reinicia por ano, não separa por loja)
 3. **Loja:** Definida automaticamente baseado na bobina de origem
+4. **🏷️ Código de barras compacto:** Sem zeros à esquerda para caber na etiqueta 60x30mm
 
 ### Etiqueta
 ✅ **Possui etiqueta física**
 
 ### Caracteres
-- **Total:** 14 caracteres
+- **No banco:** 14 caracteres (`RET-PLA-000001`)
+- **No barcode:** 8-14 caracteres (`RET-PLA-1` a `RET-PLA-999999`)
 - **Compatível com Code 128:** ✅ Sim
 
 ---
@@ -157,7 +189,7 @@ PDC-{LOJA}-{SEQUENCIAL}
 
 ## 5. Corte
 
-### Formato
+### Formato no Banco de Dados
 ```
 COR-{LOJA}-{PLANO}-{SEQUENCIAL}
 ```
@@ -169,10 +201,26 @@ COR-{LOJA}-{PLANO}-{SEQUENCIAL}
 | PLANO | Referência ao plano de corte | 3 dígitos | 001 |
 | SEQUENCIAL | Número do corte dentro do plano | 2 dígitos (01-99) | 05 |
 
+### Formato no Código de Barras (Compacto)
+```
+COR-{LOJA}-{N}-{N}
+```
+
+| Componente | Descrição | Formato | Exemplo |
+|------------|-----------|---------|---------|
+| COR | Prefixo fixo | 3 letras | COR |
+| LOJA | Prefixo da empresa | 3 letras | CIA, PLA |
+| PLANO | Número do plano sem zeros | 1-3 dígitos | 1 |
+| SEQUENCIAL | Número do corte sem zeros | 1-2 dígitos | 5 |
+
 ### Exemplos
-- `COR-PLA-001-01` → 1º corte do plano PDC-PLA-001
-- `COR-PLA-001-02` → 2º corte do plano PDC-PLA-001
-- `COR-CIA-002-01` → 1º corte do plano PDC-CIA-002
+
+| Banco de Dados | Código de Barras |
+|----------------|------------------|
+| `COR-PLA-001-01` | `COR-PLA-1-1` |
+| `COR-PLA-001-05` | `COR-PLA-1-5` |
+| `COR-CIA-002-01` | `COR-CIA-2-1` |
+| `COR-PLA-012-10` | `COR-PLA-12-10` |
 
 ### Regras
 1. **Geração:** Automática pelo sistema (ao confirmar corte no app)
@@ -180,12 +228,14 @@ COR-{LOJA}-{PLANO}-{SEQUENCIAL}
 3. **Loja:** Herdada do plano de corte
 4. **Vínculo:** Sempre associado a um plano de corte
 5. **Limite:** 99 cortes por plano
+6. **🏷️ Código de barras compacto:** Sem zeros à esquerda para caber na etiqueta 60x30mm
 
 ### Etiqueta
 ✅ **Possui etiqueta física** - Principal etiqueta do sistema
 
 ### Caracteres
-- **Total:** 14 caracteres
+- **No banco:** 14 caracteres (`COR-PLA-001-01`)
+- **No barcode:** 10-14 caracteres (`COR-PLA-1-1` a `COR-PLA-999-99`)
 - **Compatível com Code 128:** ✅ Sim
 
 ---
@@ -251,8 +301,8 @@ LOC-{N}-{X}-{N}
 ```
 1. Operador define locação ao cadastrar bobina: "0001-A-0001"
 2. Sistema salva em bobinas.locacao = "0001-A-0001"
-3. Etiqueta é impressa com: LOC-0001-A-0001
-4. Locação aparece automaticamente no sistema
+3. Etiqueta é impressa com barcode: LOC-1-A-1 (compacto)
+4. Etiqueta mostra texto legível: 0001-A-0001 (com zeros)
 5. NÃO precisa cadastrar locação antes de usar
 ```
 
@@ -270,7 +320,7 @@ SELECT * FROM retalhos WHERE locacao = '0001-A-0001';
 
 ### Caracteres
 - **No banco:** 11 caracteres (`0001-A-0001`)
-- **No código de barras:** 15 caracteres (`LOC-0001-A-0001`)
+- **No código de barras:** 7-15 caracteres (`LOC-1-A-1` a `LOC-9999-Z-9999`)
 - **Compatível com Code 128:** ✅ Sim
 
 ### Validação Regex
@@ -278,8 +328,8 @@ SELECT * FROM retalhos WHERE locacao = '0001-A-0001';
 // Formato do banco de dados (sem prefixo)
 /^\d{4}-[A-Z]-\d{4}$/
 
-// Formato do código de barras (com prefixo)
-/^LOC-\d{4}-[A-Z]-\d{4}$/
+// Formato do código de barras compacto (com prefixo, sem zeros)
+/^LOC-\d{1,4}-[A-Z]-\d{1,4}$/
 
 // Exemplos válidos no banco:
 ✅ 0001-A-0001
@@ -287,13 +337,13 @@ SELECT * FROM retalhos WHERE locacao = '0001-A-0001';
 ✅ 0150-C-0999
 ✅ 9999-Z-9999
 
-// Exemplos válidos no código de barras:
-✅ LOC-0001-A-0001
-✅ LOC-0012-B-0034
-✅ LOC-0150-C-0999
+// Exemplos válidos no código de barras (compacto):
+✅ LOC-1-A-1
+✅ LOC-12-B-34
+✅ LOC-150-C-999
 ✅ LOC-9999-Z-9999
 
-// Exemplos inválidos:
+// Exemplos inválidos no banco:
 ❌ 1-A-1        (dígitos incompletos)
 ❌ 0000-A-0001  (setor 0 não permitido)
 ❌ 0001-a-0001  (letra minúscula)
