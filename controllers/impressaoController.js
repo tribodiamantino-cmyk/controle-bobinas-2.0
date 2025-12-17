@@ -641,6 +641,9 @@ async function buscarDadosCorte(id) {
 /**
  * Dados para etiqueta de Locação
  * Layout simplificado: só código + barcode grande
+ * 
+ * Formato no banco: 0000-X-0000
+ * Formato no código de barras: LOC-0000-X-0000
  */
 async function buscarDadosLocacao(id) {
     const [rows] = await db.query(`
@@ -662,23 +665,41 @@ async function buscarDadosLocacao(id) {
     const loja = l.loja || 'PLA';
     
     // Código da locação no banco: {0000}-{X}-{0000}
-    // Formato: CCCC-A-NNNN (Corredor-Andar-Coluna)
-    const codigoBanco = l.codigo || `${String(l.corredor || 0).padStart(4, '0')}-${l.andar || 'A'}-${String(l.coluna || 0).padStart(4, '0')}`;
+    // Formato padronizado: SETOR-CORREDOR-POSICAO (4 dígitos, 1 letra, 4 dígitos)
+    let codigoBanco = l.codigo;
     
-    // QR Code impresso: LOC-{codigo} (adiciona prefixo)
-    const codigoQR = `LOC-${codigoBanco}`;
+    // Se não tiver código, gera a partir dos campos individuais
+    if (!codigoBanco) {
+        const setor = String(l.corredor || 1).padStart(4, '0');
+        const corredor = (l.andar || 'A').toUpperCase();
+        const posicao = String(l.coluna || 1).padStart(4, '0');
+        codigoBanco = `${setor}-${corredor}-${posicao}`;
+    }
+    
+    // Garante que o código está no formato 0000-X-0000
+    // Se estiver em formato curto (1-A-1), converte para longo (0001-A-0001)
+    const partes = codigoBanco.split('-');
+    if (partes.length === 3) {
+        const setor = partes[0].padStart(4, '0');
+        const corredor = partes[1].toUpperCase();
+        const posicao = partes[2].padStart(4, '0');
+        codigoBanco = `${setor}-${corredor}-${posicao}`;
+    }
+    
+    // Código de barras: LOC-0000-X-0000 (prefixo LOC- para identificação no scanner)
+    const codigoBarras = `LOC-${codigoBanco}`;
 
     return {
         tipo: 'locacao',
-        codigo: codigoQR, // QR com prefixo LOC-
+        codigo: codigoBarras, // Código de barras com prefixo LOC-
         loja,
-        linha1: codigoQR, // Display na etiqueta com prefixo
-        linha2_barcode: codigoQR, // Barcode com prefixo
+        linha1: codigoBanco, // Display na etiqueta SEM prefixo (mais legível)
+        linha2_barcode: codigoBarras, // Barcode COM prefixo LOC-
         // Locação tem layout 50/50 (código grande + barcode grande)
         layout: '50-50',
         raw: {
             id: l.id,
-            codigo_banco: codigoBanco, // Código sem prefixo (para referência)
+            codigo_banco: codigoBanco, // Código sem prefixo (para referência e busca)
             corredor: l.corredor,
             coluna: l.coluna,
             andar: l.andar,

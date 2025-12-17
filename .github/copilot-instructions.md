@@ -291,9 +291,11 @@ module.exports = router;
 | Bobina | `BOB-{LOJA}-{000000}` | `BOB-PLA-000001` |
 | Retalho | `RET-{LOJA}-{000000}` | `RET-CIA-000042` |
 | Plano | `PDC-{LOJA}-{000}` | `PDC-PLA-001` |
-| Corte | `COR-{ANO}-{00000}` | `COR-2025-00001` |
-| Locação | `LOC-{id}` | `LOC-5` |
+| Corte | `COR-{LOJA}-{PDC}-{00}` | `COR-PLA-001-01` |
+| Locação | `LOC-{0000}-{X}-{0000}` | `LOC-0001-A-0001` |
 | Carregamento | `CAR-{ANO}-{00000}` | `CAR-2025-00001` |
+
+> **⚠️ Locação:** O prefixo `LOC-` é usado **apenas no código de barras** para identificação no scanner. No banco de dados armazena-se apenas `0001-A-0001`.
 
 ### Fluxo de Cortes (Mobile)
 

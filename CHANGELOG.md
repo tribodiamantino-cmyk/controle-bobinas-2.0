@@ -4,6 +4,36 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [2.5.1] - 2025-12-17 📍 Padronização Código de Barras Locação
+
+### 🏷️ Alterações
+
+#### Código de Barras de Locação
+- **Novo formato:** `LOC-0000-X-0000` (ex: `LOC-0001-A-0001`)
+- **Prefixo LOC-** usado apenas no código de barras para identificação no scanner
+- **Banco de dados:** mantém formato `0000-X-0000` (sem prefixo)
+- **Display na etiqueta:** mostra código legível `0001-A-0001` (sem prefixo)
+
+#### Documentação Atualizada
+- `docs/PADRONIZACAO_CODIGOS.md` - Novo padrão de locação
+- `docs/ESPECIFICACAO_ETIQUETAS.md` - Recriado (arquivo estava corrompido)
+- `docs/API_MOBILE_V2.md` - Referências ao formato LOC-
+- `.github/copilot-instructions.md` - Tabela de códigos QR
+
+#### Código Atualizado
+- `controllers/impressaoController.js` - Geração do código de barras com prefixo LOC-
+- Garantia de formato `0000-X-0000` mesmo para entradas curtas
+
+### 🔄 Fluxo de Leitura
+```
+1. Scanner lê: LOC-0001-A-0001
+2. Sistema identifica prefixo LOC- → É uma locação
+3. Sistema extrai: 0001-A-0001
+4. Busca no banco: WHERE locacao = '0001-A-0001'
+```
+
+---
+
 ## [2.5.0] - 2025-12-12 🎉 MOBILE V2.0
 
 ### 🚀 Reconstrução Completa do Mobile

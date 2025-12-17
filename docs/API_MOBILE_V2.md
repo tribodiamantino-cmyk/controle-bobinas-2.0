@@ -15,7 +15,7 @@ GET /api/mobile/validar-codigo/:codigo
 **Descrição:** Identifica o tipo de código e retorna informações básicas
 
 **Parâmetros:**
-- `codigo` - Código de barras escaneado (BOB-xxx, RET-xxx, COR-xxx, LOC-xxx)
+- `codigo` - Código de barras escaneado (BOB-xxx, RET-xxx, COR-xxx, LOC-0000-X-0000)
 
 **Resposta:**
 ```json
@@ -135,7 +135,7 @@ GET /api/locacoes/:id/itens
   "success": true,
   "data": {
     "id": 15,
-    "codigo": "LOC-15",
+    "codigo": "LOC-0015-A-0023",
     "locacao": "0015-A-0023",
     "itens": [
       {

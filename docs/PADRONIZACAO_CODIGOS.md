@@ -192,18 +192,18 @@ COR-{LOJA}-{PLANO}-{SEQUENCIAL}
 
 ## 6. Locação
 
-### Formato Flexível (Referência Livre)
+### Formato no Banco de Dados (Referência)
 ```
 {SETOR}-{CORREDOR}-{POSICAO}
 ```
 
 | Componente | Descrição | Formato | Exemplo |
 |------------|-----------|---------|---------|
-| SETOR | Área do galpão | 1-4 dígitos (1-9999) | 1, 12, 123, 0001 |
+| SETOR | Área do galpão | 4 dígitos (0001-9999) | 0001 |
 | CORREDOR | Identificador do corredor | 1 letra (A-Z) | A |
-| POSICAO | Posição na prateleira | 1-4 dígitos (1-9999) | 1, 25, 150, 0001 |
+| POSICAO | Posição na prateleira | 4 dígitos (0001-9999) | 0001 |
 
-### Formato no QR Code (Etiqueta)
+### Formato no Código de Barras (Etiqueta)
 ```
 LOC-{SETOR}-{CORREDOR}-{POSICAO}
 ```
@@ -211,87 +211,95 @@ LOC-{SETOR}-{CORREDOR}-{POSICAO}
 | Componente | Descrição | Formato | Exemplo |
 |------------|-----------|---------|---------|
 | LOC | Prefixo fixo | 3 letras | LOC |
-| SETOR | Área do galpão | 1-4 dígitos (1-9999) | 1, 0001 |
+| SETOR | Área do galpão | 4 dígitos | 0001 |
 | CORREDOR | Identificador do corredor | 1 letra (A-Z) | A |
-| POSICAO | Posição na prateleira | 1-4 dígitos (1-9999) | 1, 0001 |
+| POSICAO | Posição na prateleira | 4 dígitos | 0001 |
 
-### Exemplos Válidos
+> **⚠️ IMPORTANTE:** O prefixo `LOC-` é usado **APENAS no código de barras** para distinguir de outros tipos durante a leitura. No banco de dados, armazena-se apenas `0001-A-0001`.
 
-**Formato Curto (Usado):**
-- `1-A-1` → Setor 1, Corredor A, Posição 1
-- `12-B-34` → Setor 12, Corredor B, Posição 34
-- `150-C-999` → Setor 150, Corredor C, Posição 999
+### Exemplos
 
-**Formato Longo (Usado):**
+**No Banco de Dados:**
 - `0001-A-0001` → Setor 1, Corredor A, Posição 1
 - `0012-B-0034` → Setor 12, Corredor B, Posição 34
 - `0150-C-0999` → Setor 150, Corredor C, Posição 999
 
-**No QR Code (Impresso):**
-- `LOC-1-A-1` → Setor 1, Corredor A, Posição 1
-- `LOC-0001-A-0001` → Setor 1, Corredor A, Posição 1 (formato legado)
+**No Código de Barras (Etiqueta):**
+- `LOC-0001-A-0001` → Setor 1, Corredor A, Posição 1
+- `LOC-0012-B-0034` → Setor 12, Corredor B, Posição 34
+- `LOC-0150-C-0999` → Setor 150, Corredor C, Posição 999
 
 ### Regras CRÍTICAS
-1. **🆓 Referência LIVRE:** Locação NÃO precisa estar cadastrada
-2. **📍 Armazenada nos itens:** Campo `locacao` em bobinas/retalhos/PDC
-3. **🔄 Formato flexível:** Aceita 1-A-1 até 9999-Z-9999
-4. **🏷️ Prefixo LOC-:** Adicionado APENAS no QR Code impresso
-5. **✅ Validação:** Sistema aceita com ou sem prefixo LOC-
+1. **🆓 Referência LIVRE:** Locação NÃO precisa estar cadastrada previamente
+2. **📍 Armazenada nos itens:** Campo `locacao` em bobinas/retalhos/PDC (sem prefixo LOC-)
+3. **🔄 Formato padronizado:** `0000-X-0000` (4 dígitos, 1 letra, 4 dígitos)
+4. **🏷️ Prefixo LOC-:** Adicionado **APENAS no código de barras** para identificação no scanner
+5. **✅ Validação na leitura:** Sistema remove prefixo LOC- ao processar código escaneado
 6. **📦 Tabela opcional:** Pode existir tabela `locacoes` para catálogo, mas NÃO é obrigatória
+
+### Fluxo de Leitura no Scanner
+
+```
+1. Scanner lê: LOC-0001-A-0001
+2. Sistema identifica: "É uma locação" (prefixo LOC-)
+3. Sistema extrai: 0001-A-0001
+4. Busca no banco: WHERE locacao = '0001-A-0001'
+```
 
 ### Conceito de Locação Livre
 
 **Como funciona:**
 ```
-1. Operador define locação ao cadastrar bobina: "1-A-1"
-2. Sistema salva em bobinas.locacao = "1-A-1"
-3. Locação aparece automaticamente no sistema
-4. NÃO precisa cadastrar locação antes de usar
+1. Operador define locação ao cadastrar bobina: "0001-A-0001"
+2. Sistema salva em bobinas.locacao = "0001-A-0001"
+3. Etiqueta é impressa com: LOC-0001-A-0001
+4. Locação aparece automaticamente no sistema
+5. NÃO precisa cadastrar locação antes de usar
 ```
 
 **Busca de itens:**
 ```sql
--- Busca bobinas na locação 1-A-1
-SELECT * FROM bobinas WHERE locacao = '1-A-1';
+-- Busca bobinas na locação 0001-A-0001
+SELECT * FROM bobinas WHERE locacao = '0001-A-0001';
 
--- Busca retalhos na locação 1-A-1
-SELECT * FROM retalhos WHERE locacao = '1-A-1';
+-- Busca retalhos na locação 0001-A-0001
+SELECT * FROM retalhos WHERE locacao = '0001-A-0001';
 ```
 
 ### Etiqueta
 ✅ **Possui etiqueta física** (gerada conforme demanda)
 
 ### Caracteres
-- **Mínimo:** 5 caracteres (`1-A-1`)
-- **Máximo (sem LOC-):** 11 caracteres (`9999-Z-9999`)
-- **Com prefixo LOC-:** 9-15 caracteres (`LOC-1-A-1` até `LOC-9999-Z-9999`)
+- **No banco:** 11 caracteres (`0001-A-0001`)
+- **No código de barras:** 15 caracteres (`LOC-0001-A-0001`)
 - **Compatível com Code 128:** ✅ Sim
 
 ### Validação Regex
 ```javascript
-// Aceita de 1-A-1 até 9999-Z-9999
-/^\d{1,4}-[A-Z]-\d{1,4}$/
+// Formato do banco de dados (sem prefixo)
+/^\d{4}-[A-Z]-\d{4}$/
 
-// Exemplos válidos:
-✅ 1-A-1
-✅ 12-B-34
-✅ 123-C-456
+// Formato do código de barras (com prefixo)
+/^LOC-\d{4}-[A-Z]-\d{4}$/
+
+// Exemplos válidos no banco:
 ✅ 0001-A-0001
+✅ 0012-B-0034
+✅ 0150-C-0999
 ✅ 9999-Z-9999
 
-// Exemplos inválidos:
-❌ 0-A-1      (setor 0 não permitido)
-❌ 1-a-1      (letra minúscula)
-❌ 1-AA-1     (mais de 1 letra)
-❌ 10000-A-1  (setor > 9999)
-```
+// Exemplos válidos no código de barras:
+✅ LOC-0001-A-0001
+✅ LOC-0012-B-0034
+✅ LOC-0150-C-0999
+✅ LOC-9999-Z-9999
 
-### Backward Compatibility
-- ✅ Sistema aceita `1-A-1` (formato curto)
-- ✅ Sistema aceita `0001-A-0001` (formato longo)
-- ✅ Sistema aceita `LOC-1-A-1` (com prefixo)
-- ✅ Sistema aceita `LOC-0001-A-0001` (com prefixo legado)
-- ✅ Etiquetas antigas (qualquer formato) continuam funcionando
+// Exemplos inválidos:
+❌ 1-A-1        (dígitos incompletos)
+❌ 0000-A-0001  (setor 0 não permitido)
+❌ 0001-a-0001  (letra minúscula)
+❌ 0001-AA-0001 (mais de 1 letra)
+```
 
 ---
 
