@@ -532,7 +532,13 @@ class PDCModule {
             }, 3000);
 
         } catch (error) {
-            console.error('Erro ao confirmar corte:', error);
+            // Melhor serialização do erro para logs
+            const errorInfo = {
+                message: error.message || 'Erro desconhecido',
+                name: error.name,
+                stack: error.stack?.substring(0, 300)
+            };
+            console.error('Erro ao confirmar corte:', JSON.stringify(errorInfo));
             Utils.esconderLoading();
             Utils.mostrarErro(error.message || 'Erro ao registrar corte');
         }

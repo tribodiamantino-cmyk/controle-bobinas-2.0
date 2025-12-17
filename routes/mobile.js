@@ -703,8 +703,170 @@ router.post('/upload-foto-medidor', upload.single('foto'), async (req, res) => {
     }
 });
 
-// Registrar corte
-router.post('/registrar-corte', cortesController.registrarCorte);
+// Registrar corte - versão para o app mobile
+// Aceita: pdc_id, item_id, origem_id, origem_tipo, metragem_cortada, foto
+router.post('/registrar-corte', upload.single('foto'), async (req, res) => {
+    try {
+        console.log('📝 Registrando corte. Body:', req.body);
+        console.log('📝 Arquivo:', req.file ? req.file.filename : 'Nenhum');
+        
+        const { pdc_id, item_id, origem_id, origem_tipo, metragem_cortada } = req.body;
+        
+        if (!pdc_id || !item_id || !origem_id || !origem_tipo || !metragem_cortada) {
+            return res.status(400).json({
+                success: false,
+                error: `Campos obrigatórios faltando. Recebido: pdc_id=${pdc_id}, item_id=${item_id}, origem_id=${origem_id}, origem_tipo=${origem_tipo}, metragem=${metragem_cortada}`
+            });
+        }
+        
+        // Busca a alocação correspondente
+        const whereOrigem = origem_tipo === 'bobina' ? 'ac.bobina_id = ?' : 'ac.retalho_id = ?';
+        const [alocacoes] = await db.query(`
+            SELECT ac.id as alocacao_id, ac.*, ipc.plano_corte_id, ipc.produto_id
+            FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
+            WHERE ipc.id = ? AND ${whereOrigem}
+        `, [item_id, origem_id]);
+        
+        if (!alocacoes || alocacoes.length === 0) {
+            console.error('❌ Alocação não encontrada para item_id:', item_id, 'origem:', origem_tipo, origem_id);
+            return res.status(404).json({
+                success: false,
+                error: 'Alocação não encontrada para este item e origem'
+            });
+        }
+        
+        const aloc = alocacoes[0];
+        console.log('✅ Alocação encontrada:', aloc.alocacao_id);
+        
+        // Busca dados da origem (bobina ou retalho)
+        let placa_origem = null;
+        let codigo_origem = null;
+        
+        if (origem_tipo === 'bobina') {
+            const [bobina] = await db.query(
+                'SELECT placa, codigo_interno FROM bobinas WHERE id = ?',
+                [origem_id]
+            );
+            if (bobina.length > 0) {
+                placa_origem = bobina[0].placa;
+                codigo_origem = bobina[0].codigo_interno;
+            }
+        } else {
+            const [retalho] = await db.query(
+                'SELECT placa, codigo_retalho FROM retalhos WHERE id = ?',
+                [origem_id]
+            );
+            if (retalho.length > 0) {
+                placa_origem = retalho[0].placa;
+                codigo_origem = retalho[0].codigo_retalho;
+            }
+        }
+        
+        // Gera código do corte
+        // Busca loja do PDC
+        const [pdcInfo] = await db.query('SELECT loja FROM planos_corte WHERE id = ?', [pdc_id]);
+        const loja = pdcInfo.length > 0 ? pdcInfo[0].loja : 'PLA';
+        
+        // Busca último corte para gerar sequencial
+        const [ultimoCorte] = await db.query(
+            `SELECT codigo_corte FROM cortes_realizados 
+             WHERE codigo_corte LIKE 'COR-${loja}-%' 
+             ORDER BY id DESC LIMIT 1`
+        );
+        
+        let numeroCorte = 1;
+        if (ultimoCorte.length > 0) {
+            // Extrai número do código: COR-PLA-001-05 -> 005
+            const partes = ultimoCorte[0].codigo_corte.split('-');
+            if (partes.length >= 3) {
+                const planoNum = parseInt(partes[2]) || 0;
+                const seqNum = partes.length > 3 ? parseInt(partes[3]) || 0 : 0;
+                numeroCorte = planoNum * 100 + seqNum + 1;
+            }
+        }
+        
+        // Formato: COR-LOJA-PLANO-SEQ
+        const planoNum = String(Math.floor(numeroCorte / 100) || pdc_id).padStart(3, '0');
+        const seqNum = String((numeroCorte % 100) || 1).padStart(2, '0');
+        const codigo_corte = `COR-${loja}-${planoNum}-${seqNum}`;
+        
+        // URL da foto
+        let foto_url = null;
+        if (req.file) {
+            // Comprimir imagem
+            await comprimirImagem(req.file.path);
+            foto_url = `/uploads/fotos-medidor/${req.file.filename}`;
+        }
+        
+        // Insere o corte
+        const [result] = await db.query(`
+            INSERT INTO cortes_realizados (
+                codigo_corte,
+                plano_corte_id,
+                item_plano_corte_id,
+                alocacao_corte_id,
+                origem_tipo,
+                bobina_id,
+                retalho_id,
+                placa_origem,
+                codigo_origem,
+                metragem_cortada,
+                produto_id,
+                foto_medidor_url,
+                foto_medidor_timestamp,
+                status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'concluido')
+        `, [
+            codigo_corte,
+            pdc_id,
+            item_id,
+            aloc.alocacao_id,
+            origem_tipo,
+            origem_tipo === 'bobina' ? origem_id : null,
+            origem_tipo === 'retalho' ? origem_id : null,
+            placa_origem,
+            codigo_origem,
+            metragem_cortada,
+            aloc.produto_id,
+            foto_url
+        ]);
+        
+        console.log('✅ Corte inserido com ID:', result.insertId, 'Código:', codigo_corte);
+        
+        // Atualiza metragem da origem
+        const metragemFloat = parseFloat(metragem_cortada);
+        if (origem_tipo === 'bobina') {
+            await db.query(
+                'UPDATE bobinas SET metragem_atual = metragem_atual - ? WHERE id = ?',
+                [metragemFloat, origem_id]
+            );
+        } else {
+            await db.query(
+                'UPDATE retalhos SET metragem = metragem - ? WHERE id = ?',
+                [metragemFloat, origem_id]
+            );
+        }
+        
+        // Retorna sucesso
+        res.json({
+            success: true,
+            data: {
+                id: result.insertId,
+                codigo_corte,
+                metragem_cortada: metragemFloat,
+                foto_url
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao registrar corte:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Erro interno ao registrar corte'
+        });
+    }
+});
 
 // Consultar corte por código
 router.get('/corte/:codigo_corte', cortesController.consultarCorte);

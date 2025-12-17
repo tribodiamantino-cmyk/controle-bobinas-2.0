@@ -47,7 +47,13 @@ class API {
 
         } catch (error) {
             Utils.esconderLoading();
-            console.error('Erro na API:', error);
+            // Melhor serialização do erro para logs
+            const errorInfo = {
+                message: error.message || 'Erro desconhecido',
+                name: error.name,
+                stack: error.stack?.substring(0, 300)
+            };
+            console.error('Erro na API:', JSON.stringify(errorInfo));
             Utils.mostrarErro(error.message || 'Erro de conexão');
             throw error;
         }
@@ -143,7 +149,7 @@ class API {
      */
     static async registrarCorte(formData) {
         // FormData já tem Content-Type multipart/form-data
-        return this.request('/mobile/pdcs/registrar-corte', {
+        return this.request('/mobile/registrar-corte', {
             method: 'POST',
             body: formData
         });
