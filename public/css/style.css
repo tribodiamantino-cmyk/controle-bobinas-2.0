@@ -1303,6 +1303,10 @@ body {
     background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 }
 
+.kanban-header.entregue {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
 .badge-count {
     background: rgba(255,255,255,0.3);
     padding: 4px 12px;

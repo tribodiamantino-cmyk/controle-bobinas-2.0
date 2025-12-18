@@ -1372,6 +1372,13 @@ router.post('/carregamento/finalizar', async (req, res) => {
     try {
         const { carregamento_id } = req.body;
         
+        // Buscar carregamento para pegar o plano_corte_id
+        const [carregamento] = await db.query('SELECT * FROM carregamentos WHERE id = ?', [carregamento_id]);
+        
+        if (!carregamento || carregamento.length === 0) {
+            return res.status(404).json({ success: false, error: 'Carregamento não encontrado' });
+        }
+        
         await db.query(`
             UPDATE carregamentos
             SET status = 'concluido',
@@ -1379,7 +1386,14 @@ router.post('/carregamento/finalizar', async (req, res) => {
             WHERE id = ?
         `, [carregamento_id]);
         
-        const [carregamento] = await db.query('SELECT * FROM carregamentos WHERE id = ?', [carregamento_id]);
+        // Atualizar PDC para 'entregue'
+        if (carregamento[0].plano_corte_id) {
+            await db.query(
+                'UPDATE planos_corte SET status = ? WHERE id = ?',
+                ['entregue', carregamento[0].plano_corte_id]
+            );
+            console.log(`✅ PDC ${carregamento[0].plano_corte_id} atualizado para 'entregue'`);
+        }
         
         res.json({ 
             success: true, 
@@ -1390,10 +1404,17 @@ router.post('/carregamento/finalizar', async (req, res) => {
     }
 });
 
-// Finalizar carregamento (aceita ID na URL - usado pelo app mobile)
+// Finalizar carregamento (aceita ID na URL - usado pelo app mobile) - VERSÃO SIMPLES
 router.post('/carregamento/:id/finalizar', async (req, res) => {
     try {
         const carregamentoId = req.params.id;
+        
+        // Buscar carregamento para pegar o plano_corte_id
+        const [carregamento] = await db.query('SELECT * FROM carregamentos WHERE id = ?', [carregamentoId]);
+        
+        if (!carregamento || carregamento.length === 0) {
+            return res.status(404).json({ success: false, error: 'Carregamento não encontrado' });
+        }
         
         await db.query(`
             UPDATE carregamentos
@@ -1402,7 +1423,14 @@ router.post('/carregamento/:id/finalizar', async (req, res) => {
             WHERE id = ?
         `, [carregamentoId]);
         
-        const [carregamento] = await db.query('SELECT * FROM carregamentos WHERE id = ?', [carregamentoId]);
+        // Atualizar PDC para 'entregue'
+        if (carregamento[0].plano_corte_id) {
+            await db.query(
+                'UPDATE planos_corte SET status = ? WHERE id = ?',
+                ['entregue', carregamento[0].plano_corte_id]
+            );
+            console.log(`✅ PDC ${carregamento[0].plano_corte_id} atualizado para 'entregue'`);
+        }
         
         console.log(`✅ Carregamento ${carregamentoId} finalizado`);
         
@@ -2539,9 +2567,9 @@ router.post('/carregamento/:id/finalizar', async (req, res) => {
     try {
         const carregamentoId = req.params.id;
         
-        // Buscar carregamento
+        // Buscar carregamento com plano_corte_id
         const [carregamento] = await db.query(
-            'SELECT id, codigo_carregamento, total_cortes, cortes_carregados FROM carregamentos WHERE id = ?',
+            'SELECT id, codigo_carregamento, total_cortes, cortes_carregados, plano_corte_id FROM carregamentos WHERE id = ?',
             [carregamentoId]
         );
         
@@ -2566,6 +2594,15 @@ router.post('/carregamento/:id/finalizar', async (req, res) => {
             'UPDATE carregamentos SET status = ?, data_conclusao = NOW() WHERE id = ?',
             ['concluido', carregamentoId]
         );
+        
+        // Atualizar PDC para 'entregue'
+        if (carregamento[0].plano_corte_id) {
+            await db.query(
+                'UPDATE planos_corte SET status = ? WHERE id = ?',
+                ['entregue', carregamento[0].plano_corte_id]
+            );
+            console.log(`✅ PDC ${carregamento[0].plano_corte_id} atualizado para 'entregue'`);
+        }
         
         console.log(`✅ Carregamento ${carregamento[0].codigo_carregamento} finalizado via URL param`);
         

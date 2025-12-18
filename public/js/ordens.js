@@ -22,7 +22,8 @@ let produtos = [];
 let planosCached = {
     planejamento: [],
     em_producao: [],
-    finalizado: []
+    finalizado: [],
+    entregue: []
 };
 
 // ========== INICIALIZAÇÃO ==========
@@ -60,7 +61,8 @@ async function carregarPlanos() {
             planosCached = {
                 planejamento: planos.filter(p => p.status === 'planejamento'),
                 em_producao: planos.filter(p => p.status === 'em_producao'),
-                finalizado: planos.filter(p => p.status === 'finalizado')
+                finalizado: planos.filter(p => p.status === 'finalizado'),
+                entregue: planos.filter(p => p.status === 'entregue')
             };
             
             renderizarKanban();
@@ -76,18 +78,21 @@ function renderizarKanban() {
     renderizarColuna('planejamento', planosCached.planejamento);
     renderizarColuna('em_producao', planosCached.em_producao);
     renderizarColuna('finalizado', planosCached.finalizado);
+    renderizarColuna('entregue', planosCached.entregue);
     
     // Atualizar contadores
     document.getElementById('count-planejamento').textContent = planosCached.planejamento.length;
     document.getElementById('count-em-producao').textContent = planosCached.em_producao.length;
     document.getElementById('count-finalizado').textContent = planosCached.finalizado.length;
+    document.getElementById('count-entregue').textContent = planosCached.entregue.length;
 }
 
 function renderizarColuna(status, planos) {
     const statusMap = {
         'planejamento': 'coluna-planejamento',
         'em_producao': 'coluna-em-producao',
-        'finalizado': 'coluna-finalizado'
+        'finalizado': 'coluna-finalizado',
+        'entregue': 'coluna-entregue'
     };
     
     const colunaId = statusMap[status];
@@ -192,6 +197,10 @@ function criarCardPlano(plano) {
         `;
     } else if (plano.status === 'finalizado') {
         acoes = `
+            <button class="btn-kanban btn-kanban-primary" onclick="event.stopPropagation(); abrirModalCortesRealizados(${plano.id})" title="Ver cortes e fotos de contraprova">
+                <span class="btn-kanban-icon">📷</span>
+                <span class="btn-kanban-text">Ver Cortes</span>
+            </button>
             <button class="btn-kanban btn-kanban-warning" onclick="event.stopPropagation(); voltarParaPlanejamento(${plano.id})" title="Converter cortes em retalhos e voltar para planejamento">
                 <span class="btn-kanban-icon">◀</span>
                 <span class="btn-kanban-text">Reverter</span>
@@ -202,11 +211,23 @@ function criarCardPlano(plano) {
                 <span class="btn-kanban-text">Arquivar</span>
             </button>
         `;
+    } else if (plano.status === 'entregue') {
+        acoes = `
+            <button class="btn-kanban btn-kanban-primary" onclick="event.stopPropagation(); abrirModalCortesRealizados(${plano.id})" title="Ver cortes e fotos de contraprova">
+                <span class="btn-kanban-icon">📷</span>
+                <span class="btn-kanban-text">Ver Cortes</span>
+            </button>
+            ${btnTemplate}
+            <button class="btn-kanban btn-kanban-info" onclick="event.stopPropagation(); arquivarPlano(${plano.id})">
+                <span class="btn-kanban-icon">📦</span>
+                <span class="btn-kanban-text">Arquivar</span>
+            </button>
+        `;
     }
     
-    // Lista de cortes para planos finalizados
+    // Lista de cortes para planos finalizados/entregues
     let cortesHtml = '';
-    if (plano.status === 'finalizado' && plano.cortes && plano.cortes.length > 0) {
+    if ((plano.status === 'finalizado' || plano.status === 'entregue') && plano.cortes && plano.cortes.length > 0) {
         cortesHtml = `
             <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
                 <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 6px;">
@@ -2059,3 +2080,112 @@ async function confirmarFinalizacaoPlano() {
     }
 }
 
+// ========== MODAL DE CORTES REALIZADOS (COM FOTOS) ==========
+async function abrirModalCortesRealizados(planoId) {
+    const modal = document.getElementById('modalCortesRealizados');
+    const titulo = document.getElementById('tituloCortesRealizados');
+    const info = document.getElementById('infoCortesRealizados');
+    const lista = document.getElementById('listaCortesRealizados');
+    
+    // Buscar dados do plano
+    try {
+        const response = await fetch(`${API_BASE}/ordens-corte/${planoId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            showNotification('Erro ao carregar plano', 'error');
+            return;
+        }
+        
+        const plano = data.data;
+        
+        titulo.textContent = `Cortes Realizados - ${plano.codigo_plano}`;
+        info.innerHTML = `<strong>Cliente:</strong> ${plano.cliente} | <strong>Aviário:</strong> ${plano.aviario}`;
+        
+        // Buscar cortes realizados com fotos
+        const cortesResponse = await fetch(`${API_BASE}/ordens-corte/${planoId}/cortes-realizados`);
+        const cortesData = await cortesResponse.json();
+        
+        if (!cortesData.success || !cortesData.data || cortesData.data.length === 0) {
+            lista.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    <p>Nenhum corte realizado encontrado para este plano.</p>
+                </div>
+            `;
+            modal.style.display = 'flex';
+            return;
+        }
+        
+        const cortes = cortesData.data;
+        
+        lista.innerHTML = `
+            <div style="display: grid; gap: 12px;">
+                ${cortes.map(corte => {
+                    const temFoto = corte.foto_medidor_url && corte.foto_medidor_url.trim() !== '';
+                    const dataCorte = corte.data_corte ? new Date(corte.data_corte).toLocaleString('pt-BR') : '-';
+                    
+                    return `
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid ${temFoto ? '#28a745' : '#ffc107'};">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 1.1rem; color: #333;">
+                                        ✂️ ${corte.codigo_corte}
+                                    </div>
+                                    <div style="color: #666; font-size: 0.9rem; margin-top: 4px;">
+                                        ${corte.produto_descricao || 'Produto'} - <strong>${parseFloat(corte.metragem_cortada).toFixed(2)}m</strong>
+                                    </div>
+                                    <div style="color: #999; font-size: 0.8rem; margin-top: 2px;">
+                                        📅 ${dataCorte}
+                                    </div>
+                                </div>
+                                <div>
+                                    ${temFoto ? `
+                                        <button class="btn btn-sm btn-success" onclick="abrirFotoContraprova('${corte.codigo_corte}', '${corte.foto_medidor_url}', '${corte.metragem_cortada}m', '${dataCorte}')">
+                                            📷 Ver Foto
+                                        </button>
+                                    ` : `
+                                        <span style="color: #999; font-size: 0.85rem;">
+                                            ⚠️ Sem foto
+                                        </span>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: #e7f3ff; border-radius: 8px; text-align: center;">
+                <strong>Total:</strong> ${cortes.length} corte(s) | 
+                <strong>Metragem total:</strong> ${cortes.reduce((sum, c) => sum + parseFloat(c.metragem_cortada || 0), 0).toFixed(2)}m
+            </div>
+        `;
+        
+        modal.style.display = 'flex';
+        
+    } catch (error) {
+        console.error('Erro ao carregar cortes:', error);
+        showNotification('Erro ao carregar cortes: ' + error.message, 'error');
+    }
+}
+
+function fecharModalCortesRealizados() {
+    document.getElementById('modalCortesRealizados').style.display = 'none';
+}
+
+function abrirFotoContraprova(codigoCorte, fotoUrl, metragem, dataCorte) {
+    const modal = document.getElementById('modalFotoContraprova');
+    const titulo = document.getElementById('tituloFotoContraprova');
+    const imagem = document.getElementById('imagemContraprova');
+    const info = document.getElementById('infoFotoContraprova');
+    
+    titulo.textContent = `Contraprova - ${codigoCorte}`;
+    imagem.src = fotoUrl;
+    info.innerHTML = `<strong>Metragem:</strong> ${metragem} | <strong>Data:</strong> ${dataCorte}`;
+    
+    modal.style.display = 'flex';
+}
+
+function fecharModalFotoContraprova() {
+    document.getElementById('modalFotoContraprova').style.display = 'none';
+    document.getElementById('imagemContraprova').src = '';
+}

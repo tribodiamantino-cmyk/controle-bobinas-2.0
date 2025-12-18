@@ -303,6 +303,67 @@ exports.buscarPlanoPorId = async (req, res) => {
     }
 };
 
+// Buscar cortes realizados do plano (com fotos de contraprova)
+exports.buscarCortesRealizados = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Verificar se plano existe
+        const [planos] = await db.query('SELECT id, codigo_plano FROM planos_corte WHERE id = ?', [id]);
+        
+        if (planos.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Plano de corte não encontrado' 
+            });
+        }
+        
+        // Buscar cortes realizados com fotos
+        const [cortes] = await db.query(`
+            SELECT 
+                cr.id,
+                cr.codigo_corte,
+                cr.metragem_cortada,
+                cr.origem_tipo,
+                cr.placa_origem,
+                cr.status,
+                cr.data_corte,
+                cr.foto_medidor_url,
+                cr.foto_medidor_timestamp,
+                CASE 
+                    WHEN cr.origem_tipo = 'bobina' THEN b.codigo_interno
+                    WHEN cr.origem_tipo = 'retalho' THEN r.codigo_retalho
+                END as origem_codigo,
+                p.codigo as produto_codigo,
+                CONCAT(p.codigo, ' - ', COALESCE(cc.nome_cor, ''), ' ', COALESCE(cg.gramatura, ''), 'g/m²') as produto_descricao,
+                cc.nome_cor,
+                cg.gramatura
+            FROM cortes_realizados cr
+            LEFT JOIN bobinas b ON cr.bobina_id = b.id
+            LEFT JOIN retalhos r ON cr.retalho_id = r.id
+            LEFT JOIN produtos p ON cr.produto_id = p.id
+            LEFT JOIN configuracoes_cores cc ON p.cor_id = cc.id
+            LEFT JOIN configuracoes_gramaturas cg ON p.gramatura_id = cg.id
+            WHERE cr.plano_corte_id = ?
+            ORDER BY cr.codigo_corte, cr.data_corte
+        `, [id]);
+        
+        console.log(`✅ Buscados ${cortes.length} cortes realizados do plano ${planos[0].codigo_plano}`);
+        
+        res.json({ 
+            success: true, 
+            data: cortes 
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao buscar cortes realizados:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
 // Sugerir origens automaticamente para todos os cortes
 exports.sugerirAlocacoes = async (req, res) => {
     try {

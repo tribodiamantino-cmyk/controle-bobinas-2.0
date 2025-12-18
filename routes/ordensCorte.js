@@ -11,6 +11,9 @@ router.get('/', ordensController.listarPlanos);
 // Buscar plano por ID (com itens e alocações)
 router.get('/:id', ordensController.buscarPlanoPorId);
 
+// Buscar cortes realizados do plano (com fotos de contraprova)
+router.get('/:id/cortes-realizados', ordensController.buscarCortesRealizados);
+
 // Buscar histórico/timeline do plano
 router.get('/:id/historico', ordensController.buscarHistoricoPlano);
 
