@@ -1,0 +1,12 @@
+# Dependências
+node_modules/
+
+# Executável compilado (muito grande para git)
+dist/ServidorImpressao.exe
+
+# Logs
+logs/
+*.log
+
+# Cache
+.cache/

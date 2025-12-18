@@ -4,7 +4,6 @@
  * Gera PDFs usando Puppeteer e envia para impressora A4
  */
 
-const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -20,6 +19,49 @@ try {
     printer = require('pdf-to-printer');
 } catch (e) {
     logger.warn('⚠️ pdf-to-printer não disponível, usando método alternativo');
+}
+
+// Puppeteer será carregado sob demanda
+let puppeteer = null;
+
+/**
+ * Busca o caminho do Chrome/Chromium instalado no sistema
+ */
+function encontrarChrome() {
+    const possiblePaths = [
+        // Chrome padrão Windows
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        // Chrome user-specific
+        path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        // Edge (Chromium)
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+        // Brave
+        path.join(os.homedir(), 'AppData', 'Local', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
+    ];
+    
+    for (const chromePath of possiblePaths) {
+        if (fs.existsSync(chromePath)) {
+            return chromePath;
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Inicializa o Puppeteer
+ */
+async function inicializarPuppeteer() {
+    if (puppeteer) return;
+    
+    try {
+        puppeteer = require('puppeteer');
+    } catch (e) {
+        logger.error('❌ Puppeteer não disponível:', e.message);
+        throw new Error('Puppeteer não instalado. Execute: npm install puppeteer');
+    }
 }
 
 /**
@@ -139,11 +181,24 @@ async function gerarPdfRomaneio(dados, via = 'MOTORISTA') {
     // Preencher template
     const html = preencherTemplate('romaneio', templateData);
     
-    // Gerar PDF com Puppeteer
-    const browser = await puppeteer.launch({
+    // Inicializar Puppeteer
+    await inicializarPuppeteer();
+    
+    // Buscar Chrome instalado no sistema
+    const chromePath = encontrarChrome();
+    
+    const launchOptions = {
         headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
+    };
+    
+    if (chromePath) {
+        launchOptions.executablePath = chromePath;
+        logger.debug(`Usando Chrome: ${chromePath}`);
+    }
+    
+    // Gerar PDF com Puppeteer
+    const browser = await puppeteer.launch(launchOptions);
     
     try {
         const page = await browser.newPage();
