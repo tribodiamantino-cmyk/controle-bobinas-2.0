@@ -109,10 +109,18 @@ planos_corte:
   loja                ENUM('Cortinave','BN')
   cliente             VARCHAR(200)
   obra                VARCHAR(200)
-  status              ENUM('rascunho','pendente','em_producao','finalizado','cancelado')
+  status              ENUM('planejamento','em_producao','finalizado','entregue','arquivado','cancelado')
   data_criacao        TIMESTAMP
   data_finalizacao    TIMESTAMP NULL
   observacoes         TEXT
+```
+
+**Fluxo de Status:**
+```
+planejamento → em_producao → finalizado → entregue → (arquivado)
+                                ↓
+                          Carregamento
+                          finalizado
 ```
 
 ### `itens_plano_corte` (O Que Cortar)

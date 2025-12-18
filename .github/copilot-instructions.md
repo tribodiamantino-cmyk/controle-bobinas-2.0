@@ -1,7 +1,7 @@
 # Controle de Bobinas 2.0 - Developer Guide
 
 > **Documento de referência para desenvolvedores e agentes de IA**  
-> Versão: 2.4.0 | Última atualização: 11/12/2025
+> Versão: 2.6.0 | Última atualização: 18/12/2025
 
 ---
 
@@ -35,7 +35,7 @@ Sistema de **gestão de estoque de bobinas de lona** para fabricação de cortin
 ### Conceito Central
 
 ```
-PRODUTO (abstrato)  →  BOBINA (física)  →  PLANO DE CORTE  →  CORTES  →  CARREGAMENTO
+PRODUTO (abstrato)  →  BOBINA (física)  →  PLANO DE CORTE  →  CORTES  →  CARREGAMENTO  →  ENTREGUE
        ↓                     ↓                                    ↓
   Especificação         Rolo no estoque                      RETALHO (sobra)
   do tecido             com metragem
@@ -310,20 +310,36 @@ module.exports = router;
 2. Escaneia QR da bobina/retalho → Validação de origem
 3. Informa metragem cortada
 4. Tira foto do medidor (contraprova)
-5. Sistema gera código COR-XXXX-XXXXX
+5. Sistema gera código COR-{LOJA}-{PDC}-{SEQ}
 6. Imprime etiqueta do corte
 7. Quando tudo cortado → Escaneia locações de armazenamento
-8. Finaliza plano
+8. Finaliza plano → Status "Finalizado"
+```
+
+### Fluxo de Carregamento (Mobile)
+
+```
+1. Operador seleciona PDC finalizado
+2. Inicia carregamento (ou retoma existente)
+3. Lista de cortes aparece (verdes = validados)
+4. Escaneia cada corte → Validação
+5. Progresso atualiza em tempo real
+6. Quando todos validados → Finaliza carregamento
+7. PDC vai automaticamente para "Entregue"
 ```
 
 ### Endpoints Principais
 
 ```
-GET  /api/qrcodes/bobina/:id      # QR de bobina
-GET  /api/qrcodes/retalho/:id     # QR de retalho
-GET  /api/qrcodes/corte/:codigo   # QR de corte
-POST /api/mobile/corte/registrar  # Registra novo corte
-POST /api/mobile/validar-qr       # Valida origem antes de cortar
+GET  /api/qrcodes/bobina/:id             # QR de bobina
+GET  /api/qrcodes/retalho/:id            # QR de retalho
+GET  /api/qrcodes/corte/:codigo          # QR de corte
+POST /api/mobile/corte/registrar         # Registra novo corte
+POST /api/mobile/validar-qr              # Valida origem antes de cortar
+POST /api/mobile/carregamento/iniciar    # Inicia/retoma carregamento
+POST /api/mobile/carregamento/validar-scan  # Valida corte no carregamento
+POST /api/mobile/carregamento/:id/finalizar # Finaliza e atualiza PDC
+GET  /api/ordens-corte/:id/cortes-realizados # Lista cortes com fotos
 ```
 
 **Documentação completa:** `docs/SISTEMA_CORTES_QR.md`

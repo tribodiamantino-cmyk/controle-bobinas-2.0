@@ -16,25 +16,25 @@
 
 module.exports = {
     // Versão atual do sistema
-    version: '2.5.0',
+    version: '2.6.0',
     
     // Data do último deploy (atualizar manualmente)
-    buildDate: '12/12/2025',
+    buildDate: '18/12/2025',
     
     // Resumo da versão atual
-    summary: 'Mobile v2.0 - Reconstrução Completa',
+    summary: 'Coluna Entregues & Fotos Persistentes',
     
     // Changelog resumido (últimas 5 mudanças)
     changelog: [
-        'Novo Mobile: 3 módulos completos (CONSULTAS, PDC, CARREGAMENTO)',
-        'Scanner ML Kit Code 128 (substitui QR)',
-        'Camera HD para contraprova de cortes',
-        '10 novos endpoints mobile',
-        'Capacitor 7 + 2 plugins configurados'
+        'Nova coluna "Entregues" no kanban de Ordens',
+        'Modal de cortes realizados com foto de contraprova',
+        'Railway Volume para uploads persistentes',
+        'PDC vai automaticamente para Entregue ao finalizar carregamento',
+        'Correções de ENUM e queries de foto'
     ],
     
     // Fase atual do roadmap
-    currentPhase: 'Mobile v2.0 - Aguardando Testes',
+    currentPhase: 'Produção - Sistema Completo',
     
     // Status geral
     status: 'stable'

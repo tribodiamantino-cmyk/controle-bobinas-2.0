@@ -4,6 +4,63 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [2.6.0] - 2025-12-18 🚚 Coluna Entregues & Fotos Persistentes
+
+### 🎯 Nova Coluna "Entregues" na Aba Ordens
+
+#### Kanban 4 Colunas
+- **Planejamento** → **Em Produção** → **Finalizados** → **🚚 Entregues**
+- Layout responsivo: 4 colunas em desktop, 2 em tablet, 1 em mobile
+- Novo status `'entregue'` adicionado ao ENUM de `planos_corte`
+
+#### Fluxo Automático
+- Quando carregamento é **finalizado** → PDC automaticamente vai para **"Entregue"**
+- Relação 1:1 entre PDC e Carregamento
+
+### 📷 Modal de Cortes Realizados
+
+#### Visualização
+- Ao clicar em cards de **Finalizados** ou **Entregues** → Abre modal de cortes
+- Lista todos os cortes com: código, metragem, data
+- Botão **"📷 Ver Foto"** para foto de contraprova
+- Tratamento amigável quando foto não disponível
+
+#### Novo Endpoint
+- `GET /api/ordens-corte/:id/cortes-realizados`
+- Retorna cortes com `foto_medidor_url` para exibição
+
+### 💾 Railway Volume para Uploads
+
+#### Armazenamento Persistente
+- Volume montado em `/app/uploads`
+- Fotos de contraprova **não são mais perdidas** nos redeploys
+- Suporte a variável `UPLOAD_DIR` para customização
+
+#### Configuração
+- Middleware `uploadFotos.js` atualizado para usar caminho configurável
+- `server.js` serve uploads do diretório configurado
+
+### 🔧 Correções
+
+- **ENUM de status:** Corrigido para incluir todos os valores (`planejamento`, `em_producao`, `finalizado`, `entregue`, `arquivado`, `cancelado`)
+- **Query de cortes:** Corrigido `foto_path` → `foto_medidor_url`
+- **Alocação:** Adicionados logs detalhados para debug de metragem
+- **Cards clicáveis:** Finalizados/Entregues abrem modal de cortes (não mais detalhes de origem)
+
+### 📁 Arquivos Modificados
+- `migrations/043_add_status_entregue_planos.js`
+- `migrations/044_fix_status_enum_entregue.js`
+- `routes/mobile.js` - Atualiza PDC para 'entregue' ao finalizar carregamento
+- `routes/ordensCorte.js` - Nova rota `/cortes-realizados`
+- `controllers/ordensCorteController.js` - Novo método `buscarCortesRealizados`
+- `public/ordens.html` - Nova coluna Entregues + modais
+- `public/js/ordens.js` - Funções de modal e renderização
+- `public/css/style.css` - Estilo da coluna Entregues
+- `middleware/uploadFotos.js` - Suporte a Railway Volume
+- `server.js` - Configuração de uploads persistentes
+
+---
+
 ## [2.5.1] - 2025-12-17 📍 Padronização Código de Barras Locação
 
 ### 🏷️ Alterações

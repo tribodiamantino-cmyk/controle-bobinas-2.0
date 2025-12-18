@@ -5,8 +5,8 @@
 
 (function() {
     // Fallback caso API falhe
-    let VERSION = '2.4.0';
-    let BUILD_DATE = '11/12/2025';
+    let VERSION = '2.6.0';
+    let BUILD_DATE = '18/12/2025';
     const ENVIRONMENT = window.location.hostname === 'localhost' ? 'DEV' : 'PROD';
     
     // Criar elemento do carimbo

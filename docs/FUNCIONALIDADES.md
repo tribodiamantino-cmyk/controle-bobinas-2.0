@@ -244,23 +244,43 @@ planejamento → em_producao → finalizado
 
 **Fluxo:**
 ```
-1. Criar carregamento (lista de cortes esperados)
-2. Escanear QR de cada corte
-3. Sistema valida se pertence ao carregamento
-4. Verde = OK / Vermelho = Erro
-5. Quando 100% validado → Carregamento finalizado
+1. Selecionar PDC finalizado (lista cortes pendentes)
+2. Iniciar carregamento (ou retomar existente)
+3. Escanear QR de cada corte
+4. Cortes validados ficam verdes na lista
+5. Quando 100% validado → Finalizar carregamento
+6. PDC automaticamente vai para status "Entregue"
 ```
 
 **Funcionalidades:**
-- ✅ Criar carregamento
+- ✅ Criar/retomar carregamento
 - ✅ Validar cortes por QR
-- ✅ Feedback visual (verde/vermelho)
-- ✅ Finalizar carregamento
+- ✅ Lista visual de cortes (verdes = validados)
+- ✅ Progresso em tempo real (X/Y cortes)
+- ✅ Finalizar carregamento → PDC "Entregue"
 - ✅ Histórico de entregas
+
+**Aba Ordens - 4 Colunas:**
+```
+Planejamento → Em Produção → Finalizados → 🚚 Entregues
+```
 
 ---
 
-### 8. Configurações
+### 8. Visualização de Cortes (Desktop)
+
+**O que é:** Modal para ver cortes realizados com foto de contraprova.
+
+**Funcionalidades:**
+- ✅ Clicar em card Finalizado/Entregue → Abre modal de cortes
+- ✅ Lista todos os cortes do PDC
+- ✅ Botão "📷 Ver Foto" em cada corte
+- ✅ Modal de foto em tamanho grande
+- ✅ Tratamento quando foto não disponível
+
+---
+
+### 9. Configurações
 
 **O que é:** Cadastros auxiliares do sistema.
 
@@ -430,24 +450,32 @@ Ativa/desativa pelo switch no topo da página. Quando ativo, ao invés de imprim
 ### Fluxo 5: Carregamento para Entrega
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Criar     │ →   │  Escanear   │ →   │  Carregar   │
-│ Carregamento│     │  Cada Corte │     │  no Caminhão│
-└─────────────┘     └─────────────┘     └─────────────┘
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Selecionar│ →   │  Escanear   │ →   │  Finalizar  │ →   │    PDC      │
+│   PDC       │     │  Cada Corte │     │ Carregamento│     │  "Entregue" │
+│ Finalizado  │     │ (Validação) │     │             │     │             │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
                            │
                     ┌──────┴──────┐
                     │ ✅ Verde =  │
-                    │    Correto  │
-                    │ ❌ Vermelho │
-                    │    = Errado │
+                    │    Validado │
+                    │ ⬜ Branco   │
+                    │  = Pendente │
                     └─────────────┘
 ```
 
 **Passos:**
-1. Criar carregamento com lista de cortes esperados
-2. No momento da carga, escanear QR de cada corte
-3. Sistema mostra verde (OK) ou vermelho (errado)
-4. Quando 100% validado → Finalizar carregamento
+1. Selecionar PDC finalizado na lista
+2. Iniciar carregamento (ou retomar existente)
+3. Escanear QR de cada corte para validação
+4. Progresso atualiza em tempo real (barras verde/azul)
+5. Quando 100% validado → Finalizar carregamento
+6. **PDC automaticamente muda para status "Entregue"**
+
+**Interface:**
+- Lista de cortes: verdes = validados, brancos = pendentes
+- Barra de progresso superior mostra % concluído
+- Botão "Finalizar" só aparece quando 100% validado
 5. Material sai para entrega
 
 ---
@@ -522,14 +550,15 @@ Bobina 150m → Corta 120m → Sobra 30m → Gera RET-XXX-XXXXXX
 ### R7: Status de Plano
 
 ```
-planejamento → em_producao → finalizado
-      ↓
-  cancelado
+planejamento → em_producao → finalizado → entregue
+      ↓                          ↓
+  cancelado               (via carregamento)
 ```
 
 - **planejamento**: Pode editar, adicionar/remover itens
 - **em_producao**: Metragens reservadas, cortes sendo feitos
-- **finalizado**: Concluído, sobras viraram retalhos
+- **finalizado**: Concluído, sobras viraram retalhos, aguardando carregamento
+- **entregue**: Carregamento finalizado, material enviado ao cliente
 - **cancelado**: Reservas liberadas, histórico mantido
 
 ---
@@ -607,6 +636,71 @@ planejamento → em_producao → finalizado
 - App mobile conecta via HTTPS
 - Sincronização em tempo real
 
+### Railway Volume (Armazenamento de Fotos)
+
+- Fotos de contraprova persistentes
+- Mount path: `/app/uploads`
+- Mantém fotos entre deploys
+- Acesso via URL: `/uploads/cortes/foto.jpg`
+
+---
+
+## 👁️ Visualização de Cortes Realizados
+
+### Kanban de Ordens (Desktop)
+
+O painel de ordens agora possui **4 colunas**:
+
+| Coluna | Status | Cor | Ação ao Clicar |
+|--------|--------|-----|----------------|
+| Planejamento | `planejamento` | Cinza | Abre detalhes/edição |
+| Em Produção | `em_producao` | Amarelo | Abre detalhes |
+| Finalizados | `finalizado` | Verde | **Abre modal de cortes** |
+| Entregues | `entregue` | Azul | **Abre modal de cortes** |
+
+### Modal de Cortes Realizados
+
+Ao clicar em um PDC finalizado ou entregue:
+
+```
+┌─────────────────────────────────────────────────┐
+│  📋 Cortes Realizados - PDC-PLA-001            │
+├─────────────────────────────────────────────────┤
+│  Código     │ Metragem │ Origem    │ Foto      │
+│  COR-PLA-1-1│ 25.00m   │ BOB-PLA-1 │ [📸 Ver]  │
+│  COR-PLA-1-2│ 30.00m   │ RET-CIA-5 │ [📸 Ver]  │
+│  COR-PLA-1-3│ 15.00m   │ BOB-PLA-2 │ [📸 Ver]  │
+└─────────────────────────────────────────────────┘
+```
+
+**Funcionalidades:**
+- Lista todos os cortes do plano
+- Botão "Ver Foto" abre foto do medidor em modal
+- Se foto não disponível, mostra mensagem amigável
+- Mostra origem (bobina/retalho) de cada corte
+
+### Endpoint de Cortes
+
+```
+GET /api/ordens-corte/:id/cortes-realizados
+
+Response:
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "codigo": "COR-PLA-001-01",
+      "metragem_cortada": 25.00,
+      "origem_tipo": "bobina",
+      "origem_codigo": "BOB-PLA-000001",
+      "foto_medidor_url": "/uploads/cortes/foto_123.jpg",
+      "data_corte": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
 ---
 
 ## 📊 Métricas e Indicadores
@@ -626,4 +720,7 @@ planejamento → em_producao → finalizado
 
 | Data | Alteração |
 |------|-----------|
+| 18/12/2025 | Adicionado status "Entregue" e fluxo de carregamento completo |
+| 18/12/2025 | Adicionada seção de visualização de cortes realizados |
+| 18/12/2025 | Documentado Railway Volume para fotos |
 | 11/12/2025 | Documento criado com funcionalidades atuais |
