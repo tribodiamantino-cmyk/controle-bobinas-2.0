@@ -1204,7 +1204,12 @@ router.get('/carregamento/planos-finalizados', async (req, res) => {
 // Iniciar carregamento
 router.post('/carregamento/iniciar', async (req, res) => {
     try {
-        const { plano_id, operador_nome } = req.body;
+        const { plano_id, pdc_id, operador_nome } = req.body;
+        const pdcId = plano_id || pdc_id; // Aceita ambos nomes
+        
+        if (!pdcId) {
+            return res.status(400).json({ success: false, error: 'ID do PDC é obrigatório' });
+        }
         
         // Gerar código de carregamento
         const ano = new Date().getFullYear();
@@ -1228,13 +1233,13 @@ router.post('/carregamento/iniciar', async (req, res) => {
             LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
             WHERE cr.plano_corte_id = ?
             ORDER BY cr.data_corte
-        `, [plano_id]);
+        `, [pdcId]);
         
         // Criar carregamento
         const [result] = await db.query(`
             INSERT INTO carregamentos (codigo_carregamento, plano_corte_id, total_cortes, operador_nome)
             VALUES (?, ?, ?, ?)
-        `, [codigo_carregamento, plano_id, cortes.length, operador_nome]);
+        `, [codigo_carregamento, pdcId, cortes.length, operador_nome]);
         
         res.json({ 
             success: true,
@@ -1255,6 +1260,10 @@ router.post('/carregamento/validar-scan', async (req, res) => {
     try {
         const { carregamento_id, codigo_corte } = req.body;
         
+        // Normalizar código (COR-PLA-6-1 -> COR-PLA-006-01)
+        const codigoNormalizado = normalizarCodigoBarras(codigo_corte);
+        console.log(`📦 Validando corte: ${codigo_corte} -> ${codigoNormalizado}`);
+        
         // Buscar carregamento
         const [carr] = await db.query('SELECT * FROM carregamentos WHERE id = ?', [carregamento_id]);
         
@@ -1262,11 +1271,11 @@ router.post('/carregamento/validar-scan', async (req, res) => {
             return res.json({ success: false, valido: false, erro: 'Carregamento não encontrado' });
         }
         
-        // Buscar corte
-        const [corte] = await db.query(`
+        // Buscar corte (tenta código normalizado e original)
+        let [corte] = await db.query(`
             SELECT * FROM cortes_realizados 
-            WHERE codigo_corte = ? AND plano_corte_id = ?
-        `, [codigo_corte, carr[0].plano_corte_id]);
+            WHERE (codigo_corte = ? OR codigo_corte = ?) AND plano_corte_id = ?
+        `, [codigoNormalizado, codigo_corte, carr[0].plano_corte_id]);
         
         if (!corte || corte.length === 0) {
             return res.json({ success: false, valido: false, erro: 'Corte não pertence a este plano' });
@@ -2992,13 +3001,13 @@ router.get('/carregamento/disponiveis', async (req, res) => {
                 pc.data_finalizacao,
                 pc.loja,
                 COUNT(DISTINCT cr.id) as total_cortes,
-                GROUP_CONCAT(DISTINCT pl.locacao_id) as locacoes_ids
+                GROUP_CONCAT(DISTINCT pl.codigo_locacao ORDER BY pl.ordem_scan) as locacoes
             FROM planos_corte pc
-            LEFT JOIN cortes_realizados cr ON cr.plano_id = pc.id
-            LEFT JOIN plano_locacoes pl ON pl.plano_id = pc.id
+            LEFT JOIN cortes_realizados cr ON cr.plano_corte_id = pc.id
+            LEFT JOIN plano_locacoes pl ON pl.plano_corte_id = pc.id
             WHERE pc.status = 'finalizado'
             AND pc.id NOT IN (
-                SELECT DISTINCT plano_id 
+                SELECT DISTINCT plano_corte_id 
                 FROM carregamentos 
                 WHERE status = 'concluido'
             )
@@ -3012,31 +3021,23 @@ router.get('/carregamento/disponiveis', async (req, res) => {
 
         query += `
             GROUP BY pc.id
+            HAVING total_cortes > 0
             ORDER BY pc.data_finalizacao DESC
         `;
 
         const [pdcs] = await db.query(query, params);
 
-        // Busca locações para cada PDC
-        const pdcsComLocacoes = await Promise.all(pdcs.map(async (pdc) => {
-            const [locacoes] = await db.query(`
-                SELECT l.id, l.locacao
-                FROM plano_locacoes pl
-                JOIN locacoes l ON l.id = pl.locacao_id
-                WHERE pl.plano_id = ?
-            `, [pdc.id]);
-
-            return {
-                ...pdc,
-                locacoes: locacoes.map(l => l.locacao)
-            };
+        // Formata locações de string para array
+        const pdcsFormatados = pdcs.map(pdc => ({
+            ...pdc,
+            locacoes: pdc.locacoes ? pdc.locacoes.split(',') : []
         }));
 
-        console.log(`✅ ${pdcs.length} PDCs disponíveis`);
+        console.log(`✅ ${pdcs.length} PDCs disponíveis para carregamento`);
 
         res.json({
             success: true,
-            data: pdcsComLocacoes,
+            data: pdcsFormatados,
             total: pdcs.length
         });
 
@@ -3054,7 +3055,9 @@ router.post('/carregamento/validar-corte', async (req, res) => {
     try {
         const { carregamento_id, codigo_corte } = req.body;
 
-        console.log('🔍 Validando corte:', codigo_corte);
+        // Normaliza código (COR-PLA-6-1 -> COR-PLA-006-01)
+        const codigoNormalizado = normalizarCodigoBarras(codigo_corte);
+        console.log('🔍 Validando corte:', codigo_corte, '->', codigoNormalizado);
 
         // Busca o carregamento
         const [carregamentos] = await db.query(
@@ -3071,10 +3074,10 @@ router.post('/carregamento/validar-corte', async (req, res) => {
 
         const carregamento = carregamentos[0];
 
-        // Busca o corte
+        // Busca o corte (tenta código normalizado e original)
         const [cortes] = await db.query(
-            'SELECT * FROM cortes_realizados WHERE codigo_corte = ?',
-            [codigo_corte]
+            'SELECT * FROM cortes_realizados WHERE codigo_corte = ? OR codigo_corte = ?',
+            [codigoNormalizado, codigo_corte]
         );
 
         if (cortes.length === 0) {
@@ -3088,11 +3091,11 @@ router.post('/carregamento/validar-corte', async (req, res) => {
         const corte = cortes[0];
 
         // Verifica se o corte pertence ao plano correto
-        if (corte.plano_id !== carregamento.plano_id) {
+        if (corte.plano_corte_id !== carregamento.plano_corte_id) {
             // Busca o PDC correto do corte
             const [pdcCorreto] = await db.query(
                 'SELECT codigo_plano, cliente FROM planos_corte WHERE id = ?',
-                [corte.plano_id]
+                [corte.plano_corte_id]
             );
 
             return res.json({
@@ -3131,10 +3134,10 @@ router.post('/carregamento/validar-corte', async (req, res) => {
         const [progresso] = await db.query(`
             SELECT 
                 COUNT(DISTINCT ci.corte_id) as validados,
-                (SELECT COUNT(*) FROM cortes_realizados WHERE plano_id = ?) as total
+                (SELECT COUNT(*) FROM cortes_realizados WHERE plano_corte_id = ?) as total
             FROM carregamentos_itens ci
             WHERE ci.carregamento_id = ?
-        `, [carregamento.plano_id, carregamento_id]);
+        `, [carregamento.plano_corte_id, carregamento_id]);
 
         const { validados, total } = progresso[0];
         const percentual = Math.round((validados / total) * 100);
