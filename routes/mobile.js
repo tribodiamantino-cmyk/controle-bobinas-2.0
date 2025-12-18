@@ -2329,18 +2329,20 @@ router.post('/carregamento/validar-corte', async (req, res) => {
         `, [codigo_corte]);
         
         if (!corte || corte.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Corte não encontrado',
+            return res.json({
+                success: true,
+                valido: false,
+                erro: 'Corte não encontrado',
                 validacao: 'invalido'
             });
         }
         
         // Verificar se corte pertence ao plano do carregamento
         if (corte[0].plano_corte_id !== carregamento[0].plano_corte_id) {
-            return res.status(400).json({
-                success: false,
-                error: 'Este corte não pertence ao plano deste carregamento',
+            return res.json({
+                success: true,
+                valido: false,
+                erro: 'Este corte não pertence ao plano deste carregamento',
                 validacao: 'plano_errado',
                 corte: corte[0]
             });
@@ -2353,9 +2355,10 @@ router.post('/carregamento/validar-corte', async (req, res) => {
         );
         
         if (jaEscaneado && jaEscaneado.length > 0) {
-            return res.status(400).json({
-                success: false,
-                error: 'Este corte já foi escaneado neste carregamento',
+            return res.json({
+                success: true,
+                valido: false,
+                erro: 'Este corte já foi escaneado neste carregamento',
                 validacao: 'duplicado',
                 corte: corte[0]
             });
@@ -3099,7 +3102,7 @@ router.post('/carregamento/validar-corte', async (req, res) => {
             );
 
             return res.json({
-                success: false,
+                success: true,
                 valido: false,
                 erro: 'Corte pertence a outro PDC',
                 corte: {
@@ -3118,7 +3121,7 @@ router.post('/carregamento/validar-corte', async (req, res) => {
 
         if (jaCarregado.length > 0) {
             return res.json({
-                success: false,
+                success: true,
                 valido: false,
                 erro: 'Corte já validado anteriormente'
             });

@@ -292,34 +292,35 @@ class CarregamentoModule {
 
             Utils.mostrarLoading('Validando corte...');
 
-            const response = await API.validarCorteCarregamento(
-                this.carregamentoAtual.id,
-                codigoNormalizado
-            );
+            let response;
+            try {
+                response = await API.validarCorteCarregamento(
+                    this.carregamentoAtual.id,
+                    codigoNormalizado
+                );
+            } catch (apiError) {
+                // API lança exceção quando success=false
+                Utils.esconderLoading();
+                Utils.feedbackErro();
+                Utils.mostrarErro(apiError.message || 'Erro ao validar corte');
+                return;
+            }
 
             Utils.esconderLoading();
 
-            if (!response.valido) {
+            // API retorna success:true com data.corte
+            if (!response.success || !response.data) {
                 Utils.feedbackErro();
-                
-                // Mostra erro específico
-                if (response.erro === 'Corte pertence a outro PDC') {
-                    Utils.mostrarErro(
-                        `❌ ERRO: Corte pertence a outro PDC!\n\n` +
-                        `PDC Correto: ${response.corte.pdc_correto}\n` +
-                        `Cliente: ${response.corte.cliente}`
-                    );
-                } else {
-                    Utils.mostrarErro(response.erro || 'Corte inválido');
-                }
+                Utils.mostrarErro(response.error || 'Erro ao validar corte');
                 return;
             }
 
             // Sucesso!
             Utils.feedbackSucesso();
             
-            // Adiciona à lista
-            this.cortesValidados.push(response.corte);
+            // Adiciona à lista (corte vem em response.data.corte)
+            const corteValidado = response.data.corte;
+            this.cortesValidados.push(corteValidado);
             
             // Atualiza UI
             this.atualizarProgresso();
@@ -327,8 +328,15 @@ class CarregamentoModule {
             
             // Toast de sucesso
             Utils.mostrarSucesso(
-                `✅ ${response.corte.codigo_corte} - ${Utils.formatarMetragem(response.corte.metragem_cortada || response.corte.metragem)}`
+                `✅ ${corteValidado.codigo_corte} - ${Utils.formatarMetragem(corteValidado.metragem_cortada || 0)}m`
             );
+            
+            // Verifica se completou
+            if (response.data.completo) {
+                setTimeout(() => {
+                    Utils.mostrarSucesso('🎉 Todos os cortes foram validados!');
+                }, 500);
+            }
 
         } catch (error) {
             console.error('Erro ao validar corte:', error);
