@@ -83,22 +83,36 @@
         
         // ============ HANDLER BOTÃO VOLTAR ANDROID ============
         if (Capacitor.isNativePlatform()) {
+            // Importar plugin App
             const { App } = Capacitor.Plugins;
+            
             if (App) {
-                App.addListener('backButton', ({ canGoBack }) => {
-                    console.log('📱 Botão voltar pressionado, canGoBack:', canGoBack);
+                App.addListener('backButton', async ({ canGoBack }) => {
+                    console.log('📱 Botão voltar pressionado');
+                    console.log('📱 canGoBack:', canGoBack);
+                    console.log('📱 Página atual:', window.location.pathname);
+                    console.log('📱 document.referrer:', document.referrer);
                     
-                    // Se tem histórico de navegação, volta
-                    if (window.history.length > 1) {
-                        window.history.back();
-                    } else {
-                        // Confirma se quer sair do app
-                        if (confirm('Deseja sair do aplicativo?')) {
+                    // Pegar o nome do arquivo atual
+                    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+                    console.log('📱 currentPage:', currentPage);
+                    
+                    // Se está na página inicial (index.html), confirma saída
+                    if (currentPage === 'index.html' || currentPage === '' || currentPage === 'mobile') {
+                        // Usar dialog nativo se disponível
+                        const sair = confirm('Deseja sair do aplicativo?');
+                        if (sair) {
                             App.exitApp();
                         }
+                    } else {
+                        // Se está em qualquer outra página, volta para index
+                        console.log('📱 Voltando para index.html...');
+                        window.location.href = 'index.html';
                     }
                 });
                 console.log('✅ Handler do botão voltar configurado');
+            } else {
+                console.warn('⚠️ Plugin App não disponível');
             }
         }
     });
