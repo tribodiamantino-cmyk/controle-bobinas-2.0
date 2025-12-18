@@ -2753,6 +2753,10 @@ router.get('/pdcs/:id/origens', async (req, res) => {
                     WHEN ac.tipo_origem = 'bobina' THEN b.locacao
                     WHEN ac.tipo_origem = 'retalho' THEN r.locacao
                 END) as locacao,
+                MAX(CASE 
+                    WHEN ac.tipo_origem = 'bobina' THEN b.metragem_atual
+                    WHEN ac.tipo_origem = 'retalho' THEN r.metragem
+                END) as metragem_atual,
                 MAX(CONCAT(p.codigo, ' - ', COALESCE(c.nome_cor, ''), ' ', COALESCE(g.gramatura, ''), 'g/m²')) as produto,
                 COUNT(DISTINCT ipc.id) as total_cortes,
                 COUNT(DISTINCT cr.id) as cortes_concluidos
@@ -2802,6 +2806,7 @@ router.get('/pdcs/:id/origens', async (req, res) => {
                 id: origem.origem_id,
                 codigo: origem.codigo,
                 locacao: origem.locacao,
+                metragem_atual: parseFloat(origem.metragem_atual || 0),
                 produto: origem.produto,
                 total_cortes: origem.total_cortes,
                 cortes_concluidos: origem.cortes_concluidos,
