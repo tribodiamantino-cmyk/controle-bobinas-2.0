@@ -834,27 +834,46 @@ router.post('/registrar-corte', upload.single('foto'), async (req, res) => {
         
         console.log('✅ Corte inserido com ID:', result.insertId, 'Código:', codigo_corte);
         
-        // Atualiza metragem da origem
+        // Atualiza metragem da origem (deduz metragem_atual E metragem_reservada)
         const metragemFloat = parseFloat(metragem_cortada);
         if (origem_tipo === 'bobina') {
             await db.query(
-                'UPDATE bobinas SET metragem_atual = metragem_atual - ? WHERE id = ?',
-                [metragemFloat, origem_id]
+                `UPDATE bobinas 
+                 SET metragem_atual = metragem_atual - ?,
+                     metragem_reservada = GREATEST(0, metragem_reservada - ?)
+                 WHERE id = ?`,
+                [metragemFloat, metragemFloat, origem_id]
             );
+            console.log(`📦 Bobina ${origem_id}: -${metragemFloat}m (atual e reservada)`);
         } else {
             await db.query(
-                'UPDATE retalhos SET metragem = metragem - ? WHERE id = ?',
-                [metragemFloat, origem_id]
+                `UPDATE retalhos 
+                 SET metragem = metragem - ?,
+                     metragem_reservada = GREATEST(0, metragem_reservada - ?)
+                 WHERE id = ?`,
+                [metragemFloat, metragemFloat, origem_id]
             );
+            console.log(`♻️ Retalho ${origem_id}: -${metragemFloat}m (atual e reservada)`);
         }
         
-        // Retorna sucesso
+        // Busca metragem restante da origem para retornar ao frontend
+        let metragemRestante = 0;
+        if (origem_tipo === 'bobina') {
+            const [bobina] = await db.query('SELECT metragem_atual FROM bobinas WHERE id = ?', [origem_id]);
+            metragemRestante = bobina.length > 0 ? parseFloat(bobina[0].metragem_atual) : 0;
+        } else {
+            const [retalho] = await db.query('SELECT metragem FROM retalhos WHERE id = ?', [origem_id]);
+            metragemRestante = retalho.length > 0 ? parseFloat(retalho[0].metragem) : 0;
+        }
+        
+        // Retorna sucesso com metragem restante
         res.json({
             success: true,
             data: {
                 id: result.insertId,
                 codigo_corte,
                 metragem_cortada: metragemFloat,
+                metragem_restante: metragemRestante,
                 foto_url
             }
         });

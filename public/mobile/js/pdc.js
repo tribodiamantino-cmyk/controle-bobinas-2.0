@@ -521,15 +521,23 @@ class PDCModule {
 
             // Feedback de sucesso
             Utils.feedbackSucesso();
-            this.mostrarSucessoCorte(corteRegistrado);
-
+            
             // Limpa foto
             this.camera.limparUltimaFoto();
 
-            // Aguarda 3 segundos e volta para lista
-            setTimeout(() => {
-                this.voltarParaCortes();
-            }, 3000);
+            // Verifica se sobrou metragem na origem
+            const metragemRestante = corteRegistrado.metragem_restante || 0;
+            
+            if (metragemRestante > 0) {
+                // Sobrou metragem - pedir para guardar a origem
+                this.mostrarGuardarOrigemAposCorte(corteRegistrado, metragemRestante);
+            } else {
+                // Origem esgotada - mostrar sucesso e continuar
+                this.mostrarSucessoCorte(corteRegistrado);
+                setTimeout(() => {
+                    this.voltarParaCortes();
+                }, 3000);
+            }
 
         } catch (error) {
             // Melhor serialização do erro para logs
@@ -545,7 +553,119 @@ class PDCModule {
     }
 
     /**
-     * Mostra feedback de sucesso do corte
+     * Mostra tela para guardar origem após corte (quando sobra metragem)
+     */
+    mostrarGuardarOrigemAposCorte(corte, metragemRestante) {
+        const icone = this.origemAtual.tipo === 'bobina' ? '📦' : '♻️';
+        const tipoNome = this.origemAtual.tipo === 'bobina' ? 'Bobina' : 'Retalho';
+        
+        const container = document.querySelector('#corteView .card-body');
+        container.innerHTML = `
+            <div class="text-center py-3">
+                <div class="icon-xl text-success mb-2">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <h4>Corte Registrado!</h4>
+                <p class="mb-1"><strong>${corte.codigo_corte}</strong></p>
+                <p class="text-muted small">${Utils.formatarMetragem(corte.metragem_cortada)} cortado</p>
+                
+                <hr>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-box-seam"></i>
+                    <strong>Sobrou ${Utils.formatarMetragem(metragemRestante)}</strong>
+                    <p class="mb-0 small">Guarde ${tipoNome.toLowerCase()} e escaneie a locação</p>
+                </div>
+                
+                <div class="form-group mt-3">
+                    <div class="input-group">
+                        <input type="text" 
+                               id="locacaoGuardarAposCorte" 
+                               class="form-control form-control-lg text-center"
+                               placeholder="Locação (ex: 1-A-1)"
+                               style="text-transform: uppercase;">
+                        <button class="btn btn-primary" onclick="pdc.escanearLocacaoAposCorte()">
+                            <i class="bi bi-qr-code-scan"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-success btn-lg" onclick="pdc.confirmarLocacaoAposCorte()">
+                        <i class="bi bi-check-lg"></i> CONFIRMAR LOCAÇÃO
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="pdc.pularLocacaoAposCorte()">
+                        Pular (manter locação atual)
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Escaneia locação após corte
+     */
+    async escanearLocacaoAposCorte() {
+        try {
+            const callbackOriginal = this.scanner.callback;
+            this.scanner.callback = (codigo) => {
+                document.getElementById('locacaoGuardarAposCorte').value = codigo.toUpperCase();
+                this.scanner.callback = callbackOriginal;
+            };
+            await this.scanner.iniciar();
+        } catch (error) {
+            console.error('Erro ao escanear locação:', error);
+            Utils.mostrarErro('Erro ao abrir scanner');
+        }
+    }
+
+    /**
+     * Confirma locação após corte
+     */
+    async confirmarLocacaoAposCorte() {
+        try {
+            let codigo = document.getElementById('locacaoGuardarAposCorte').value.trim().toUpperCase();
+            
+            if (!codigo) {
+                Utils.mostrarErro('Informe a locação');
+                return;
+            }
+            
+            Utils.mostrarLoading('Salvando locação...');
+            
+            const response = await API.atualizarLocacaoOrigem({
+                tipo: this.origemAtual.tipo,
+                origem_id: this.origemAtual.id,
+                codigo_locacao: codigo
+            });
+            
+            Utils.esconderLoading();
+            
+            if (response.success) {
+                Utils.feedbackSucesso();
+                Utils.mostrarSucesso('Locação salva!');
+                setTimeout(() => this.voltarParaCortes(), 1500);
+            } else {
+                throw new Error(response.error || 'Erro ao salvar');
+            }
+            
+        } catch (error) {
+            console.error('Erro ao salvar locação:', error);
+            Utils.esconderLoading();
+            Utils.mostrarErro(error.message || 'Erro ao salvar locação');
+        }
+    }
+
+    /**
+     * Pula etapa de locação após corte
+     */
+    pularLocacaoAposCorte() {
+        Utils.mostrarAviso('Locação mantida');
+        this.voltarParaCortes();
+    }
+
+    /**
+     * Mostra feedback de sucesso do corte (quando origem esgotada)
      */
     mostrarSucessoCorte(corte) {
         const container = document.querySelector('#corteView .card-body');
@@ -558,9 +678,9 @@ class PDCModule {
                 <p class="text-large mb-3">${corte.codigo_corte}</p>
                 <p class="text-muted">${Utils.formatarMetragem(corte.metragem_cortada)}</p>
                 
-                <div class="alert alert-info mt-4">
-                    <i class="bi bi-printer"></i>
-                    <strong>Etiqueta enviada para impressão</strong>
+                <div class="alert alert-secondary mt-3">
+                    <i class="bi bi-box-seam"></i>
+                    <strong>Origem esgotada</strong>
                 </div>
 
                 <button class="btn btn-primary mt-3" onclick="pdc.voltarParaCortes()">
@@ -572,6 +692,7 @@ class PDCModule {
 
     /**
      * Volta para lista de cortes (recarrega dados da origem atual)
+     * Nota: A locação da origem agora é pedida APÓS cada corte (quando sobra metragem)
      */
     async voltarParaCortes() {
         try {
@@ -603,10 +724,9 @@ class PDCModule {
                     this.renderListaCortes();
                 } else {
                     // Todos os cortes da origem foram concluídos!
-                    // Pede para guardar a origem (informar nova locação)
+                    // Volta para lista de origens do PDC
                     this.pdcAtual = response.pdc;
-                    this.origensAtualizadas = origens;
-                    this.iniciarGuardarOrigem();
+                    this.renderOrigens(origens);
                 }
             } else {
                 // Origem não encontrada (improvável) - volta para origens
@@ -622,187 +742,11 @@ class PDCModule {
         }
     }
 
-    /**
-     * Inicia processo de guardar a origem (informar nova locação)
-     */
-    iniciarGuardarOrigem() {
-        const icone = this.origemAtual.tipo === 'bobina' ? '📦' : '♻️';
-        const tipoNome = this.origemAtual.tipo === 'bobina' ? 'Bobina' : 'Retalho';
-        
-        // Mostra view de guardar origem
-        this.mostrarView('cortesView');
-        
-        const container = document.getElementById('cortesSection');
-        container.style.display = 'block';
-        document.getElementById('validarOrigemSection').style.display = 'none';
-        
-        // Renderiza tela de guardar origem
-        document.getElementById('cortesContainer').innerHTML = `
-            <div class="text-center py-4">
-                <div class="icon-xl text-success mb-3">
-                    <i class="bi bi-check-circle"></i>
-                </div>
-                <h4>Cortes Concluídos!</h4>
-                <p class="text-muted mb-4">
-                    ${icone} ${tipoNome} <strong>${this.origemAtual.codigo}</strong>
-                </p>
-                
-                <div class="alert alert-info">
-                    <i class="bi bi-geo-alt"></i>
-                    <strong>Agora guarde ${tipoNome.toLowerCase()} e escaneie a locação</strong>
-                </div>
-                
-                <div class="form-group mt-4">
-                    <label class="form-label">Locação:</label>
-                    <div class="input-group">
-                        <input type="text" 
-                               id="locacaoGuardarOrigem" 
-                               class="form-control form-control-lg text-center"
-                               placeholder="Ex: 1-A-1"
-                               style="text-transform: uppercase;">
-                        <button class="btn btn-primary" onclick="pdc.escanearLocacaoOrigem()">
-                            <i class="bi bi-qr-code-scan"></i>
-                        </button>
-                    </div>
-                    <small class="text-muted">Escaneie ou digite a locação</small>
-                </div>
-                
-                <div class="d-grid gap-2 mt-4">
-                    <button class="btn btn-success btn-lg" onclick="pdc.confirmarGuardarOrigem()">
-                        <i class="bi bi-check-lg"></i> CONFIRMAR LOCAÇÃO
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="pdc.pularGuardarOrigem()">
-                        Pular (manter locação atual)
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Escaneia locação para guardar origem
-     */
-    async escanearLocacaoOrigem() {
-        try {
-            // Configura callback temporário
-            const callbackOriginal = this.scanner.callback;
-            this.scanner.callback = (codigo) => {
-                // Preenche o campo
-                document.getElementById('locacaoGuardarOrigem').value = codigo.toUpperCase();
-                // Restaura callback
-                this.scanner.callback = callbackOriginal;
-            };
-            
-            await this.scanner.iniciar();
-        } catch (error) {
-            console.error('Erro ao escanear locação:', error);
-            Utils.mostrarErro('Erro ao abrir scanner');
-        }
-    }
-
-    /**
-     * Confirma guardar origem com nova locação
-     */
-    async confirmarGuardarOrigem() {
-        try {
-            let codigo = document.getElementById('locacaoGuardarOrigem').value.trim().toUpperCase();
-            
-            if (!codigo) {
-                Utils.mostrarErro('Informe a locação');
-                return;
-            }
-            
-            Utils.mostrarLoading('Salvando locação...');
-            
-            // Chama API para atualizar locação
-            const response = await API.atualizarLocacaoOrigem({
-                tipo: this.origemAtual.tipo,
-                origem_id: this.origemAtual.id,
-                codigo_locacao: codigo
-            });
-            
-            Utils.esconderLoading();
-            
-            if (response.success) {
-                Utils.feedbackSucesso();
-                Utils.mostrarSucesso('Locação atualizada!');
-                
-                // Volta para lista de origens após 1.5s
-                setTimeout(() => {
-                    this.renderOrigens(this.origensAtualizadas);
-                }, 1500);
-            } else {
-                throw new Error(response.error || 'Erro ao salvar');
-            }
-            
-        } catch (error) {
-            console.error('Erro ao guardar origem:', error);
-            Utils.esconderLoading();
-            Utils.mostrarErro(error.message || 'Erro ao salvar locação');
-        }
-    }
-
-    /**
-     * Pula etapa de guardar origem (mantém locação atual)
-     */
-    pularGuardarOrigem() {
-        Utils.mostrarAviso('Locação mantida');
-        this.renderOrigens(this.origensAtualizadas);
-    }
-
-    /**
-     * Atualiza locação da origem após todos cortes
-     */
-    async atualizarLocacaoOrigem() {
-        try {
-            debugLog('Atualizando locação da origem...');
-            
-            // Inicia scanner para nova locação
-            Utils.mostrarAviso('Escaneie a nova locação da origem');
-            
-            // Configura callback temporário do scanner
-            const codigoOriginal = this.scanner.callback;
-            this.scanner.callback = async (codigo) => {
-                try {
-                    // Valida se é locação
-                    if (!codigo.startsWith('LOC-')) {
-                        Utils.mostrarErro('Código inválido. Use LOC-XXX');
-                        return;
-                    }
-
-                    Utils.mostrarLoading('Atualizando locação...');
-
-                    await API.atualizarLocacao({
-                        tipo: this.origemAtual.tipo,
-                        id: this.origemAtual.id,
-                        nova_locacao: codigo
-                    });
-
-                    Utils.esconderLoading();
-                    Utils.feedbackSucesso();
-                    Utils.mostrarSucesso('Locação atualizada!');
-
-                    // Restaura callback original
-                    this.scanner.callback = codigoOriginal;
-
-                    // Volta para origens
-                    await this.abrirPDC(this.pdcAtual.id);
-
-                } catch (error) {
-                    console.error('Erro ao atualizar locação:', error);
-                    Utils.esconderLoading();
-                    Utils.mostrarErro('Erro ao atualizar locação');
-                    this.scanner.callback = codigoOriginal;
-                }
-            };
-
-            await this.scanner.iniciar();
-
-        } catch (error) {
-            console.error('Erro:', error);
-            Utils.mostrarErro('Erro ao abrir scanner');
-        }
-    }
+    // ============================================================
+    // Os métodos de guardar origem após TODOS os cortes foram 
+    // removidos pois agora a locação é pedida APÓS CADA CORTE
+    // (quando sobra metragem). Ver: mostrarGuardarOrigemAposCorte()
+    // ============================================================
 
     /**
      * Cancela corte em andamento
