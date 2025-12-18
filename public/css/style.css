@@ -1261,8 +1261,8 @@ body {
 /* ========== KANBAN BOARD - ORDENS DE CORTE ========== */
 .kanban-board {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
     margin-top: 20px;
 }
 
@@ -2156,7 +2156,36 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
+@media (max-width: 1400px) {
+    .kanban-board {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+    
+    .kanban-header {
+        padding: 12px 15px;
+        font-size: 0.9rem;
+    }
+    
+    .kanban-header h3 {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 1200px) {
+    .kanban-board {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .kanban-column {
+        height: auto;
+        min-height: 400px;
+        max-height: 500px;
+    }
+}
+
+@media (max-width: 768px) {
     .kanban-board {
         grid-template-columns: 1fr;
     }
@@ -2164,10 +2193,9 @@ body {
     .kanban-column {
         height: auto;
         min-height: 300px;
+        max-height: none;
     }
-}
-
-@media (max-width: 768px) {
+    
     .form-row {
         grid-template-columns: 1fr;
     }
