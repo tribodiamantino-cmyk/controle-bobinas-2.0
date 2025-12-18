@@ -8,8 +8,11 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const config = require('../../config.json');
 const logger = require('../utils/logger');
+
+// Usar config global
+const config = global.CONFIG;
+const baseDir = global.BASE_DIR;
 
 // Tentar importar pdf-to-printer
 let printer = null;
@@ -26,7 +29,25 @@ try {
  * @returns {string} HTML preenchido
  */
 function preencherTemplate(templateName, dados) {
-    const templatePath = path.join(__dirname, '../templates', `${templateName}.html`);
+    // Tentar carregar template de diferentes locais
+    const possiblePaths = [
+        path.join(baseDir, 'templates', `${templateName}.html`),
+        path.join(baseDir, 'src', 'templates', `${templateName}.html`),
+        path.join(__dirname, '..', 'templates', `${templateName}.html`)
+    ];
+    
+    let templatePath = null;
+    for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+            templatePath = p;
+            break;
+        }
+    }
+    
+    if (!templatePath) {
+        throw new Error(`Template ${templateName}.html não encontrado`);
+    }
+    
     let html = fs.readFileSync(templatePath, 'utf-8');
     
     // Substituir variáveis simples

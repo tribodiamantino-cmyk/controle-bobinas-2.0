@@ -2,24 +2,70 @@
 
 > Servidor para impressão automática de etiquetas e relatórios do Controle de Bobinas 2.0
 
-## 📋 Requisitos
+## � Instalação Rápida (Executável)
 
-- **Node.js** 18+ 
-- **Windows** (para impressão via driver)
-- **Impressora Elgin L42 Pro Full** (USB) - Etiquetas 60x30mm
-- **Impressora A4** (USB ou rede) - Relatórios
+### Para o usuário final:
 
-## 🚀 Instalação
+1. Baixe a pasta `dist/` com os arquivos:
+   - `ServidorImpressao.exe`
+   - `config.json`
+   - `Instalar.bat`
+   - `Iniciar.bat`
+   - `templates/romaneio.html`
 
-### 1. Instalar dependências
+2. Execute `Instalar.bat` **como Administrador**
+
+3. Configure o `config.json` com o nome das impressoras
+
+4. Use o atalho na Área de Trabalho para iniciar
+
+---
+
+## � Para Desenvolvedores
+
+### Gerar o executável (.exe)
+
 ```bash
 cd servidor-impressao
+
+# Instalar dependências (incluindo pkg)
 npm install
+
+# Gerar executável Windows 64-bit
+npm run build
+
+# Gerar executável + preparar pasta de distribuição
+npm run build:all
 ```
 
-### 2. Configurar impressoras
+O executável será gerado em `dist/ServidorImpressao.exe`
 
-Edite o arquivo `config.json`:
+### Estrutura da pasta dist/ (para distribuição)
+
+```
+dist/
+├── ServidorImpressao.exe    # Executável principal
+├── config.json              # Configurações (editar antes de usar)
+├── Instalar.bat             # Instalador automático
+├── Iniciar.bat              # Script para iniciar
+├── LEIA-ME.txt              # Instruções para usuário
+├── templates/
+│   └── romaneio.html        # Template do relatório A4
+└── logs/                    # Logs (criado automaticamente)
+```
+
+---
+
+## 📋 Requisitos
+
+- **Windows** 10/11 (64-bit)
+- **Impressora Elgin L42 Pro Full** (USB) - Etiquetas 60x30mm
+- **Impressora A4** (USB ou rede) - Relatórios
+- **Conexão com internet** - Para acessar a API
+
+---
+
+## ⚙️ Configuração (config.json)
 
 ```json
 {
@@ -31,14 +77,10 @@ Edite o arquivo `config.json`:
     "impressoras": {
         "termica": {
             "nome": "Elgin L42 Pro Full",
-            "tipo": "usb",
-            "vendorId": "0x0525",
-            "productId": "0xa700",
-            "larguraEtiqueta": 60,
-            "alturaEtiqueta": 30
+            "tipo": "windows"
         },
         "a4": {
-            "nome": "HP LaserJet Pro",
+            "nome": "",
             "copias": 2
         }
     },
@@ -52,31 +94,24 @@ Edite o arquivo `config.json`:
 | Campo | Descrição |
 |-------|-----------|
 | `api.baseUrl` | URL da API Railway |
-| `api.pollingInterval` | Intervalo de consulta (ms) |
+| `api.pollingInterval` | Intervalo de consulta em ms (padrão: 5000 = 5s) |
 | `api.loja` | Código da loja: `PLA` (Cortinave) ou `CIA` (BN) |
-| `impressoras.termica.nome` | Nome da impressora no Windows |
+| `impressoras.termica.nome` | **Nome exato** da impressora de etiquetas no Windows |
 | `impressoras.a4.nome` | Nome da impressora A4 (deixe vazio para usar padrão) |
 | `impressoras.a4.copias` | Número de cópias do romaneio (padrão: 2) |
 
-### 3. Encontrar nome das impressoras
+### Descobrir nome das impressoras
 
-No Windows, execute:
+Abra o **Prompt de Comando** e execute:
 ```cmd
 wmic printer get name
 ```
 
-### 4. Iniciar servidor
+Use o nome **exatamente como aparece** no config.json.
 
-```bash
-npm start
-```
+---
 
-Ou em modo desenvolvimento (com auto-reload):
-```bash
-npm run dev
-```
-
-## 🔧 Como Funciona
+## � Como Funciona
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -92,7 +127,7 @@ npm run dev
 │      └─ Fila Relatórios (prioridade normal)                     │
 │                                                                 │
 │   3. IMPRESSÃO                                                  │
-│      ├─ Etiquetas → Elgin L42 (ZPL via USB/Windows)             │
+│      ├─ Etiquetas → Elgin L42 (ZPL via Windows)                 │
 │      └─ Relatórios → PDF → Impressora A4 (2 cópias)             │
 │                                                                 │
 │   4. CONFIRMAÇÃO                                                │
@@ -101,26 +136,7 @@ npm run dev
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## 📦 Estrutura de Arquivos
-
-```
-servidor-impressao/
-├── package.json
-├── config.json           # Configurações
-├── README.md             # Este arquivo
-├── src/
-│   ├── index.js          # Entry point
-│   ├── polling.js        # Consulta API
-│   ├── queue.js          # Gerenciamento de filas
-│   ├── printers/
-│   │   ├── thermal.js    # Impressora térmica (etiquetas)
-│   │   └── pdf.js        # Impressora A4 (relatórios)
-│   ├── templates/
-│   │   └── romaneio.html # Template do romaneio de carregamento
-│   └── utils/
-│       └── logger.js     # Logs
-└── logs/                 # Arquivos de log diários
-```
+---
 
 ## 🏷️ Tipos de Impressão
 
@@ -137,48 +153,25 @@ servidor-impressao/
   - 2 vias: MOTORISTA + ARQUIVO LOJA
   - Contém: dados do PDC, lista de cortes, observações, assinaturas
 
-## 🔍 Logs
-
-Os logs são salvos em:
-- **Console**: Colorido, em tempo real
-- **Arquivo**: `logs/YYYY-MM-DD.log` (se `logs.arquivo: true`)
-
-Níveis de log:
-- `debug`: Detalhado (para desenvolvimento)
-- `info`: Normal (padrão)
-- `warn`: Avisos
-- `error`: Erros
-
-## ⚙️ Executar como Serviço Windows
-
-Para manter o servidor rodando mesmo após logout:
-
-### Opção 1: PM2
-```bash
-npm install -g pm2
-pm2 start src/index.js --name "servidor-impressao"
-pm2 save
-pm2 startup
-```
-
-### Opção 2: NSSM (Non-Sucking Service Manager)
-```bash
-nssm install ServidorImpressao "C:\caminho\node.exe" "C:\servidor-impressao\src\index.js"
-nssm start ServidorImpressao
-```
+---
 
 ## 🐛 Troubleshooting
+
+### O servidor não inicia
+
+1. Verifique se o `config.json` existe na mesma pasta do .exe
+2. Verifique se o JSON está válido (sem erros de sintaxe)
 
 ### Impressora térmica não imprime
 
 1. Verifique se a impressora está conectada e ligada
-2. Verifique o nome da impressora no `config.json`
-3. Teste manualmente: `print /d:"Nome Impressora" arquivo.txt`
+2. Verifique o nome **exato** da impressora no `config.json`
+3. Teste manualmente: `copy arquivo.txt "\\%COMPUTERNAME%\NomeImpressora"`
 
 ### Relatório não imprime
 
 1. Verifique se a impressora A4 está configurada como padrão
-2. Instale o Chrome/Chromium (Puppeteer precisa)
+2. Verifique se o Chrome está instalado (Puppeteer precisa)
 3. Verifique os logs em `logs/`
 
 ### API não responde
@@ -187,16 +180,13 @@ nssm start ServidorImpressao
 2. Teste no navegador: `https://seu-railway.app/api/health`
 3. Verifique a conexão com internet
 
-## 📝 API Endpoints Utilizados
+---
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/api/health` | Verificar conexão |
-| GET | `/api/impressao/pendentes?loja=PLA` | Etiquetas pendentes |
-| GET | `/api/impressao/relatorios/pendentes?loja=PLA` | Relatórios pendentes |
-| GET | `/api/carregamento/:id/relatorio` | Dados do romaneio |
-| POST | `/api/impressao/:id/marcar-impresso` | Confirmar etiqueta |
-| POST | `/api/impressao/relatorios/:id/marcar-impresso` | Confirmar relatório |
+## 📝 Logs
+
+Os logs são salvos em:
+- **Console**: Colorido, em tempo real
+- **Arquivo**: `logs/YYYY-MM-DD.log`
 
 ---
 

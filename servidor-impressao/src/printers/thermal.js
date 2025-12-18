@@ -2,81 +2,13 @@
  * Impressora Térmica - Elgin L42 Pro Full
  * 
  * Gera comandos ZPL para impressão de etiquetas 60x30mm
- * Envia via USB utilizando a biblioteca 'escpos'
+ * Envia via driver do Windows
  */
 
-const config = require('../../config.json');
 const logger = require('../utils/logger');
 
-// Tentar importar escpos (opcional - fallback para impressão via driver Windows)
-let escpos = null;
-let USB = null;
-
-try {
-    escpos = require('escpos');
-    USB = require('escpos-usb');
-    escpos.USB = USB;
-} catch (e) {
-    logger.warn('⚠️ Biblioteca escpos não disponível, usando impressão via driver Windows');
-}
-
-/**
- * Imprime etiqueta via USB direto (ESC/POS)
- * @param {Object} dados - Dados da etiqueta
- */
-async function imprimirViaUSB(dados) {
-    if (!escpos || !USB) {
-        throw new Error('Biblioteca escpos não disponível');
-    }
-    
-    const device = new USB(
-        parseInt(config.impressoras.termica.vendorId),
-        parseInt(config.impressoras.termica.productId)
-    );
-    
-    const printer = new escpos.Printer(device);
-    
-    return new Promise((resolve, reject) => {
-        device.open((err) => {
-            if (err) {
-                reject(new Error(`Erro ao abrir dispositivo USB: ${err.message}`));
-                return;
-            }
-            
-            try {
-                // Configurar etiqueta 60x30mm
-                printer
-                    .font('a')
-                    .align('ct')
-                    .size(1, 1);
-                
-                // Linha 1: Código
-                printer.text(dados.linha1);
-                
-                // Linha 2: Código de barras
-                printer.barcode(dados.linha2_barcode, 'CODE128', {
-                    width: 2,
-                    height: 60,
-                    position: 'OFF'
-                });
-                
-                // Linhas 3 e 4 (se não for locação)
-                if (dados.tipo !== 'locacao') {
-                    printer.text(dados.linha3 || '');
-                    printer.style('b');
-                    printer.text(dados.linha4 || '');
-                }
-                
-                printer.cut();
-                printer.close();
-                
-                resolve();
-            } catch (e) {
-                reject(e);
-            }
-        });
-    });
-}
+// Usar config global
+const config = global.CONFIG;
 
 /**
  * Gera comandos ZPL para etiqueta
@@ -179,7 +111,7 @@ async function imprimirViaWindows(dados, quantidade = 1) {
 }
 
 /**
- * Imprime etiqueta (escolhe método automaticamente)
+ * Imprime etiqueta (via driver Windows)
  * @param {Object} etiqueta - Objeto da etiqueta da fila
  */
 async function imprimirEtiqueta(etiqueta) {
@@ -188,24 +120,11 @@ async function imprimirEtiqueta(etiqueta) {
     
     logger.debug(`Imprimindo ${quantidade}x etiqueta: ${dados.linha1}`);
     
-    // Tentar USB direto primeiro
-    if (escpos && USB && config.impressoras.termica.tipo === 'usb') {
-        try {
-            for (let i = 0; i < quantidade; i++) {
-                await imprimirViaUSB(dados);
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            return;
-        } catch (e) {
-            logger.warn(`USB falhou: ${e.message}, tentando via Windows...`);
-        }
-    }
-    
-    // Fallback: Impressão via Windows
+    // Impressão via Windows
     if (config.impressoras.termica.nome) {
         await imprimirViaWindows(dados, quantidade);
     } else {
-        throw new Error('Impressora térmica não configurada');
+        throw new Error('Impressora térmica não configurada. Edite o config.json');
     }
 }
 

@@ -9,7 +9,33 @@
  * 4. Marca como impresso na API
  */
 
-const config = require('../config.json');
+const fs = require('fs');
+const path = require('path');
+
+// Detectar se está rodando como executável (pkg)
+const isPackaged = typeof process.pkg !== 'undefined';
+const baseDir = isPackaged ? path.dirname(process.execPath) : __dirname.replace(/[\\\/]src$/, '');
+
+// Carregar configuração
+let config;
+const configPath = path.join(baseDir, 'config.json');
+try {
+    if (fs.existsSync(configPath)) {
+        config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    } else {
+        console.error('❌ ERRO: config.json não encontrado em:', configPath);
+        console.log('\nCrie o arquivo config.json com as configurações das impressoras.');
+        process.exit(1);
+    }
+} catch (e) {
+    console.error('❌ ERRO ao ler config.json:', e.message);
+    process.exit(1);
+}
+
+// Exportar config e baseDir para outros módulos
+global.CONFIG = config;
+global.BASE_DIR = baseDir;
+
 const logger = require('./utils/logger');
 const polling = require('./polling');
 const queue = require('./queue');

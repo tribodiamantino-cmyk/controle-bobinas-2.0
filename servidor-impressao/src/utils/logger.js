@@ -4,7 +4,21 @@
 
 const fs = require('fs');
 const path = require('path');
-const config = require('../../config.json');
+
+// Detectar se está rodando como executável (pkg)
+const isPackaged = typeof process.pkg !== 'undefined';
+const baseDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '../..');
+
+// Carregar config
+let config = { logs: { nivel: 'info', arquivo: true } };
+try {
+    const configPath = path.join(baseDir, 'config.json');
+    if (fs.existsSync(configPath)) {
+        config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    }
+} catch (e) {
+    console.warn('Aviso: config.json não encontrado, usando padrões');
+}
 
 const NIVEIS = {
     debug: 0,
@@ -22,7 +36,7 @@ const CORES = {
 };
 
 const nivelAtual = NIVEIS[config.logs?.nivel || 'info'];
-const logDir = path.join(__dirname, '../../logs');
+const logDir = path.join(baseDir, 'logs');
 
 // Criar pasta de logs se não existir
 if (config.logs?.arquivo && !fs.existsSync(logDir)) {

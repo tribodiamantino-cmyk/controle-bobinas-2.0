@@ -3,9 +3,11 @@
  */
 
 const axios = require('axios');
-const config = require('../config.json');
 const logger = require('./utils/logger');
 const queue = require('./queue');
+
+// Usar config global
+const config = global.CONFIG;
 
 let intervalId = null;
 let emExecucao = false;
