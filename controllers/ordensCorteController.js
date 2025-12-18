@@ -243,8 +243,8 @@ exports.buscarPlanoPorId = async (req, res) => {
         
         plano.itens = itens;
         
-        // Se finalizado, buscar cortes realizados
-        if (plano.status === 'finalizado' || plano.status === 'Finalizado') {
+        // Se finalizado ou entregue, buscar cortes realizados
+        if (plano.status === 'finalizado' || plano.status === 'Finalizado' || plano.status === 'entregue') {
             const [cortes] = await db.query(`
                 SELECT 
                     cr.id,
@@ -254,7 +254,7 @@ exports.buscarPlanoPorId = async (req, res) => {
                     cr.placa_origem,
                     cr.status,
                     cr.data_corte,
-                    cr.foto_path,
+                    cr.foto_medidor_url,
                     CASE 
                         WHEN cr.origem_tipo = 'bobina' THEN b.codigo_interno
                         WHEN cr.origem_tipo = 'retalho' THEN r.codigo_retalho
