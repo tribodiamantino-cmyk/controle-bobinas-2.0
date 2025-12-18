@@ -1367,7 +1367,7 @@ router.post('/carregamento/validar-scan', async (req, res) => {
     }
 });
 
-// Finalizar carregamento
+// Finalizar carregamento (aceita ID no body)
 router.post('/carregamento/finalizar', async (req, res) => {
     try {
         const { carregamento_id } = req.body;
@@ -1386,6 +1386,32 @@ router.post('/carregamento/finalizar', async (req, res) => {
             carregamento: carregamento[0]
         });
     } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Finalizar carregamento (aceita ID na URL - usado pelo app mobile)
+router.post('/carregamento/:id/finalizar', async (req, res) => {
+    try {
+        const carregamentoId = req.params.id;
+        
+        await db.query(`
+            UPDATE carregamentos
+            SET status = 'concluido',
+                data_conclusao = NOW()
+            WHERE id = ?
+        `, [carregamentoId]);
+        
+        const [carregamento] = await db.query('SELECT * FROM carregamentos WHERE id = ?', [carregamentoId]);
+        
+        console.log(`✅ Carregamento ${carregamentoId} finalizado`);
+        
+        res.json({ 
+            success: true, 
+            carregamento: carregamento[0]
+        });
+    } catch (error) {
+        console.error('❌ Erro ao finalizar carregamento:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -2489,6 +2515,59 @@ router.post('/carregamento/finalizar', async (req, res) => {
         );
         
         console.log(`✅ Carregamento ${carregamento[0].codigo_carregamento} finalizado`);
+        
+        res.json({
+            success: true,
+            message: 'Carregamento finalizado com sucesso',
+            data: {
+                codigo_carregamento: carregamento[0].codigo_carregamento,
+                total_cortes: carregamento[0].total_cortes
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao finalizar carregamento:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Finalizar carregamento (aceita ID na URL - usado pelo app mobile)
+router.post('/carregamento/:id/finalizar', async (req, res) => {
+    try {
+        const carregamentoId = req.params.id;
+        
+        // Buscar carregamento
+        const [carregamento] = await db.query(
+            'SELECT id, codigo_carregamento, total_cortes, cortes_carregados FROM carregamentos WHERE id = ?',
+            [carregamentoId]
+        );
+        
+        if (!carregamento || carregamento.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Carregamento não encontrado'
+            });
+        }
+        
+        // Verificar se todos os cortes foram carregados
+        if (carregamento[0].cortes_carregados < carregamento[0].total_cortes) {
+            return res.status(400).json({
+                success: false,
+                error: `Apenas ${carregamento[0].cortes_carregados} de ${carregamento[0].total_cortes} cortes foram carregados`,
+                pode_finalizar_parcial: true
+            });
+        }
+        
+        // Finalizar carregamento
+        await db.query(
+            'UPDATE carregamentos SET status = ?, data_conclusao = NOW() WHERE id = ?',
+            ['concluido', carregamentoId]
+        );
+        
+        console.log(`✅ Carregamento ${carregamento[0].codigo_carregamento} finalizado via URL param`);
         
         res.json({
             success: true,
