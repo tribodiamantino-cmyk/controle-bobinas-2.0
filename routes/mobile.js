@@ -868,6 +868,156 @@ router.post('/registrar-corte', upload.single('foto'), async (req, res) => {
     }
 });
 
+// ==================== PDC: ATUALIZAR LOCAÇÃO DA ORIGEM ==================== //
+
+/**
+ * Atualiza locação de uma bobina ou retalho após cortes
+ * POST /api/mobile/pdcs/atualizar-locacao-origem
+ */
+router.post('/pdcs/atualizar-locacao-origem', async (req, res) => {
+    try {
+        const { tipo, origem_id, codigo_locacao } = req.body;
+        
+        console.log('📍 Atualizando locação da origem:', tipo, origem_id, codigo_locacao);
+        
+        if (!tipo || !origem_id || !codigo_locacao) {
+            return res.status(400).json({
+                success: false,
+                error: 'Tipo, origem_id e codigo_locacao são obrigatórios'
+            });
+        }
+        
+        // Normaliza código da locação (LOC-1-A-1 -> 0001-A-0001)
+        let locacaoNormalizada = codigo_locacao;
+        if (codigo_locacao.startsWith('LOC-')) {
+            // LOC-1-A-1 -> 1-A-1 -> 0001-A-0001
+            const semPrefixo = codigo_locacao.replace('LOC-', '');
+            const partes = semPrefixo.split('-');
+            if (partes.length === 3) {
+                locacaoNormalizada = `${partes[0].padStart(4, '0')}-${partes[1]}-${partes[2].padStart(4, '0')}`;
+            }
+        }
+        
+        // Atualiza no banco
+        if (tipo === 'bobina') {
+            await db.query(
+                'UPDATE bobinas SET locacao = ? WHERE id = ?',
+                [locacaoNormalizada, origem_id]
+            );
+        } else if (tipo === 'retalho') {
+            await db.query(
+                'UPDATE retalhos SET locacao = ? WHERE id = ?',
+                [locacaoNormalizada, origem_id]
+            );
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: 'Tipo deve ser "bobina" ou "retalho"'
+            });
+        }
+        
+        console.log('✅ Locação atualizada:', locacaoNormalizada);
+        
+        res.json({
+            success: true,
+            locacao: locacaoNormalizada
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar locação da origem:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ==================== PDC: FINALIZAR ==================== //
+
+/**
+ * Finaliza um PDC após todos os cortes serem concluídos
+ * POST /api/mobile/pdcs/:id/finalizar
+ */
+router.post('/pdcs/:id/finalizar', async (req, res) => {
+    try {
+        const pdcId = req.params.id;
+        const { locacoes } = req.body;
+        
+        console.log('🏁 Finalizando PDC:', pdcId, 'Locações:', locacoes);
+        
+        // Verifica se PDC existe
+        const [pdcs] = await db.query('SELECT * FROM planos_corte WHERE id = ?', [pdcId]);
+        if (pdcs.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'PDC não encontrado'
+            });
+        }
+        
+        // Verifica se tem locações
+        if (!locacoes || locacoes.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Informe pelo menos uma locação para armazenamento'
+            });
+        }
+        
+        // Salva locações na tabela plano_locacoes
+        for (let i = 0; i < locacoes.length; i++) {
+            let codigoLocacao = locacoes[i];
+            
+            // Normaliza código
+            if (codigoLocacao.startsWith('LOC-')) {
+                const semPrefixo = codigoLocacao.replace('LOC-', '');
+                const partes = semPrefixo.split('-');
+                if (partes.length === 3) {
+                    codigoLocacao = `${partes[0].padStart(4, '0')}-${partes[1]}-${partes[2].padStart(4, '0')}`;
+                }
+            }
+            
+            // Busca ID da locação (se existir)
+            const [locacao] = await db.query(
+                'SELECT id FROM locacoes WHERE codigo_locacao = ?',
+                [codigoLocacao]
+            );
+            
+            const locacaoId = locacao.length > 0 ? locacao[0].id : null;
+            
+            // Insere na plano_locacoes
+            await db.query(`
+                INSERT INTO plano_locacoes (plano_corte_id, locacao_id, codigo_locacao, validada_qr, data_scan, ordem_scan)
+                VALUES (?, ?, ?, TRUE, NOW(), ?)
+                ON DUPLICATE KEY UPDATE codigo_locacao = VALUES(codigo_locacao), data_scan = NOW()
+            `, [pdcId, locacaoId, codigoLocacao, i + 1]);
+        }
+        
+        // Atualiza status do PDC para Finalizado
+        await db.query(`
+            UPDATE planos_corte 
+            SET status = 'Finalizado',
+                locacoes_validadas = TRUE,
+                data_finalizacao = NOW(),
+                data_armazenamento = NOW()
+            WHERE id = ?
+        `, [pdcId]);
+        
+        console.log('✅ PDC finalizado com sucesso');
+        
+        res.json({
+            success: true,
+            message: 'PDC finalizado com sucesso',
+            locacoes_registradas: locacoes.length
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao finalizar PDC:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Consultar corte por código
 router.get('/corte/:codigo_corte', cortesController.consultarCorte);
 

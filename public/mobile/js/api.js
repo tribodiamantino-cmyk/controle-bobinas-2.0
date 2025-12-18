@@ -166,6 +166,16 @@ class API {
     }
 
     /**
+     * Atualiza locação de bobina/retalho após todos cortes concluídos
+     */
+    static async atualizarLocacaoOrigem(dados) {
+        return this.request('/mobile/pdcs/atualizar-locacao-origem', {
+            method: 'POST',
+            body: JSON.stringify(dados)
+        });
+    }
+
+    /**
      * Finaliza um PDC (todos cortes concluídos)
      */
     static async finalizarPDC(pdcId, locacoes) {

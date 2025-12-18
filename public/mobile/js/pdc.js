@@ -602,12 +602,11 @@ class PDCModule {
                     document.getElementById('cortesSection').style.display = 'block';
                     this.renderListaCortes();
                 } else {
-                    // Todos os cortes da origem foram concluídos
-                    Utils.mostrarSucesso('Todos os cortes desta origem foram concluídos!');
-                    
-                    // Volta para lista de origens (com dados atualizados)
+                    // Todos os cortes da origem foram concluídos!
+                    // Pede para guardar a origem (informar nova locação)
                     this.pdcAtual = response.pdc;
-                    this.renderOrigens(origens);
+                    this.origensAtualizadas = origens;
+                    this.iniciarGuardarOrigem();
                 }
             } else {
                 // Origem não encontrada (improvável) - volta para origens
@@ -621,6 +620,134 @@ class PDCModule {
             // Fallback: volta para origens
             await this.abrirPDC(this.pdcAtual.id);
         }
+    }
+
+    /**
+     * Inicia processo de guardar a origem (informar nova locação)
+     */
+    iniciarGuardarOrigem() {
+        const icone = this.origemAtual.tipo === 'bobina' ? '📦' : '♻️';
+        const tipoNome = this.origemAtual.tipo === 'bobina' ? 'Bobina' : 'Retalho';
+        
+        // Mostra view de guardar origem
+        this.mostrarView('cortesView');
+        
+        const container = document.getElementById('cortesSection');
+        container.style.display = 'block';
+        document.getElementById('validarOrigemSection').style.display = 'none';
+        
+        // Renderiza tela de guardar origem
+        document.getElementById('cortesContainer').innerHTML = `
+            <div class="text-center py-4">
+                <div class="icon-xl text-success mb-3">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <h4>Cortes Concluídos!</h4>
+                <p class="text-muted mb-4">
+                    ${icone} ${tipoNome} <strong>${this.origemAtual.codigo}</strong>
+                </p>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-geo-alt"></i>
+                    <strong>Agora guarde ${tipoNome.toLowerCase()} e escaneie a locação</strong>
+                </div>
+                
+                <div class="form-group mt-4">
+                    <label class="form-label">Locação:</label>
+                    <div class="input-group">
+                        <input type="text" 
+                               id="locacaoGuardarOrigem" 
+                               class="form-control form-control-lg text-center"
+                               placeholder="Ex: 1-A-1"
+                               style="text-transform: uppercase;">
+                        <button class="btn btn-primary" onclick="pdc.escanearLocacaoOrigem()">
+                            <i class="bi bi-qr-code-scan"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">Escaneie ou digite a locação</small>
+                </div>
+                
+                <div class="d-grid gap-2 mt-4">
+                    <button class="btn btn-success btn-lg" onclick="pdc.confirmarGuardarOrigem()">
+                        <i class="bi bi-check-lg"></i> CONFIRMAR LOCAÇÃO
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="pdc.pularGuardarOrigem()">
+                        Pular (manter locação atual)
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Escaneia locação para guardar origem
+     */
+    async escanearLocacaoOrigem() {
+        try {
+            // Configura callback temporário
+            const callbackOriginal = this.scanner.callback;
+            this.scanner.callback = (codigo) => {
+                // Preenche o campo
+                document.getElementById('locacaoGuardarOrigem').value = codigo.toUpperCase();
+                // Restaura callback
+                this.scanner.callback = callbackOriginal;
+            };
+            
+            await this.scanner.iniciar();
+        } catch (error) {
+            console.error('Erro ao escanear locação:', error);
+            Utils.mostrarErro('Erro ao abrir scanner');
+        }
+    }
+
+    /**
+     * Confirma guardar origem com nova locação
+     */
+    async confirmarGuardarOrigem() {
+        try {
+            let codigo = document.getElementById('locacaoGuardarOrigem').value.trim().toUpperCase();
+            
+            if (!codigo) {
+                Utils.mostrarErro('Informe a locação');
+                return;
+            }
+            
+            Utils.mostrarLoading('Salvando locação...');
+            
+            // Chama API para atualizar locação
+            const response = await API.atualizarLocacaoOrigem({
+                tipo: this.origemAtual.tipo,
+                origem_id: this.origemAtual.id,
+                codigo_locacao: codigo
+            });
+            
+            Utils.esconderLoading();
+            
+            if (response.success) {
+                Utils.feedbackSucesso();
+                Utils.mostrarSucesso('Locação atualizada!');
+                
+                // Volta para lista de origens após 1.5s
+                setTimeout(() => {
+                    this.renderOrigens(this.origensAtualizadas);
+                }, 1500);
+            } else {
+                throw new Error(response.error || 'Erro ao salvar');
+            }
+            
+        } catch (error) {
+            console.error('Erro ao guardar origem:', error);
+            Utils.esconderLoading();
+            Utils.mostrarErro(error.message || 'Erro ao salvar locação');
+        }
+    }
+
+    /**
+     * Pula etapa de guardar origem (mantém locação atual)
+     */
+    pularGuardarOrigem() {
+        Utils.mostrarAviso('Locação mantida');
+        this.renderOrigens(this.origensAtualizadas);
     }
 
     /**
