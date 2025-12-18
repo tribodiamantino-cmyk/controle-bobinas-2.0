@@ -484,23 +484,36 @@ router.post('/validar-item', async (req, res) => {
             WHERE id = ?
         `, [item_id]);
         
-        // Gerar código sequencial simples para o corte (COR-000001)
-        const [ultimoCodigo] = await connection.query(`
+        // Gerar código do corte no formato COR-{LOJA}-{PLANO}-{SEQUENCIAL}
+        // Exemplo: COR-PLA-001-01 (1º corte do PDC 001)
+        
+        // Buscar loja do plano
+        const [planoInfo] = await connection.query(
+            'SELECT loja FROM planos_corte WHERE id = ?', 
+            [planoCorteId]
+        );
+        const loja = planoInfo.length > 0 ? planoInfo[0].loja : 'PLA';
+        
+        // Buscar próximo sequencial dentro do plano (reinicia em cada PDC)
+        const [ultimoCorte] = await connection.query(`
             SELECT codigo_corte FROM cortes_realizados 
-            WHERE codigo_corte LIKE 'COR-%' 
+            WHERE plano_corte_id = ? 
             ORDER BY id DESC LIMIT 1
-        `);
+        `, [planoCorteId]);
         
         let sequencial = 1;
-        if (ultimoCodigo.length > 0) {
-            // Extrair número do formato COR-000001
-            const match = ultimoCodigo[0].codigo_corte.match(/COR-(\d+)/);
-            if (match) {
-                sequencial = parseInt(match[1]) + 1;
+        if (ultimoCorte.length > 0) {
+            // Extrair número do formato COR-PLA-001-05 -> 05
+            const partes = ultimoCorte[0].codigo_corte.split('-');
+            if (partes.length >= 4) {
+                sequencial = parseInt(partes[3]) + 1;
             }
         }
         
-        const codigoCorte = `COR-${String(sequencial).padStart(6, '0')}`;
+        // Formato: COR-{LOJA}-{PLANO 3 dígitos}-{SEQUENCIAL 2 dígitos}
+        const planoStr = String(planoCorteId).padStart(3, '0');
+        const seqStr = String(sequencial).padStart(2, '0');
+        const codigoCorte = `COR-${loja}-${planoStr}-${seqStr}`;
         
         // Criar registro em cortes_realizados
         const [corteResult] = await connection.query(`
@@ -763,33 +776,34 @@ router.post('/registrar-corte', upload.single('foto'), async (req, res) => {
             }
         }
         
-        // Gera código do corte
+        // Gera código do corte no formato COR-{LOJA}-{PLANO}-{SEQUENCIAL}
+        // Exemplo: COR-PLA-001-01 (1º corte do PDC 001)
+        
         // Busca loja do PDC
         const [pdcInfo] = await db.query('SELECT loja FROM planos_corte WHERE id = ?', [pdc_id]);
         const loja = pdcInfo.length > 0 ? pdcInfo[0].loja : 'PLA';
         
-        // Busca último corte para gerar sequencial
+        // Buscar próximo sequencial dentro do plano (reinicia em cada PDC)
         const [ultimoCorte] = await db.query(
             `SELECT codigo_corte FROM cortes_realizados 
-             WHERE codigo_corte LIKE 'COR-${loja}-%' 
-             ORDER BY id DESC LIMIT 1`
+             WHERE plano_corte_id = ? 
+             ORDER BY id DESC LIMIT 1`,
+            [pdc_id]
         );
         
-        let numeroCorte = 1;
+        let sequencial = 1;
         if (ultimoCorte.length > 0) {
-            // Extrai número do código: COR-PLA-001-05 -> 005
+            // Extrai número do código: COR-PLA-001-05 -> 05
             const partes = ultimoCorte[0].codigo_corte.split('-');
-            if (partes.length >= 3) {
-                const planoNum = parseInt(partes[2]) || 0;
-                const seqNum = partes.length > 3 ? parseInt(partes[3]) || 0 : 0;
-                numeroCorte = planoNum * 100 + seqNum + 1;
+            if (partes.length >= 4) {
+                sequencial = parseInt(partes[3]) + 1;
             }
         }
         
-        // Formato: COR-LOJA-PLANO-SEQ
-        const planoNum = String(Math.floor(numeroCorte / 100) || pdc_id).padStart(3, '0');
-        const seqNum = String((numeroCorte % 100) || 1).padStart(2, '0');
-        const codigo_corte = `COR-${loja}-${planoNum}-${seqNum}`;
+        // Formato: COR-{LOJA}-{PLANO 3 dígitos}-{SEQUENCIAL 2 dígitos}
+        const planoStr = String(pdc_id).padStart(3, '0');
+        const seqStr = String(sequencial).padStart(2, '0');
+        const codigo_corte = `COR-${loja}-${planoStr}-${seqStr}`;
         
         // URL da foto
         let foto_url = null;
