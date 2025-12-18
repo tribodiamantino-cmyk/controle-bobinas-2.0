@@ -149,12 +149,19 @@ class CarregamentoModule {
             const response = await API.iniciarCarregamento(pdc.id);
             this.carregamentoAtual = response.carregamento;
             this.todosCortes = response.cortes || []; // Armazena todos os cortes
-            this.cortesValidados = [];
+            
+            // Se retomou carregamento, recupera cortes já validados
+            this.cortesValidados = response.cortesValidados || [];
 
             Utils.esconderLoading();
 
             debugLog('Carregamento iniciado:', this.carregamentoAtual);
             debugLog('Total de cortes:', this.todosCortes.length);
+            debugLog('Cortes já validados:', this.cortesValidados.length);
+            
+            if (response.retomado) {
+                Utils.mostrarSucesso(`Retomando carregamento: ${this.cortesValidados.length}/${this.todosCortes.length} já validados`);
+            }
 
             // Mostra tela de validação
             this.renderValidacao();
@@ -210,10 +217,12 @@ class CarregamentoModule {
             return;
         }
 
+        // Usar tanto ID quanto codigo_corte para verificar (flexibilidade)
+        const idsValidados = this.cortesValidados.map(c => c.id);
         const codigosValidados = this.cortesValidados.map(c => c.codigo_corte);
 
         const html = this.todosCortes.map((corte, index) => {
-            const isValidado = codigosValidados.includes(corte.codigo_corte);
+            const isValidado = idsValidados.includes(corte.id) || codigosValidados.includes(corte.codigo_corte);
             const statusClass = isValidado ? 'bg-success text-white' : 'bg-light';
             const iconClass = isValidado ? 'bi-check-circle-fill text-white' : 'bi-circle text-muted';
             
@@ -240,7 +249,6 @@ class CarregamentoModule {
 
         container.innerHTML = html;
     }
-
     /**
      * Atualiza barra de progresso
      */

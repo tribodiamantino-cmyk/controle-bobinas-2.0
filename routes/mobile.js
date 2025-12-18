@@ -1211,7 +1211,52 @@ router.post('/carregamento/iniciar', async (req, res) => {
             return res.status(400).json({ success: false, error: 'ID do PDC é obrigatório' });
         }
         
-        // Gerar código de carregamento
+        // Verificar se já existe carregamento em andamento para este PDC
+        const [carregamentoExistente] = await db.query(`
+            SELECT c.*, 
+                   (SELECT GROUP_CONCAT(ci.corte_id) FROM carregamentos_itens ci WHERE ci.carregamento_id = c.id) as cortes_validados_ids
+            FROM carregamentos c
+            WHERE c.plano_corte_id = ? AND c.status = 'em_andamento'
+            ORDER BY c.id DESC LIMIT 1
+        `, [pdcId]);
+        
+        // Buscar todos os cortes do PDC
+        const [cortes] = await db.query(`
+            SELECT cr.*, p.codigo as produto_codigo, c.nome_cor
+            FROM cortes_realizados cr
+            JOIN produtos p ON p.id = cr.produto_id
+            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+            WHERE cr.plano_corte_id = ?
+            ORDER BY cr.data_corte
+        `, [pdcId]);
+        
+        // Se já existe carregamento em andamento, reutiliza
+        if (carregamentoExistente && carregamentoExistente.length > 0) {
+            const carrExistente = carregamentoExistente[0];
+            const idsValidados = carrExistente.cortes_validados_ids 
+                ? carrExistente.cortes_validados_ids.split(',').map(Number)
+                : [];
+            
+            // Buscar dados dos cortes já validados
+            const cortesValidados = cortes.filter(c => idsValidados.includes(c.id));
+            
+            console.log(`🔄 Retomando carregamento existente ${carrExistente.codigo_carregamento} (${idsValidados.length}/${cortes.length} validados)`);
+            
+            return res.json({ 
+                success: true,
+                carregamento: {
+                    id: carrExistente.id,
+                    codigo_carregamento: carrExistente.codigo_carregamento,
+                    total_cortes: cortes.length,
+                    cortes_carregados: carrExistente.cortes_carregados
+                },
+                cortes,
+                cortesValidados, // Cortes já validados anteriormente
+                retomado: true
+            });
+        }
+        
+        // Criar novo carregamento
         const ano = new Date().getFullYear();
         const [ultimo] = await db.query(`
             SELECT codigo_carregamento FROM carregamentos 
@@ -1225,32 +1270,27 @@ router.post('/carregamento/iniciar', async (req, res) => {
         }
         const codigo_carregamento = `CAR-${ano}-${String(numero).padStart(5, '0')}`;
         
-        // Buscar total de cortes
-        const [cortes] = await db.query(`
-            SELECT cr.*, p.codigo as produto_codigo, c.nome_cor
-            FROM cortes_realizados cr
-            JOIN produtos p ON p.id = cr.produto_id
-            LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
-            WHERE cr.plano_corte_id = ?
-            ORDER BY cr.data_corte
-        `, [pdcId]);
-        
-        // Criar carregamento
         const [result] = await db.query(`
-            INSERT INTO carregamentos (codigo_carregamento, plano_corte_id, total_cortes, operador_nome)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO carregamentos (codigo_carregamento, plano_corte_id, total_cortes, operador_nome, status)
+            VALUES (?, ?, ?, ?, 'em_andamento')
         `, [codigo_carregamento, pdcId, cortes.length, operador_nome]);
+        
+        console.log(`✅ Novo carregamento criado: ${codigo_carregamento}`);
         
         res.json({ 
             success: true,
             carregamento: {
                 id: result.insertId,
                 codigo_carregamento,
-                total_cortes: cortes.length
+                total_cortes: cortes.length,
+                cortes_carregados: 0
             },
-            cortes
+            cortes,
+            cortesValidados: [],
+            retomado: false
         });
     } catch (error) {
+        console.error('❌ Erro ao iniciar carregamento:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -2329,20 +2369,18 @@ router.post('/carregamento/validar-corte', async (req, res) => {
         `, [codigo_corte]);
         
         if (!corte || corte.length === 0) {
-            return res.json({
-                success: true,
-                valido: false,
-                erro: 'Corte não encontrado',
+            return res.status(404).json({
+                success: false,
+                error: 'Corte não encontrado',
                 validacao: 'invalido'
             });
         }
         
         // Verificar se corte pertence ao plano do carregamento
         if (corte[0].plano_corte_id !== carregamento[0].plano_corte_id) {
-            return res.json({
-                success: true,
-                valido: false,
-                erro: 'Este corte não pertence ao plano deste carregamento',
+            return res.status(400).json({
+                success: false,
+                error: 'Este corte não pertence ao plano deste carregamento',
                 validacao: 'plano_errado',
                 corte: corte[0]
             });
@@ -2355,10 +2393,9 @@ router.post('/carregamento/validar-corte', async (req, res) => {
         );
         
         if (jaEscaneado && jaEscaneado.length > 0) {
-            return res.json({
-                success: true,
-                valido: false,
-                erro: 'Este corte já foi escaneado neste carregamento',
+            return res.status(400).json({
+                success: false,
+                error: 'Este corte já foi escaneado neste carregamento',
                 validacao: 'duplicado',
                 corte: corte[0]
             });
@@ -3102,7 +3139,7 @@ router.post('/carregamento/validar-corte', async (req, res) => {
             );
 
             return res.json({
-                success: true,
+                success: false,
                 valido: false,
                 erro: 'Corte pertence a outro PDC',
                 corte: {
@@ -3121,7 +3158,7 @@ router.post('/carregamento/validar-corte', async (req, res) => {
 
         if (jaCarregado.length > 0) {
             return res.json({
-                success: true,
+                success: false,
                 valido: false,
                 erro: 'Corte já validado anteriormente'
             });
