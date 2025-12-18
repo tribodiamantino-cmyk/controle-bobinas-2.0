@@ -243,6 +243,52 @@ exports.buscarPlanoPorId = async (req, res) => {
         
         plano.itens = itens;
         
+        // Se finalizado, buscar cortes realizados
+        if (plano.status === 'finalizado' || plano.status === 'Finalizado') {
+            const [cortes] = await db.query(`
+                SELECT 
+                    cr.id,
+                    cr.codigo_corte,
+                    cr.metragem_cortada,
+                    cr.origem_tipo,
+                    cr.placa_origem,
+                    cr.status,
+                    cr.data_corte,
+                    cr.foto_path,
+                    CASE 
+                        WHEN cr.origem_tipo = 'bobina' THEN b.codigo_interno
+                        WHEN cr.origem_tipo = 'retalho' THEN r.codigo_retalho
+                    END as origem_codigo,
+                    p.codigo as produto_codigo,
+                    c.nome_cor,
+                    g.gramatura
+                FROM cortes_realizados cr
+                LEFT JOIN bobinas b ON cr.bobina_id = b.id
+                LEFT JOIN retalhos r ON cr.retalho_id = r.id
+                LEFT JOIN produtos p ON cr.produto_id = p.id
+                LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                WHERE cr.plano_corte_id = ?
+                ORDER BY cr.data_corte
+            `, [id]);
+            
+            plano.cortes = cortes;
+            
+            // Buscar locações de armazenamento
+            try {
+                const [locacoes] = await db.query(`
+                    SELECT codigo_locacao FROM plano_locacoes 
+                    WHERE plano_corte_id = ? 
+                    ORDER BY ordem_scan
+                `, [id]);
+                
+                plano.locacoes_armazenamento = locacoes.map(l => l.codigo_locacao).join(', ');
+            } catch (err) {
+                // Tabela pode não existir ainda
+                plano.locacoes_armazenamento = '';
+            }
+        }
+        
         res.json({ 
             success: true, 
             data: plano 

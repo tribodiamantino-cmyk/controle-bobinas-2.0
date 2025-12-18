@@ -596,6 +596,12 @@ function renderizarDetalhesPlano(plano) {
     document.getElementById('infoDetalhes').textContent = 
         `${plano.cliente} • ${plano.aviario} • ${new Date(plano.data_criacao).toLocaleDateString('pt-BR')}`;
     
+    // Para PDCs finalizados, mostrar cortes realizados
+    if (plano.status === 'finalizado') {
+        renderizarDetalhesPlanoFinalizado(plano);
+        return;
+    }
+    
     // Mostrar botão de edição se estiver em planejamento
     let botoesAdicionais = '';
     if (plano.status === 'planejamento') {
@@ -681,6 +687,117 @@ function renderizarDetalhesPlano(plano) {
             </tbody>
         </table>
     `;
+    
+    document.getElementById('conteudoDetalhes').innerHTML = conteudoHTML;
+    document.getElementById('modoVisualizacao').style.display = 'block';
+    document.getElementById('modoEdicao').style.display = 'none';
+}
+
+/**
+ * Renderiza detalhes de um PDC finalizado (mostra cortes ao invés de origens)
+ */
+function renderizarDetalhesPlanoFinalizado(plano) {
+    const cortes = plano.cortes || [];
+    const locacoes = plano.locacoes_armazenamento || plano.locacoes || '';
+    
+    let conteudoHTML = `
+        <div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 24px;">✅</span>
+                <div>
+                    <strong style="color: #065f46; font-size: 16px;">PDC Finalizado</strong>
+                    <div style="color: #047857; font-size: 13px;">
+                        ${cortes.length} corte(s) realizado(s)
+                        ${locacoes ? ` • Armazenado em: <strong>${locacoes}</strong>` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h4 style="margin-bottom: 15px; color: #374151;">
+            ✂️ Cortes Realizados
+        </h4>
+    `;
+    
+    if (cortes.length === 0) {
+        conteudoHTML += `
+            <div style="text-align: center; padding: 40px; color: #999;">
+                <p>Nenhum corte registrado para este PDC.</p>
+                <small>Os cortes são registrados pelo app mobile durante a produção.</small>
+            </div>
+        `;
+    } else {
+        conteudoHTML += `
+            <table class="tabela-itens">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Código do Corte</th>
+                        <th>Produto</th>
+                        <th>Metragem</th>
+                        <th>Origem</th>
+                        <th>Placa</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        cortes.forEach((corte, index) => {
+            const dataCorte = corte.data_corte 
+                ? new Date(corte.data_corte).toLocaleDateString('pt-BR') 
+                : '-';
+            
+            const origemBadge = corte.origem_tipo === 'retalho'
+                ? '<span class="badge-prioridade alta">RET</span>'
+                : '<span class="badge-prioridade media">BOB</span>';
+            
+            conteudoHTML += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>
+                        <strong style="color: #059669; font-family: monospace;">
+                            ${corte.codigo_corte || '-'}
+                        </strong>
+                    </td>
+                    <td>
+                        <strong>${corte.produto_codigo || '-'}</strong><br>
+                        <small style="color: #666;">${corte.nome_cor || ''} ${corte.gramatura ? corte.gramatura + 'g' : ''}</small>
+                    </td>
+                    <td>
+                        <strong style="color: #059669;">${parseFloat(corte.metragem_cortada || 0).toFixed(2)}m</strong>
+                    </td>
+                    <td>
+                        ${origemBadge}
+                        <span style="font-size: 12px;">${corte.origem_codigo || '-'}</span>
+                    </td>
+                    <td>
+                        ${corte.placa_origem 
+                            ? `<span style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${corte.placa_origem}</span>`
+                            : '-'
+                        }
+                    </td>
+                    <td style="font-size: 12px; color: #666;">${dataCorte}</td>
+                </tr>
+            `;
+        });
+        
+        conteudoHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        // Resumo de metragem total
+        const metragemTotal = cortes.reduce((sum, c) => sum + parseFloat(c.metragem_cortada || 0), 0);
+        conteudoHTML += `
+            <div style="text-align: right; margin-top: 15px; padding: 10px; background: #f3f4f6; border-radius: 8px;">
+                <strong>Total Cortado: </strong>
+                <span style="font-size: 18px; color: #059669; font-weight: bold;">
+                    ${metragemTotal.toFixed(2)}m
+                </span>
+            </div>
+        `;
+    }
     
     document.getElementById('conteudoDetalhes').innerHTML = conteudoHTML;
     document.getElementById('modoVisualizacao').style.display = 'block';
