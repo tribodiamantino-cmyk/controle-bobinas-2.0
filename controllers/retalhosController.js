@@ -313,6 +313,10 @@ exports.listarRetalhos = async (req, res) => {
                 p.codigo,
                 p.loja,
                 p.fabricante,
+                p.tipo_tecido,
+                p.largura_final,
+                p.largura_maior,
+                p.largura_y,
                 c.nome_cor,
                 g.gramatura,
                 b.codigo_interno as bobina_codigo
@@ -347,6 +351,10 @@ exports.listarRetalhos = async (req, res) => {
                     p.codigo,
                     p.loja,
                     p.fabricante,
+                    p.tipo_tecido,
+                    p.largura_final,
+                    p.largura_maior,
+                    p.largura_y,
                     c.nome_cor,
                     g.gramatura,
                     b.codigo_interno as bobina_codigo

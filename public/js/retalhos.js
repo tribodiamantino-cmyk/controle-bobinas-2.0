@@ -190,7 +190,7 @@ function renderizarTabela(retalhos) {
     if (retalhos.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" style="text-align: center; padding: 40px; color: #999;">
+                <td colspan="11" style="text-align: center; padding: 40px; color: #999;">
                     Nenhum retalho encontrado
                 </td>
             </tr>
@@ -218,6 +218,9 @@ function renderizarTabela(retalhos) {
                 <div style="font-size: 0.85em; color: #666;">
                     ${r.nome_cor || '-'} ${r.gramatura || '-'}g/m²
                 </div>
+            </td>
+            <td>
+                ${formatarLargura(r)}
             </td>
             <td>
                 <span style="color: #28a745; font-weight: 600; font-size: 1.1em;">
@@ -255,6 +258,24 @@ function renderizarTabela(retalhos) {
             </td>
         </tr>
     `}).join('');
+}
+
+/**
+ * Formata a largura do tecido
+ * Normal: apenas largura_final
+ * Bando Y: largura_maior x largura_y x largura_y (ex: 180 x 60 x 60)
+ */
+function formatarLargura(r) {
+    if (r.tipo_tecido === 'Bando Y' && r.largura_maior && r.largura_y) {
+        const lMaior = parseFloat(r.largura_maior).toFixed(0);
+        const lY = parseFloat(r.largura_y).toFixed(0);
+        return `<span style="font-weight: 600; color: #6f42c1;" title="Bando Y: ${lMaior} x ${lY} x ${lY}">
+            ${lMaior}×${lY}×${lY}
+        </span>`;
+    } else if (r.largura_final) {
+        return `<span style="font-weight: 500;">${parseFloat(r.largura_final).toFixed(0)}cm</span>`;
+    }
+    return '<span style="color: #999;">-</span>';
 }
 
 function formatarOrigem(r) {
