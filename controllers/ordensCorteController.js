@@ -961,13 +961,31 @@ exports.voltarParaPlanejamento = async (req, res) => {
         }
         
         const plano = planos[0];
+        const statusAtual = plano.status?.toLowerCase();
         
-        if (plano.status !== 'em_producao' && plano.status !== 'Em Produção') {
+        // Permitir voltar de: em_producao, em produção, finalizado
+        const statusPermitidos = ['em_producao', 'em produção', 'finalizado'];
+        if (!statusPermitidos.includes(statusAtual)) {
             await connection.rollback();
             return res.status(400).json({ 
                 success: false, 
-                error: 'Apenas planos em produção podem voltar para planejamento' 
+                error: `Apenas planos em produção ou finalizados podem voltar para planejamento. Status atual: ${plano.status}` 
             });
+        }
+        
+        const eraFinalizado = statusAtual === 'finalizado';
+        
+        // ============================================================
+        // SE ERA FINALIZADO: LIMPAR DADOS DE ARMAZENAMENTO
+        // ============================================================
+        if (eraFinalizado) {
+            console.log(`🔄 Revertendo PDC finalizado ${plano.codigo_plano}...`);
+            
+            // Limpar locações de armazenamento
+            await connection.query(`
+                DELETE FROM plano_locacoes WHERE plano_corte_id = ?
+            `, [id]);
+            console.log(`  🗑️ Locações de armazenamento removidas`);
         }
         
         // ============================================================

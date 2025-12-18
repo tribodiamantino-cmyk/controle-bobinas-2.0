@@ -192,6 +192,10 @@ function criarCardPlano(plano) {
         `;
     } else if (plano.status === 'finalizado') {
         acoes = `
+            <button class="btn-kanban btn-kanban-warning" onclick="event.stopPropagation(); voltarParaPlanejamento(${plano.id})" title="Converter cortes em retalhos e voltar para planejamento">
+                <span class="btn-kanban-icon">◀</span>
+                <span class="btn-kanban-text">Reverter</span>
+            </button>
             ${btnTemplate}
             <button class="btn-kanban btn-kanban-info" onclick="event.stopPropagation(); arquivarPlano(${plano.id})">
                 <span class="btn-kanban-icon">📦</span>
@@ -1466,7 +1470,13 @@ function mostrarAlertaEtiquetasRetalhos(retalhos) {
 
 // ========== VOLTAR PARA PLANEJAMENTO ==========
 async function voltarParaPlanejamento(planoId) {
-    if (!confirm('Deseja voltar este plano para a fase de planejamento? As reservas de metragem serão liberadas.')) {
+    const mensagem = `⚠️ ATENÇÃO: Esta ação irá:\n\n` +
+        `• Liberar todas as reservas de metragem\n` +
+        `• Converter TODOS os cortes realizados em RETALHOS\n` +
+        `• As etiquetas dos retalhos serão adicionadas à fila de impressão\n\n` +
+        `Deseja realmente reverter este plano para planejamento?`;
+    
+    if (!confirm(mensagem)) {
         return;
     }
     
@@ -1480,6 +1490,16 @@ async function voltarParaPlanejamento(planoId) {
         
         if (data.success) {
             showNotification(data.message, 'success');
+            
+            // Se gerou retalhos, pergunta se quer ir para a fila de impressão
+            if (data.retalhos_gerados && data.retalhos_gerados.length > 0) {
+                setTimeout(() => {
+                    if (confirm(`✅ ${data.retalhos_gerados.length} retalho(s) gerado(s)!\n\nDeseja ir para a fila de impressão?`)) {
+                        window.location.href = '/fila-impressao.html';
+                    }
+                }, 500);
+            }
+            
             carregarPlanos();
         } else {
             showNotification(data.error, 'error');
