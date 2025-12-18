@@ -1026,6 +1026,8 @@ exports.voltarParaPlanejamento = async (req, res) => {
                     corte.id // Referência ao corte de origem
                 ]);
                 
+                const retalhoId = resultRetalho.insertId;
+                
                 // Marcar o corte como convertido em retalho
                 await connection.query(`
                     UPDATE cortes_realizados 
@@ -1033,12 +1035,77 @@ exports.voltarParaPlanejamento = async (req, res) => {
                         retalho_gerado_id = ?,
                         observacoes = CONCAT(COALESCE(observacoes, ''), ' | Convertido em retalho ${codigoRetalho} em ', NOW())
                     WHERE id = ?
-                `, [resultRetalho.insertId, corte.id]);
+                `, [retalhoId, corte.id]);
+                
+                // ============================================================
+                // ADICIONAR À FILA DE IMPRESSÃO
+                // ============================================================
+                try {
+                    // Buscar dados completos do retalho para a etiqueta
+                    const [dadosRetalho] = await connection.query(`
+                        SELECT 
+                            r.id, r.codigo_retalho, r.metragem, r.placa,
+                            p.fabricante, p.loja, p.codigo as produto_codigo,
+                            p.largura_final as largura, p.tipo_bainha as bainha,
+                            c.nome_cor as cores, g.gramatura
+                        FROM retalhos r
+                        LEFT JOIN produtos p ON r.produto_id = p.id
+                        LEFT JOIN configuracoes_cores c ON p.cor_id = c.id
+                        LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
+                        WHERE r.id = ?
+                    `, [retalhoId]);
+                    
+                    if (dadosRetalho.length > 0) {
+                        const ret = dadosRetalho[0];
+                        // Código compacto para etiqueta (RET-PLA-000001 → RET-PLA-1)
+                        const codigoCompacto = codigoRetalho.replace(/^(RET-[A-Z]{3}-)0*(\d+)$/, '$1$2');
+                        const lojaFila = prefixo; // PLA ou CIA
+                        
+                        // Montar dados da etiqueta
+                        const dadosEtiqueta = {
+                            tipo: 'retalho',
+                            codigo: codigoCompacto,
+                            loja: lojaFila,
+                            linha1: codigoCompacto,
+                            linha2_barcode: codigoCompacto,
+                            linha3: `${ret.cores || 'S/C'} ${ret.largura || ''}cm ${ret.bainha || ''} ${ret.gramatura || ''}`.trim(),
+                            linha4: `${ret.fabricante || 'S/F'} | ${parseFloat(ret.metragem).toFixed(2)}m`,
+                            raw: {
+                                id: retalhoId,
+                                metragem: ret.metragem,
+                                fabricante: ret.fabricante,
+                                placa: ret.placa,
+                                cores: ret.cores
+                            }
+                        };
+                        
+                        // Inserir na fila de impressão
+                        await connection.query(`
+                            INSERT INTO fila_impressao 
+                            (tipo_etiqueta, entidade_id, dados_etiqueta, codigo_etiqueta, quantidade, prioridade, loja, solicitado_por)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        `, [
+                            'retalho',
+                            retalhoId,
+                            JSON.stringify(dadosEtiqueta),
+                            codigoCompacto,
+                            1, // quantidade
+                            'alta', // prioridade alta para retalhos convertidos
+                            lojaFila,
+                            'Sistema (PDC Revertido)'
+                        ]);
+                        
+                        console.log(`  🖨️ Etiqueta ${codigoCompacto} adicionada à fila de impressão`);
+                    }
+                } catch (errImpressao) {
+                    // Não falha a operação se a impressão der erro
+                    console.error(`  ⚠️ Erro ao adicionar etiqueta à fila:`, errImpressao.message);
+                }
                 
                 retalhosGerados.push({
                     corte_codigo: corte.codigo_corte,
                     retalho_codigo: codigoRetalho,
-                    retalho_id: resultRetalho.insertId,
+                    retalho_id: retalhoId,
                     metragem: corte.metragem_cortada
                 });
                 
