@@ -1,18 +1,18 @@
 /**
  * Migration 043: Adicionar status 'entregue' aos planos de corte
  * 
- * Fluxo: pendente → em_producao → finalizado → entregue → (arquivado futuro)
+ * Fluxo: planejamento → em_producao → finalizado → entregue → (arquivado futuro)
  * 
  * Quando um carregamento é finalizado, o PDC associado vai para 'entregue'
  */
 
 exports.up = async function(db) {
     try {
-        // Alterar ENUM para incluir 'entregue'
+        // Alterar ENUM para incluir 'entregue' (mantendo todos os valores existentes)
         await db.query(`
             ALTER TABLE planos_corte 
-            MODIFY COLUMN status ENUM('rascunho', 'pendente', 'em_producao', 'finalizado', 'entregue', 'cancelado') 
-            DEFAULT 'pendente'
+            MODIFY COLUMN status ENUM('planejamento', 'em_producao', 'finalizado', 'entregue', 'arquivado', 'cancelado') 
+            DEFAULT 'planejamento'
         `);
         
         console.log('✅ Migration 043: Status "entregue" adicionado aos planos de corte');
@@ -34,7 +34,7 @@ exports.down = async function(db) {
     
     await db.query(`
         ALTER TABLE planos_corte 
-        MODIFY COLUMN status ENUM('rascunho', 'pendente', 'em_producao', 'finalizado', 'cancelado') 
-        DEFAULT 'pendente'
+        MODIFY COLUMN status ENUM('planejamento', 'em_producao', 'finalizado', 'arquivado', 'cancelado') 
+        DEFAULT 'planejamento'
     `);
 };
