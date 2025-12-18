@@ -938,17 +938,22 @@ exports.enviarParaProducao = async (req, res) => {
     }
 };
 
-// Voltar plano para planejamento (liberar reservas)
+// Voltar plano para planejamento (liberar reservas e converter cortes em retalhos)
 exports.voltarParaPlanejamento = async (req, res) => {
+    const connection = await db.getConnection();
+    
     try {
         const { id } = req.params;
         
+        await connection.beginTransaction();
+        
         // Verificar se plano existe
-        const [planos] = await db.query(`
+        const [planos] = await connection.query(`
             SELECT * FROM planos_corte WHERE id = ?
         `, [id]);
         
         if (planos.length === 0) {
+            await connection.rollback();
             return res.status(404).json({ 
                 success: false, 
                 error: 'Plano de corte não encontrado' 
@@ -957,58 +962,157 @@ exports.voltarParaPlanejamento = async (req, res) => {
         
         const plano = planos[0];
         
-        if (plano.status !== 'em_producao') {
+        if (plano.status !== 'em_producao' && plano.status !== 'Em Produção') {
+            await connection.rollback();
             return res.status(400).json({ 
                 success: false, 
                 error: 'Apenas planos em produção podem voltar para planejamento' 
             });
         }
         
-        // Buscar alocações
-        const [alocacoes] = await db.query(`
+        // ============================================================
+        // VERIFICAR SE HÁ CORTES REALIZADOS - CONVERTER EM RETALHOS
+        // ============================================================
+        const [cortesRealizados] = await connection.query(`
+            SELECT 
+                cr.*,
+                p.codigo as produto_codigo,
+                p.loja
+            FROM cortes_realizados cr
+            JOIN produtos p ON cr.produto_id = p.id
+            WHERE cr.plano_corte_id = ? 
+              AND cr.status = 'concluido'
+        `, [id]);
+        
+        const retalhosGerados = [];
+        
+        if (cortesRealizados.length > 0) {
+            console.log(`⚠️ Plano ${plano.codigo_plano} tem ${cortesRealizados.length} cortes realizados. Convertendo em retalhos...`);
+            
+            for (const corte of cortesRealizados) {
+                // Gerar código único para o retalho
+                const loja = corte.loja || 'Cortinave';
+                const prefixo = loja === 'BN' ? 'CIA' : 'PLA';
+                
+                // Buscar último código de retalho
+                const [ultimoRetalho] = await connection.query(`
+                    SELECT codigo_retalho FROM retalhos 
+                    WHERE codigo_retalho LIKE 'RET-${prefixo}-%'
+                    ORDER BY id DESC LIMIT 1
+                `);
+                
+                let proximoNumero = 1;
+                if (ultimoRetalho.length > 0) {
+                    const partes = ultimoRetalho[0].codigo_retalho.split('-');
+                    if (partes.length >= 3) {
+                        proximoNumero = parseInt(partes[2]) + 1;
+                    }
+                }
+                
+                const codigoRetalho = `RET-${prefixo}-${String(proximoNumero).padStart(6, '0')}`;
+                
+                // Criar retalho a partir do corte
+                const [resultRetalho] = await connection.query(`
+                    INSERT INTO retalhos 
+                    (codigo_retalho, produto_id, metragem, locacao, observacoes, status, placa, origem_corte_id)
+                    VALUES (?, ?, ?, ?, ?, 'Disponível', ?, ?)
+                `, [
+                    codigoRetalho,
+                    corte.produto_id,
+                    corte.metragem_cortada,
+                    null, // Sem locação definida ainda
+                    `Gerado do corte ${corte.codigo_corte} (PDC ${plano.codigo_plano} revertido)`,
+                    corte.placa_origem,
+                    corte.id // Referência ao corte de origem
+                ]);
+                
+                // Marcar o corte como convertido em retalho
+                await connection.query(`
+                    UPDATE cortes_realizados 
+                    SET status = 'convertido_retalho',
+                        retalho_gerado_id = ?,
+                        observacoes = CONCAT(COALESCE(observacoes, ''), ' | Convertido em retalho ${codigoRetalho} em ', NOW())
+                    WHERE id = ?
+                `, [resultRetalho.insertId, corte.id]);
+                
+                retalhosGerados.push({
+                    corte_codigo: corte.codigo_corte,
+                    retalho_codigo: codigoRetalho,
+                    retalho_id: resultRetalho.insertId,
+                    metragem: corte.metragem_cortada
+                });
+                
+                console.log(`  ✅ Corte ${corte.codigo_corte} → Retalho ${codigoRetalho} (${corte.metragem_cortada}m)`);
+            }
+        }
+        
+        // ============================================================
+        // LIBERAR RESERVAS DAS ALOCAÇÕES
+        // ============================================================
+        const [alocacoes] = await connection.query(`
             SELECT ac.*
             FROM alocacoes_corte ac
             JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
             WHERE ipc.plano_corte_id = ?
         `, [id]);
         
-        // Liberar reservas
         for (const alocacao of alocacoes) {
             if (alocacao.tipo_origem === 'bobina') {
-                await db.query(`
+                await connection.query(`
                     UPDATE bobinas 
-                    SET metragem_reservada = metragem_reservada - ?
+                    SET metragem_reservada = GREATEST(0, metragem_reservada - ?)
                     WHERE id = ?
                 `, [alocacao.metragem_alocada, alocacao.bobina_id]);
             } else {
-                await db.query(`
+                await connection.query(`
                     UPDATE retalhos 
-                    SET metragem_reservada = metragem_reservada - ?
+                    SET metragem_reservada = GREATEST(0, metragem_reservada - ?)
                     WHERE id = ?
                 `, [alocacao.metragem_alocada, alocacao.retalho_id]);
             }
         }
         
-        // Atualizar status do plano
-        await db.query(`
+        // ============================================================
+        // LIMPAR ALOCAÇÕES (serão recriadas quando voltar para produção)
+        // ============================================================
+        await connection.query(`
+            DELETE ac FROM alocacoes_corte ac
+            JOIN itens_plano_corte ipc ON ipc.id = ac.item_plano_corte_id
+            WHERE ipc.plano_corte_id = ?
+        `, [id]);
+        
+        // ============================================================
+        // ATUALIZAR STATUS DO PLANO
+        // ============================================================
+        await connection.query(`
             UPDATE planos_corte SET status = 'planejamento' WHERE id = ?
         `, [id]);
+        
+        await connection.commit();
         
         // VALIDAR RESERVAS APÓS VOLTAR PARA PLANEJAMENTO
         console.log('🔍 Validando reservas após voltar plano para planejamento...');
         await validarECorrigirReservas();
         
+        const mensagem = retalhosGerados.length > 0
+            ? `Plano voltou para planejamento. ${retalhosGerados.length} corte(s) convertido(s) em retalho(s).`
+            : 'Plano voltou para planejamento. Reservas liberadas!';
+        
         res.json({ 
             success: true, 
-            message: 'Plano voltou para planejamento. Reservas liberadas!' 
+            message: mensagem,
+            retalhos_gerados: retalhosGerados
         });
         
     } catch (error) {
+        await connection.rollback();
         console.error('Erro ao voltar para planejamento:', error);
         res.status(500).json({ 
             success: false, 
             error: error.message 
         });
+    } finally {
+        connection.release();
     }
 };
 
