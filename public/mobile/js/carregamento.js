@@ -14,6 +14,7 @@ class CarregamentoModule {
         this.scanner = null;
         this.pdcAtual = null;
         this.carregamentoAtual = null;
+        this.todosCortes = [];
         this.cortesValidados = [];
         this.init();
     }
@@ -147,11 +148,13 @@ class CarregamentoModule {
 
             const response = await API.iniciarCarregamento(pdc.id);
             this.carregamentoAtual = response.carregamento;
+            this.todosCortes = response.cortes || []; // Armazena todos os cortes
             this.cortesValidados = [];
 
             Utils.esconderLoading();
 
             debugLog('Carregamento iniciado:', this.carregamentoAtual);
+            debugLog('Total de cortes:', this.todosCortes.length);
 
             // Mostra tela de validação
             this.renderValidacao();
@@ -189,8 +192,53 @@ class CarregamentoModule {
             document.getElementById('carregamentoLocacoes').innerHTML = locacoesHtml;
         }
 
+        // Renderiza lista de cortes
+        this.renderListaCortes();
+
         // Progresso inicial
         this.atualizarProgresso();
+    }
+
+    /**
+     * Renderiza lista de todos os cortes com status de validação
+     */
+    renderListaCortes() {
+        const container = document.getElementById('listaCortes');
+        
+        if (!this.todosCortes || this.todosCortes.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">Nenhum corte encontrado</p>';
+            return;
+        }
+
+        const codigosValidados = this.cortesValidados.map(c => c.codigo_corte);
+
+        const html = this.todosCortes.map((corte, index) => {
+            const isValidado = codigosValidados.includes(corte.codigo_corte);
+            const statusClass = isValidado ? 'bg-success text-white' : 'bg-light';
+            const iconClass = isValidado ? 'bi-check-circle-fill text-white' : 'bi-circle text-muted';
+            
+            // Compacta código para exibição (COR-PLA-006-01 -> COR-PLA-6-1)
+            const codigoCompacto = corte.codigo_corte
+                .replace(/-0+(\d)/g, '-$1'); // Remove zeros à esquerda
+            
+            return `
+                <div class="corte-item ${statusClass}" 
+                     style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid ${isValidado ? '#198754' : '#dee2e6'};">
+                    <i class="bi ${iconClass} me-3" style="font-size: 1.3rem;"></i>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-family: monospace;">
+                            ${codigoCompacto}
+                        </div>
+                        <small style="opacity: 0.8;">
+                            ${corte.produto_codigo || ''} ${corte.nome_cor || ''} • ${parseFloat(corte.metragem_cortada || 0).toFixed(1)}m
+                        </small>
+                    </div>
+                    ${isValidado ? '<span class="badge bg-light text-success">✓</span>' : ''}
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
     }
 
     /**
@@ -275,11 +323,11 @@ class CarregamentoModule {
             
             // Atualiza UI
             this.atualizarProgresso();
-            this.renderUltimosValidados();
+            this.renderListaCortes(); // Atualiza lista com corte validado em verde
             
             // Toast de sucesso
             Utils.mostrarSucesso(
-                `✅ ${response.corte.codigo_corte} - ${Utils.formatarMetragem(response.corte.metragem)}`
+                `✅ ${response.corte.codigo_corte} - ${Utils.formatarMetragem(response.corte.metragem_cortada || response.corte.metragem)}`
             );
 
         } catch (error) {

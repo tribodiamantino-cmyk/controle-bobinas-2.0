@@ -620,19 +620,21 @@ async function buscarDadosCorte(id) {
             cr.id,
             cr.codigo_corte,
             cr.metragem_cortada,
-            cr.created_at,
+            cr.data_corte,
+            cr.produto_id,
+            cr.plano_corte_id,
             ipc.metragem as metragem_solicitada,
             pc.codigo_plano as plano_codigo,
             pc.cliente,
             pc.obra,
+            pc.loja,
             p.codigo as produto_codigo,
             p.largura_final as largura,
-            g.gramatura,
-            pc.loja
+            g.gramatura
         FROM cortes_realizados cr
-        LEFT JOIN itens_plano_corte ipc ON cr.item_plano_id = ipc.id
-        LEFT JOIN planos_corte pc ON ipc.plano_corte_id = pc.id
-        LEFT JOIN produtos p ON ipc.produto_id = p.id
+        LEFT JOIN itens_plano_corte ipc ON cr.item_plano_corte_id = ipc.id
+        LEFT JOIN planos_corte pc ON cr.plano_corte_id = pc.id
+        LEFT JOIN produtos p ON cr.produto_id = p.id
         LEFT JOIN configuracoes_gramaturas g ON p.gramatura_id = g.id
         WHERE cr.id = ?
     `, [id]);
