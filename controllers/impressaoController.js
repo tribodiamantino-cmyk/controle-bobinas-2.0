@@ -626,7 +626,7 @@ async function buscarDadosCorte(id) {
             ipc.metragem as metragem_solicitada,
             pc.codigo_plano as plano_codigo,
             pc.cliente,
-            pc.obra,
+            pc.aviario,
             pc.loja,
             p.codigo as produto_codigo,
             p.largura_final as largura,
@@ -657,8 +657,8 @@ async function buscarDadosCorte(id) {
     // Linha 3: Produto resumido
     const linhaProduto = `${c.produto_codigo || 'Produto'} ${c.largura || ''}cm`;
 
-    // Linha 4: Cliente | Obra | Metragem
-    let linhaDetalhes = `${c.cliente || 'Cliente'} | ${c.obra || 'Obra'}`;
+    // Linha 4: Cliente | Aviário | Metragem
+    let linhaDetalhes = `${c.cliente || 'Cliente'} | ${c.aviario || 'Aviário'}`;
     linhaDetalhes += ` | ${formatarMetragem(c.metragem_cortada)}`;
 
     return {
@@ -674,7 +674,7 @@ async function buscarDadosCorte(id) {
             codigo_original: codigo, // Código completo para referência
             plano: c.plano_codigo,
             cliente: c.cliente,
-            obra: c.obra,
+            aviario: c.aviario,
             metragem: c.metragem_cortada,
             produto: c.produto_codigo
         }
