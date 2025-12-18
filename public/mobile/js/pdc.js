@@ -525,19 +525,12 @@ class PDCModule {
             // Limpa foto
             this.camera.limparUltimaFoto();
 
-            // Verifica se sobrou metragem na origem
-            const metragemRestante = corteRegistrado.metragem_restante || 0;
-            
-            if (metragemRestante > 0) {
-                // Sobrou metragem - pedir para guardar a origem
-                this.mostrarGuardarOrigemAposCorte(corteRegistrado, metragemRestante);
-            } else {
-                // Origem esgotada - mostrar sucesso e continuar
-                this.mostrarSucessoCorte(corteRegistrado);
-                setTimeout(() => {
-                    this.voltarParaCortes();
-                }, 3000);
-            }
+            // Mostra sucesso e vai para próximo corte
+            // A locação será pedida apenas quando TODOS os cortes da origem terminarem
+            this.mostrarSucessoCorte(corteRegistrado);
+            setTimeout(() => {
+                this.voltarParaCortes();
+            }, 2000);
 
         } catch (error) {
             // Melhor serialização do erro para logs
@@ -553,28 +546,32 @@ class PDCModule {
     }
 
     /**
-     * Mostra tela para guardar origem após corte (quando sobra metragem)
+     * Mostra tela para guardar origem quando todos os cortes terminaram e sobrou metragem
      */
     mostrarGuardarOrigemAposCorte(corte, metragemRestante) {
         const icone = this.origemAtual.tipo === 'bobina' ? '📦' : '♻️';
         const tipoNome = this.origemAtual.tipo === 'bobina' ? 'Bobina' : 'Retalho';
         
-        const container = document.querySelector('#corteView .card-body');
-        container.innerHTML = `
+        // Mostra a view correta
+        this.mostrarView('cortesView');
+        const container = document.getElementById('cortesSection');
+        container.style.display = 'block';
+        document.getElementById('validarOrigemSection').style.display = 'none';
+        
+        document.getElementById('cortesContainer').innerHTML = `
             <div class="text-center py-3">
                 <div class="icon-xl text-success mb-2">
                     <i class="bi bi-check-circle"></i>
                 </div>
-                <h4>Corte Registrado!</h4>
-                <p class="mb-1"><strong>${corte.codigo_corte}</strong></p>
-                <p class="text-muted small">${Utils.formatarMetragem(corte.metragem_cortada)} cortado</p>
-                
-                <hr>
+                <h4>Cortes Concluídos!</h4>
+                <p class="mb-2">
+                    ${icone} ${tipoNome} <strong>${this.origemAtual.codigo}</strong>
+                </p>
                 
                 <div class="alert alert-warning">
                     <i class="bi bi-box-seam"></i>
                     <strong>Sobrou ${Utils.formatarMetragem(metragemRestante)}</strong>
-                    <p class="mb-0 small">Guarde ${tipoNome.toLowerCase()} e escaneie a locação</p>
+                    <p class="mb-0 small">Guarde ${tipoNome.toLowerCase()} e informe a locação</p>
                 </div>
                 
                 <div class="form-group mt-3">
@@ -620,7 +617,7 @@ class PDCModule {
     }
 
     /**
-     * Confirma locação após corte
+     * Confirma locação após todos os cortes da origem
      */
     async confirmarLocacaoAposCorte() {
         try {
@@ -644,7 +641,14 @@ class PDCModule {
             if (response.success) {
                 Utils.feedbackSucesso();
                 Utils.mostrarSucesso('Locação salva!');
-                setTimeout(() => this.voltarParaCortes(), 1500);
+                // Volta para lista de origens do PDC
+                setTimeout(() => {
+                    if (this.origensAtualizadas) {
+                        this.renderOrigens(this.origensAtualizadas);
+                    } else {
+                        this.abrirPDC(this.pdcAtual.id);
+                    }
+                }, 1500);
             } else {
                 throw new Error(response.error || 'Erro ao salvar');
             }
@@ -657,11 +661,16 @@ class PDCModule {
     }
 
     /**
-     * Pula etapa de locação após corte
+     * Pula etapa de locação (mantém locação atual)
      */
     pularLocacaoAposCorte() {
         Utils.mostrarAviso('Locação mantida');
-        this.voltarParaCortes();
+        // Volta para lista de origens do PDC
+        if (this.origensAtualizadas) {
+            this.renderOrigens(this.origensAtualizadas);
+        } else {
+            this.abrirPDC(this.pdcAtual.id);
+        }
     }
 
     /**
@@ -692,7 +701,7 @@ class PDCModule {
 
     /**
      * Volta para lista de cortes (recarrega dados da origem atual)
-     * Nota: A locação da origem agora é pedida APÓS cada corte (quando sobra metragem)
+     * Quando TODOS os cortes da origem terminam e sobra metragem, pede locação
      */
     async voltarParaCortes() {
         try {
@@ -717,16 +726,26 @@ class PDCModule {
                 const cortesPendentes = (origemAtualizada.cortes || []).filter(c => c.status !== 'concluido');
                 
                 if (cortesPendentes.length > 0) {
-                    // Ainda há cortes - mostra lista de cortes (já validada)
+                    // Ainda há cortes pendentes - mostra lista de cortes
                     this.mostrarView('cortesView');
                     document.getElementById('validarOrigemSection').style.display = 'none';
                     document.getElementById('cortesSection').style.display = 'block';
                     this.renderListaCortes();
                 } else {
                     // Todos os cortes da origem foram concluídos!
-                    // Volta para lista de origens do PDC
-                    this.pdcAtual = response.pdc;
-                    this.renderOrigens(origens);
+                    // Verifica se sobrou metragem para pedir locação
+                    const metragemRestante = parseFloat(origemAtualizada.metragem_atual || origemAtualizada.metragem || 0);
+                    
+                    if (metragemRestante > 0) {
+                        // Sobrou metragem - pede para guardar a origem
+                        this.pdcAtual = response.pdc;
+                        this.origensAtualizadas = origens;
+                        this.mostrarGuardarOrigemAposCorte(null, metragemRestante);
+                    } else {
+                        // Origem esgotada - volta para lista de origens
+                        this.pdcAtual = response.pdc;
+                        this.renderOrigens(origens);
+                    }
                 }
             } else {
                 // Origem não encontrada (improvável) - volta para origens
