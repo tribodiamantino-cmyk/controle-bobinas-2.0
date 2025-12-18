@@ -158,6 +158,7 @@ const adminRoutes = require('./routes/admin');
 const impressaoRoutes = require('./routes/impressao');
 const cortesRoutes = require('./routes/cortes');
 const historicoRoutes = require('./routes/historico');
+const carregamentoRoutes = require('./routes/carregamento');
 
 // Usar rotas
 app.use('/api/cores', coresRoutes);
@@ -178,6 +179,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/impressao', impressaoRoutes);
 app.use('/api/cortes', cortesRoutes);
 app.use('/api/historico', historicoRoutes);
+app.use('/api/carregamento', carregamentoRoutes);
 
 // Servir arquivos de upload (compatível com Railway Volume)
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';

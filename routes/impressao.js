@@ -1,5 +1,5 @@
 /**
- * Rotas: Fila de Impressão de Etiquetas
+ * Rotas: Fila de Impressão de Etiquetas e Relatórios
  * 
  * Endpoints para gerenciar a fila de impressão
  */
@@ -8,7 +8,21 @@ const express = require('express');
 const router = express.Router();
 const impressaoController = require('../controllers/impressaoController');
 
-// === ROTAS ESPECÍFICAS (devem vir antes das rotas com :id) ===
+// === ROTAS DE RELATÓRIOS A4 (devem vir primeiro) ===
+
+// Listar relatórios pendentes
+// GET /api/impressao/relatorios/pendentes?loja=PLA
+router.get('/relatorios/pendentes', impressaoController.listarRelatoriosPendentes);
+
+// Adicionar relatório à fila
+// POST /api/impressao/relatorios/adicionar
+router.post('/relatorios/adicionar', impressaoController.adicionarRelatorio);
+
+// Marcar relatório como impresso
+// POST /api/impressao/relatorios/:id/marcar-impresso
+router.post('/relatorios/:id/marcar-impresso', impressaoController.marcarRelatorioImpresso);
+
+// === ROTAS DE ETIQUETAS ===
 
 // Adicionar etiqueta à fila
 // POST /api/impressao/adicionar

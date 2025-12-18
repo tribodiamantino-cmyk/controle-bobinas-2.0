@@ -1,0 +1,25 @@
+{
+    "api": {
+        "baseUrl": "https://controle-bobinas-20-production.up.railway.app",
+        "pollingInterval": 5000,
+        "loja": "PLA"
+    },
+    "impressoras": {
+        "termica": {
+            "nome": "Elgin L42 Pro Full",
+            "tipo": "usb",
+            "vendorId": "0x0525",
+            "productId": "0xa700",
+            "larguraEtiqueta": 60,
+            "alturaEtiqueta": 30
+        },
+        "a4": {
+            "nome": "",
+            "copias": 2
+        }
+    },
+    "logs": {
+        "nivel": "info",
+        "arquivo": true
+    }
+}

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { 
+            size: A4; 
+            margin: 12mm; 
+        }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        body { 
+            font-family: Arial, sans-serif; 
+            font-size: 11pt; 
+            line-height: 1.4;
+        }
+        
+        /* Cabeçalho */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            border: 2px solid #000;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+        }
+        .header-left { font-weight: bold; }
+        .header-left .empresa { font-size: 18pt; }
+        .header-left .cidade { font-size: 10pt; color: #666; }
+        .header-right { text-align: right; }
+        .header-right .titulo { font-size: 14pt; font-weight: bold; }
+        .header-right .codigo { font-size: 12pt; }
+        .header-right .data { font-size: 10pt; color: #666; }
+        
+        /* Seções */
+        .section {
+            border: 1px solid #000;
+            margin-bottom: 12px;
+        }
+        .section-title {
+            background: #e0e0e0;
+            padding: 5px 10px;
+            font-weight: bold;
+            border-bottom: 1px solid #000;
+        }
+        .section-content {
+            padding: 10px;
+        }
+        .section-content p {
+            margin-bottom: 5px;
+        }
+        .section-content .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 160px;
+        }
+        
+        /* Tabela de Cortes */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        th {
+            background: #e0e0e0;
+            font-weight: bold;
+        }
+        .col-seq { width: 5%; text-align: center; }
+        .col-codigo { width: 18%; }
+        .col-origem { width: 20%; }
+        .col-obs { width: 37%; font-size: 9pt; }
+        .col-metragem { width: 12%; text-align: right; }
+        .col-ok { width: 8%; text-align: center; }
+        .checkbox { 
+            width: 14px; 
+            height: 14px; 
+            border: 1px solid #000; 
+            display: inline-block; 
+        }
+        .total-row { font-weight: bold; background: #f5f5f5; }
+        
+        /* Via */
+        .via-indicator {
+            position: absolute;
+            top: 12mm;
+            right: 12mm;
+            font-size: 9pt;
+            color: #666;
+            border: 1px dashed #999;
+            padding: 2px 8px;
+        }
+        
+        /* Assinaturas */
+        .assinaturas {
+            margin-top: 15px;
+        }
+        .assinatura-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+        .assinatura-campo {
+            flex: 1;
+            margin-right: 20px;
+        }
+        .assinatura-campo:last-child {
+            margin-right: 0;
+        }
+        .linha-assinatura {
+            border-bottom: 1px solid #000;
+            margin-top: 30px;
+            margin-bottom: 3px;
+        }
+        .assinatura-label {
+            font-size: 9pt;
+        }
+        
+        /* Declaração */
+        .declaracao {
+            border: 1px solid #000;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 10pt;
+        }
+        
+        /* Rodapé */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #000;
+            padding: 8px;
+            margin-top: 15px;
+        }
+        .footer .barcode {
+            font-family: 'Libre Barcode 128', monospace;
+            font-size: 36pt;
+        }
+        .footer .info {
+            font-size: 9pt;
+            text-align: right;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="via-indicator">Via: {{VIA}}</div>
+    
+    <div class="header">
+        <div class="header-left">
+            <div class="empresa">{{EMPRESA}}</div>
+            <div class="cidade">{{CIDADE_EMPRESA}}</div>
+        </div>
+        <div class="header-right">
+            <div class="titulo">ROMANEIO DE CARREGAMENTO</div>
+            <div class="codigo">{{CODIGO_CARREGAMENTO}}</div>
+            <div class="data">Data: {{DATA_CARREGAMENTO}}</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">DADOS DO PLANO DE CORTE</div>
+        <div class="section-content">
+            <p><span class="label">Código:</span> {{CODIGO_PDC}}</p>
+            <p><span class="label">Cliente:</span> {{CLIENTE}}</p>
+            <p><span class="label">Obra:</span> {{OBRA}}</p>
+            <p><span class="label">Cidade:</span> {{CIDADE_ENTREGA}}</p>
+            <p><span class="label">Cor:</span> {{COR}}</p>
+            <p><span class="label">Medida:</span> {{MEDIDA}} ({{BAINHA}})</p>
+            <p><span class="label">Gramatura:</span> {{GRAMATURA}}</p>
+            <p><span class="label">Metragem Solicitada:</span> {{METRAGEM_SOLICITADA}}m</p>
+            <p><span class="label">Observações:</span> {{OBSERVACOES_PDC}}</p>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">LISTA DE CORTES</div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-seq">#</th>
+                    <th class="col-codigo">Código</th>
+                    <th class="col-origem">Origem</th>
+                    <th class="col-obs">Observações</th>
+                    <th class="col-metragem">Metragem</th>
+                    <th class="col-ok">OK</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{CORTES_ROWS}}
+                <tr class="total-row">
+                    <td colspan="4" style="text-align: right;">TOTAL ({{QTD_ITENS}} itens)</td>
+                    <td class="col-metragem">{{METRAGEM_TOTAL}}m</td>
+                    <td class="col-ok"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">CONFERÊNCIA E ASSINATURAS</div>
+        <div class="section-content assinaturas">
+            <div class="assinatura-row">
+                <div class="assinatura-campo">
+                    <div class="linha-assinatura"></div>
+                    <div class="assinatura-label">Expedidor</div>
+                </div>
+                <div class="assinatura-campo">
+                    <div class="linha-assinatura"></div>
+                    <div class="assinatura-label">Data</div>
+                </div>
+            </div>
+            <div class="assinatura-row">
+                <div class="assinatura-campo">
+                    <div class="linha-assinatura"></div>
+                    <div class="assinatura-label">Motorista</div>
+                </div>
+                <div class="assinatura-campo">
+                    <div class="linha-assinatura"></div>
+                    <div class="assinatura-label">Placa</div>
+                </div>
+            </div>
+            <div class="declaracao">
+                <strong>Declaro ter recebido os materiais acima descritos em perfeitas condições de uso.</strong>
+                <div class="assinatura-row" style="margin-top: 15px; margin-bottom: 0;">
+                    <div class="assinatura-campo">
+                        <div class="linha-assinatura"></div>
+                        <div class="assinatura-label">Recebido por</div>
+                    </div>
+                    <div class="assinatura-campo">
+                        <div class="linha-assinatura"></div>
+                        <div class="assinatura-label">Data/Hora</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <div class="barcode">{{CODIGO_CARREGAMENTO}}</div>
+        <div class="info">
+            Impresso: {{DATA_IMPRESSAO}}<br>
+            Sistema v{{VERSAO}}
+        </div>
+    </div>
+</body>
+</html>

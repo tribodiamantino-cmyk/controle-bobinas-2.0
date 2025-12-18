@@ -1372,8 +1372,13 @@ router.post('/carregamento/finalizar', async (req, res) => {
     try {
         const { carregamento_id } = req.body;
         
-        // Buscar carregamento para pegar o plano_corte_id
-        const [carregamento] = await db.query('SELECT * FROM carregamentos WHERE id = ?', [carregamento_id]);
+        // Buscar carregamento para pegar o plano_corte_id e loja
+        const [carregamento] = await db.query(`
+            SELECT c.*, pc.loja 
+            FROM carregamentos c 
+            LEFT JOIN planos_corte pc ON c.plano_corte_id = pc.id 
+            WHERE c.id = ?
+        `, [carregamento_id]);
         
         if (!carregamento || carregamento.length === 0) {
             return res.status(404).json({ success: false, error: 'Carregamento não encontrado' });
@@ -1395,6 +1400,14 @@ router.post('/carregamento/finalizar', async (req, res) => {
             console.log(`✅ PDC ${carregamento[0].plano_corte_id} atualizado para 'entregue'`);
         }
         
+        // Adicionar romaneio à fila de impressão automaticamente
+        const loja = carregamento[0].loja === 'Cortinave' ? 'PLA' : 'CIA';
+        await db.query(`
+            INSERT INTO fila_impressao_relatorios (tipo, entidade_id, copias, loja)
+            VALUES ('carregamento', ?, 2, ?)
+        `, [carregamento_id, loja]);
+        console.log(`🖨️ Romaneio do carregamento ${carregamento_id} adicionado à fila de impressão`);
+        
         res.json({ 
             success: true, 
             carregamento: carregamento[0]
@@ -1409,8 +1422,13 @@ router.post('/carregamento/:id/finalizar', async (req, res) => {
     try {
         const carregamentoId = req.params.id;
         
-        // Buscar carregamento para pegar o plano_corte_id
-        const [carregamento] = await db.query('SELECT * FROM carregamentos WHERE id = ?', [carregamentoId]);
+        // Buscar carregamento para pegar o plano_corte_id e loja
+        const [carregamento] = await db.query(`
+            SELECT c.*, pc.loja 
+            FROM carregamentos c 
+            LEFT JOIN planos_corte pc ON c.plano_corte_id = pc.id 
+            WHERE c.id = ?
+        `, [carregamentoId]);
         
         if (!carregamento || carregamento.length === 0) {
             return res.status(404).json({ success: false, error: 'Carregamento não encontrado' });
@@ -1430,6 +1448,19 @@ router.post('/carregamento/:id/finalizar', async (req, res) => {
                 ['entregue', carregamento[0].plano_corte_id]
             );
             console.log(`✅ PDC ${carregamento[0].plano_corte_id} atualizado para 'entregue'`);
+        }
+        
+        // Adicionar romaneio à fila de impressão automaticamente
+        try {
+            const loja = carregamento[0].loja === 'Cortinave' ? 'PLA' : 'CIA';
+            await db.query(`
+                INSERT INTO fila_impressao_relatorios (tipo, entidade_id, copias, loja)
+                VALUES ('carregamento', ?, 2, ?)
+            `, [carregamentoId, loja]);
+            console.log(`🖨️ Romaneio do carregamento ${carregamentoId} adicionado à fila de impressão`);
+        } catch (printErr) {
+            // Não bloquear finalização se fila de impressão falhar
+            console.warn(`⚠️ Não foi possível adicionar romaneio à fila: ${printErr.message}`);
         }
         
         console.log(`✅ Carregamento ${carregamentoId} finalizado`);

@@ -1,0 +1,26 @@
+{
+  "name": "servidor-impressao",
+  "version": "1.0.0",
+  "description": "Servidor local de impressão para Controle de Bobinas 2.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "impressao",
+    "etiquetas",
+    "relatorios",
+    "bobinas"
+  ],
+  "author": "Controle Bobinas",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "puppeteer": "^21.0.0",
+    "pdf-to-printer": "^5.3.0",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-usb": "^3.0.0-alpha.4",
+    "usb": "^2.11.0"
+  }
+}

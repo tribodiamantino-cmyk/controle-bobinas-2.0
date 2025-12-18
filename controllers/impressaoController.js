@@ -803,6 +803,242 @@ function formatarMetragem(valor) {
     return num.toFixed(2).replace('.', ',') + 'm';
 }
 
+// ==================== RELATÓRIOS A4 ==================== //
+
+/**
+ * Listar relatórios pendentes de impressão
+ * GET /api/impressao/relatorios/pendentes?loja=PLA
+ */
+const listarRelatoriosPendentes = async (req, res) => {
+    try {
+        const { loja } = req.query;
+
+        let sql = `
+            SELECT 
+                id,
+                tipo,
+                entidade_id,
+                copias,
+                loja,
+                status,
+                tentativas,
+                created_at
+            FROM fila_impressao_relatorios
+            WHERE status = 'pendente'
+        `;
+        const params = [];
+
+        if (loja && ['PLA', 'CIA'].includes(loja)) {
+            sql += ' AND loja = ?';
+            params.push(loja);
+        }
+
+        sql += ' ORDER BY created_at ASC';
+
+        const [rows] = await db.query(sql, params);
+
+        res.json({
+            success: true,
+            data: rows,
+            total: rows.length
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao listar relatórios pendentes:', error);
+        res.json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Marcar relatório como impresso
+ * POST /api/impressao/relatorios/:id/marcar-impresso
+ */
+const marcarRelatorioImpresso = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [result] = await db.query(`
+            UPDATE fila_impressao_relatorios 
+            SET status = 'impresso', data_impressao = NOW()
+            WHERE id = ? AND status = 'pendente'
+        `, [id]);
+
+        if (result.affectedRows === 0) {
+            return res.json({ 
+                success: false, 
+                error: 'Relatório não encontrado ou já processado' 
+            });
+        }
+
+        console.log(`✅ Relatório #${id} marcado como impresso`);
+
+        res.json({ success: true, message: 'Relatório marcado como impresso' });
+
+    } catch (error) {
+        console.error('❌ Erro ao marcar relatório impresso:', error);
+        res.json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Adicionar relatório à fila de impressão
+ * POST /api/impressao/relatorios/adicionar
+ * Body: { tipo: 'carregamento', entidade_id: 123, loja: 'PLA' }
+ */
+const adicionarRelatorio = async (req, res) => {
+    try {
+        const { tipo, entidade_id, loja, copias = 2 } = req.body;
+
+        if (!tipo || !entidade_id) {
+            return res.json({ 
+                success: false, 
+                error: 'Tipo e entidade_id são obrigatórios' 
+            });
+        }
+
+        const tiposValidos = ['carregamento', 'inventario', 'producao'];
+        if (!tiposValidos.includes(tipo)) {
+            return res.json({ 
+                success: false, 
+                error: `Tipo inválido. Use: ${tiposValidos.join(', ')}` 
+            });
+        }
+
+        // Verificar se já existe pendente para esta entidade
+        const [existente] = await db.query(`
+            SELECT id FROM fila_impressao_relatorios
+            WHERE tipo = ? AND entidade_id = ? AND status = 'pendente'
+        `, [tipo, entidade_id]);
+
+        if (existente.length > 0) {
+            return res.json({ 
+                success: false, 
+                error: 'Relatório já está na fila de impressão' 
+            });
+        }
+
+        const lojaConvertida = converterLojaParaFila(loja);
+
+        const [result] = await db.query(`
+            INSERT INTO fila_impressao_relatorios
+            (tipo, entidade_id, copias, loja)
+            VALUES (?, ?, ?, ?)
+        `, [tipo, entidade_id, copias, lojaConvertida]);
+
+        console.log(`✅ Relatório ${tipo} #${entidade_id} adicionado à fila`);
+
+        res.json({
+            success: true,
+            data: {
+                id: result.insertId,
+                tipo,
+                entidade_id,
+                copias,
+                loja: lojaConvertida
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao adicionar relatório:', error);
+        res.json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Buscar dados completos para relatório de carregamento
+ * GET /api/carregamento/:id/relatorio
+ */
+const getDadosRelatorioCarregamento = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Buscar carregamento
+        const [carregamentos] = await db.query(`
+            SELECT 
+                c.*,
+                CONCAT('CAR-', YEAR(c.created_at), '-', LPAD(c.id, 5, '0')) as codigo
+            FROM carregamentos c
+            WHERE c.id = ?
+        `, [id]);
+
+        if (carregamentos.length === 0) {
+            return res.json({ 
+                success: false, 
+                error: 'Carregamento não encontrado' 
+            });
+        }
+
+        const carregamento = carregamentos[0];
+
+        // Buscar plano de corte
+        const [planos] = await db.query(`
+            SELECT 
+                pc.*,
+                CASE 
+                    WHEN pc.loja = 'Cortinave' THEN CONCAT('PDC-PLA-', LPAD(pc.id, 3, '0'))
+                    ELSE CONCAT('PDC-CIA-', LPAD(pc.id, 3, '0'))
+                END as codigo_plano
+            FROM planos_corte pc
+            WHERE pc.id = ?
+        `, [carregamento.plano_corte_id]);
+
+        if (planos.length === 0) {
+            return res.json({ 
+                success: false, 
+                error: 'Plano de corte não encontrado' 
+            });
+        }
+
+        const plano = planos[0];
+
+        // Buscar cortes realizados
+        const [cortes] = await db.query(`
+            SELECT 
+                cr.id,
+                cr.codigo_corte,
+                cr.metragem_cortada,
+                cr.observacoes,
+                cr.created_at,
+                CASE 
+                    WHEN cr.bobina_id IS NOT NULL THEN 
+                        CONCAT('BOB-', 
+                            CASE WHEN b.loja = 'Cortinave' THEN 'PLA' ELSE 'CIA' END, 
+                            '-', LPAD(b.id, 6, '0'))
+                    WHEN cr.retalho_id IS NOT NULL THEN 
+                        CONCAT('RET-', 
+                            CASE WHEN r.loja = 'Cortinave' THEN 'PLA' ELSE 'CIA' END, 
+                            '-', LPAD(r.id, 6, '0'))
+                    ELSE '-'
+                END as codigo_origem
+            FROM cortes_realizados cr
+            LEFT JOIN bobinas b ON cr.bobina_id = b.id
+            LEFT JOIN retalhos r ON cr.retalho_id = r.id
+            WHERE cr.plano_corte_id = ?
+            ORDER BY cr.codigo_corte
+        `, [plano.id]);
+
+        // Calcular totais
+        const totais = {
+            quantidade_cortes: cortes.length,
+            metragem_total: cortes.reduce((sum, c) => sum + parseFloat(c.metragem_cortada || 0), 0)
+        };
+
+        res.json({
+            success: true,
+            data: {
+                carregamento,
+                plano,
+                cortes,
+                totais
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar dados do relatório:', error);
+        res.json({ success: false, error: error.message });
+    }
+};
+
 module.exports = {
     adicionar,
     listarPendentes,
@@ -812,5 +1048,10 @@ module.exports = {
     obterEtiqueta,
     historico,
     estatisticas,
-    preview
+    preview,
+    // Relatórios A4
+    listarRelatoriosPendentes,
+    marcarRelatorioImpresso,
+    adicionarRelatorio,
+    getDadosRelatorioCarregamento
 };
