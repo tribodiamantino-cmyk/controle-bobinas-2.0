@@ -1,7 +1,35 @@
 # 🗺️ ROADMAP - Sistema de Controle de Bobinas 2.0
 ## Cortinave & BN - Lonas para Aviários
 
-**Última atualização:** 12/12/2025 | **Versão atual:** 2.5.0
+**Última atualização:** 18/12/2025 | **Versão atual:** 2.6.0
+
+---
+
+## ✅ VERSÃO 2.6.0 - STATUS ENTREGUE E CARREGAMENTO (18/12/2025)
+
+### 🚚 Fluxo Completo de Carregamento
+
+#### Frontend Desktop
+- ✅ Coluna "Entregues" no kanban de ordens (4 colunas)
+- ✅ Modal de cortes realizados por PDC
+- ✅ Visualização de fotos de contraprova
+- ✅ Estilos para status "entregue" (azul)
+
+#### Backend
+- ✅ Status 'entregue' no ENUM de planos_corte
+- ✅ PDC automaticamente muda para 'entregue' ao finalizar carregamento
+- ✅ Endpoint `/api/ordens-corte/:id/cortes-realizados`
+
+#### Infraestrutura
+- ✅ Railway Volume configurado para uploads persistentes
+- ✅ Fotos de contraprova mantidas entre deploys
+
+#### Tech Debt Resolvido
+- ✅ Migrations duplicadas renumeradas (028b, 039b)
+- ✅ schema.sql atualizado para v2.6.0
+- ✅ Status 'Vazia' padronizado para 'Esgotado'
+
+**Status:** EM PRODUÇÃO ✅
 
 ---
 
@@ -448,9 +476,9 @@ Com isso, já dá para usar no dia a dia!
 > **Instruções para AI Agents:** Sempre que o usuário sugerir algo e pedir para "deixar pra depois", adicione aqui com status `[ ]`. Quando resolver, marque como `[x]`.
 
 ### Banco de Dados
-- [ ] **Renumerar migrations 028** - Existem duas: `028_add_origem_cortes.js` e `028_add_placa_fallback.js` (ambas já rodaram, apenas organização)
-- [ ] **Atualizar schema.sql** - Arquivo `database/schema.sql` não reflete o estado atual do banco (migrations são a fonte de verdade)
-- [ ] **Padronizar status 'Vazia' → 'Esgotado'** - Trigger usa 'Vazia', mas convenção é 'Esgotado' para items zerados
+- [x] **Renumerar migrations duplicadas** - 028b e 039b (organizadas em 18/12/2025)
+- [x] **Atualizar schema.sql** - Recriado com estado atual v2.6.0 (18/12/2025)
+- [x] **Padronizar status 'Vazia' → 'Esgotado'** - Migration 045 + código corrigido (18/12/2025)
 
 ### Código
 - [ ] **Adicionar TypeScript** (opcional futuro) - Melhor tipagem e menos bugs
@@ -468,9 +496,10 @@ Com isso, já dá para usar no dia a dia!
 > **Instruções para AI Agents:** Quando o usuário mencionar funcionalidades futuras ou ideias que não são prioridade agora, registre aqui.
 
 ### Sistema de Fotos de Contraprova
-- [ ] **Migração para dispositivo de produção** - Atualmente fotos armazenadas em `uploads/cortes/` no servidor. Avaliar migração para S3/Cloudinary ou outro serviço especializado de armazenamento
+- [x] **Railway Volume configurado** - Fotos persistentes entre deploys (v2.6.0)
+- [ ] **Migração para S3/Cloudinary** - Avaliar se precisar de mais espaço (opcional)
 - [ ] **Afinamento da função de foto** - Otimizar resolução, compressão e qualidade das fotos de medidor (atualmente HD 1280x720, Sharp 85%)
-- [ ] **Galeria de fotos por PDC** - Interface para visualizar todas as fotos de contraprova de um plano de corte
+- [x] **Galeria de fotos por PDC** - Modal de cortes realizados com botão para ver foto de cada corte (v2.6.0)
 - [ ] **OCR em fotos de medidor** - Leitura automática da medição para comparar com metragem informada
 
 ### Sistema de Carregamento
