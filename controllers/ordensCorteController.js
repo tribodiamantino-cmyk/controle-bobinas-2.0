@@ -774,7 +774,12 @@ exports.alocarOrigem = async (req, res) => {
         
         if (tipo_origem === 'bobina') {
             const [bobinas] = await db.query(`
-                SELECT (metragem_atual - COALESCE(metragem_reservada, 0)) as disponivel
+                SELECT 
+                    id,
+                    codigo_interno,
+                    metragem_atual,
+                    metragem_reservada,
+                    (metragem_atual - COALESCE(metragem_reservada, 0)) as disponivel
                 FROM bobinas WHERE id = ?
             `, [origem_id]);
             
@@ -785,10 +790,17 @@ exports.alocarOrigem = async (req, res) => {
                 });
             }
             
+            console.log(`📦 Bobina ${bobinas[0].codigo_interno}: metragem_atual=${bobinas[0].metragem_atual}, metragem_reservada=${bobinas[0].metragem_reservada}, disponivel=${bobinas[0].disponivel}`);
+            
             metragemDisponivel = bobinas[0].disponivel;
         } else {
             const [retalhos] = await db.query(`
-                SELECT (metragem - COALESCE(metragem_reservada, 0)) as disponivel
+                SELECT 
+                    id,
+                    codigo_retalho,
+                    metragem,
+                    metragem_reservada,
+                    (metragem - COALESCE(metragem_reservada, 0)) as disponivel
                 FROM retalhos WHERE id = ?
             `, [origem_id]);
             
@@ -799,13 +811,21 @@ exports.alocarOrigem = async (req, res) => {
                 });
             }
             
+            console.log(`📦 Retalho ${retalhos[0].codigo_retalho}: metragem=${retalhos[0].metragem}, metragem_reservada=${retalhos[0].metragem_reservada}, disponivel=${retalhos[0].disponivel}`);
+            
             metragemDisponivel = retalhos[0].disponivel;
         }
         
-        if (metragemDisponivel < item.metragem) {
+        // Garantir que são números para comparação correta
+        const disponivelNum = parseFloat(metragemDisponivel) || 0;
+        const necessarioNum = parseFloat(item.metragem) || 0;
+        
+        console.log(`🔍 Verificação de metragem: Disponível=${disponivelNum}, Necessário=${necessarioNum}, Tipo origem=${tipo_origem}`);
+        
+        if (disponivelNum < necessarioNum) {
             return res.status(400).json({ 
                 success: false, 
-                error: `Metragem insuficiente na origem selecionada. Disponível: ${metragemDisponivel}m, Necessário: ${item.metragem}m` 
+                error: `Metragem insuficiente na origem selecionada. Disponível: ${disponivelNum.toFixed(2)}m, Necessário: ${necessarioNum.toFixed(2)}m` 
             });
         }
         
