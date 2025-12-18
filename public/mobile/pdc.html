@@ -224,12 +224,15 @@
                     <div class="mb-3">
                         <div class="input-group">
                             <input type="text" id="locacaoManual" class="form-control" 
-                                   placeholder="Ou digite: 1-A-1 ou LOC-5"
+                                   placeholder="0001-A-0001"
+                                   maxlength="11"
+                                   style="text-transform: uppercase;"
                                    onkeypress="if(event.key==='Enter') pdc.adicionarLocacaoManual()">
                             <button class="btn btn-outline-primary" type="button" onclick="pdc.adicionarLocacaoManual()">
                                 <i class="bi bi-plus"></i>
                             </button>
                         </div>
+                        <small class="text-muted">Formato: NNNN-L-NNNN (ex: 0001-A-0001)</small>
                     </div>
 
                     <!-- Locações Escaneadas -->

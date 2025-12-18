@@ -171,6 +171,77 @@ const Utils = {
     },
 
     /**
+     * Aplica máscara de locação (0000-A-0000) em um input
+     * @param {HTMLInputElement} input - Elemento input
+     */
+    aplicarMascaraLocacao(input) {
+        input.addEventListener('input', function(e) {
+            let valor = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
+            let resultado = '';
+            
+            // Formato: 0000-A-0000
+            for (let i = 0; i < valor.length && i < 9; i++) {
+                if (i === 4 || i === 5) {
+                    // Posição 4: adiciona hífen antes da letra
+                    if (i === 4 && resultado.length === 4) {
+                        resultado += '-';
+                    }
+                    // Posição 5: deve ser letra
+                    if (i === 4) {
+                        if (/[A-Z]/.test(valor[i])) {
+                            resultado += valor[i] + '-';
+                        }
+                    } else if (i === 5) {
+                        if (/[0-9]/.test(valor[i])) {
+                            resultado += valor[i];
+                        }
+                    }
+                } else if (i < 4) {
+                    // Primeiros 4 dígitos
+                    if (/[0-9]/.test(valor[i])) {
+                        resultado += valor[i];
+                    }
+                } else {
+                    // Últimos 4 dígitos
+                    if (/[0-9]/.test(valor[i])) {
+                        resultado += valor[i];
+                    }
+                }
+            }
+            
+            e.target.value = resultado;
+        });
+    },
+
+    /**
+     * Formata código de locação para exibição
+     * @param {string} codigo - Código bruto (ex: "1A1" ou "0001-A-0001")
+     * @returns {string} - Código formatado (ex: "0001-A-0001")
+     */
+    formatarLocacao(codigo) {
+        if (!codigo) return '-';
+        
+        // Se já está formatado corretamente
+        if (/^\d{4}-[A-Z]-\d{4}$/.test(codigo)) {
+            return codigo;
+        }
+        
+        // Remove caracteres inválidos
+        let limpo = codigo.toUpperCase().replace(/[^0-9A-Z]/g, '');
+        
+        // Tenta extrair área, corredor e posição
+        const match = limpo.match(/^(\d+)([A-Z])(\d+)$/);
+        if (match) {
+            const area = match[1].padStart(4, '0');
+            const corredor = match[2];
+            const posicao = match[3].padStart(4, '0');
+            return `${area}-${corredor}-${posicao}`;
+        }
+        
+        return codigo;
+    },
+
+    /**
      * Mostra loading overlay
      */
     mostrarLoading(texto = 'Carregando...') {

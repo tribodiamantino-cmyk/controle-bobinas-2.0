@@ -615,12 +615,14 @@ class PDCModule {
                         <input type="text" 
                                id="locacaoGuardarAposCorte" 
                                class="form-control form-control-lg text-center"
-                               placeholder="Locação (ex: 1-A-1)"
+                               placeholder="0001-A-0001"
+                               maxlength="11"
                                style="text-transform: uppercase;">
                         <button class="btn btn-primary" onclick="pdc.escanearLocacaoAposCorte()">
                             <i class="bi bi-qr-code-scan"></i>
                         </button>
                     </div>
+                    <small class="text-muted">Formato: NNNN-L-NNNN (ex: 0001-A-0001)</small>
                 </div>
                 
                 <div class="d-grid gap-2 mt-3">
@@ -633,6 +635,9 @@ class PDCModule {
                 </div>
             </div>
         `;
+        
+        // Aplica máscara de locação
+        Utils.aplicarMascaraLocacao(document.getElementById('locacaoGuardarAposCorte'));
     }
 
     /**
@@ -841,6 +846,12 @@ class PDCModule {
             `${this.pdcAtual.codigo_plano} - ${this.pdcAtual.cliente}`;
 
         this.atualizarListaLocacoes();
+        
+        // Aplica máscara de locação no campo manual
+        const inputLocacao = document.getElementById('locacaoManual');
+        if (inputLocacao) {
+            Utils.aplicarMascaraLocacao(inputLocacao);
+        }
     }
 
     /**
