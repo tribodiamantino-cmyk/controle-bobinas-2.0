@@ -2179,8 +2179,35 @@ function abrirFotoContraprova(codigoCorte, fotoUrl, metragem, dataCorte) {
     const info = document.getElementById('infoFotoContraprova');
     
     titulo.textContent = `Contraprova - ${codigoCorte}`;
-    imagem.src = fotoUrl;
     info.innerHTML = `<strong>Metragem:</strong> ${metragem} | <strong>Data:</strong> ${dataCorte}`;
+    
+    // Verificar se a foto existe antes de mostrar
+    const img = new Image();
+    img.onload = function() {
+        imagem.src = fotoUrl;
+        imagem.style.display = 'block';
+        document.getElementById('fotoNaoEncontrada')?.remove();
+    };
+    img.onerror = function() {
+        imagem.style.display = 'none';
+        // Mostrar mensagem de erro
+        let errorDiv = document.getElementById('fotoNaoEncontrada');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.id = 'fotoNaoEncontrada';
+            errorDiv.style.cssText = 'background: #fff3cd; color: #856404; padding: 30px; border-radius: 8px; text-align: center;';
+            errorDiv.innerHTML = `
+                <div style="font-size: 3rem; margin-bottom: 15px;">📷</div>
+                <h3>Foto não disponível</h3>
+                <p style="margin-top: 10px; font-size: 0.9rem;">
+                    A foto de contraprova foi registrada, mas não está mais disponível no servidor.<br>
+                    <small style="color: #666;">Caminho: ${fotoUrl}</small>
+                </p>
+            `;
+            imagem.parentNode.insertBefore(errorDiv, imagem);
+        }
+    };
+    img.src = fotoUrl;
     
     modal.style.display = 'flex';
 }
@@ -2188,4 +2215,6 @@ function abrirFotoContraprova(codigoCorte, fotoUrl, metragem, dataCorte) {
 function fecharModalFotoContraprova() {
     document.getElementById('modalFotoContraprova').style.display = 'none';
     document.getElementById('imagemContraprova').src = '';
+    document.getElementById('imagemContraprova').style.display = 'block';
+    document.getElementById('fotoNaoEncontrada')?.remove();
 }
