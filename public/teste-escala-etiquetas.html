@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Escala - Etiquetas 60x30mm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .info {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .info code {
+            background: #e0e0e0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+        
+        .labels-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: flex-start;
+        }
+        
+        .label-container {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .label-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 12px;
+        }
+        
+        .label-code {
+            font-family: monospace;
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        
+        /* Etiqueta 60x30mm em escala real (1mm = 3.78px) */
+        .etiqueta {
+            width: 226.8px;  /* 60mm */
+            height: 113.4px; /* 30mm */
+            border: 1px solid #333;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            padding: 3px;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        /* Linha 1 - Código legível */
+        .linha1 {
+            height: 22.68px; /* 6mm */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Linha 2 - Código de barras */
+        .linha2 {
+            height: 37.8px; /* 10mm */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .linha2.alta {
+            height: 56.7px; /* 15mm - para locação */
+        }
+        
+        .linha2 svg {
+            max-width: 100%;
+            height: 100%;
+        }
+        
+        /* Linha 3 - Produto */
+        .linha3 {
+            height: 26.46px; /* 7mm */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            text-align: center;
+            line-height: 1.1;
+        }
+        
+        /* Linha 4 - Detalhes */
+        .linha4 {
+            height: 26.46px; /* 7mm */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        /* Etiqueta de Locação (só 2 linhas) */
+        .etiqueta-locacao .linha1 {
+            height: 35px;
+            font-size: 16px;
+        }
+        
+        .comparison {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+        }
+        
+        .comparison h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+        
+        .comparison table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        .comparison th, .comparison td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .comparison th {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .scale-options {
+            margin-top: 30px;
+            padding: 20px;
+            background: #d4edda;
+            border-radius: 8px;
+        }
+        
+        .scale-options h3 {
+            margin-bottom: 15px;
+            color: #155724;
+        }
+        
+        .scale-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .scale-selector button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .scale-selector button.active {
+            background: #28a745;
+            color: white;
+        }
+        
+        .scale-selector button:not(.active) {
+            background: #e0e0e0;
+        }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            
+            .section h2, .info, h1, .comparison, .scale-options {
+                display: none;
+            }
+            
+            .label-container {
+                box-shadow: none;
+                padding: 5px;
+                page-break-inside: avoid;
+            }
+            
+            .etiqueta {
+                border: 1px solid black;
+            }
+        }
+    </style>
+    <!-- JsBarcode para gerar códigos de barras -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+</head>
+<body>
+    <h1>🏷️ Teste de Escala - Etiquetas 60x30mm</h1>
+    <div class="info">
+        <p>Este documento exibe etiquetas com <strong>códigos no tamanho MÁXIMO</strong> para validar a escala dos códigos de barras.</p>
+        <p>Etiqueta: <code>60mm x 30mm</code> | Código de Barras: <code>Code 128</code></p>
+    </div>
+
+    <!-- ==================== BOBINA ==================== -->
+    <div class="section">
+        <h2>1. BOBINA</h2>
+        <p style="margin-bottom: 15px; color: #666;">
+            Banco: <code>BOB-{LOJA}-{000000}</code> (14 chars) | 
+            Barcode: <code>BOB-{LOJA}-{N}</code> (8-14 chars)
+        </p>
+        <div class="labels-row">
+            <!-- Mínimo -->
+            <div class="label-container">
+                <div class="label-title">MÍNIMO (9 chars)</div>
+                <div class="label-code">Barcode: BOB-PLA-1</div>
+                <div class="etiqueta" id="bobina-min">
+                    <div class="linha1">BOB-PLA-000001</div>
+                    <div class="linha2"><svg id="barcode-bobina-min"></svg></div>
+                    <div class="linha3">Preta/Prata 190cm Cano/Cano 190gr</div>
+                    <div class="linha4">PROPEX | ABC-1234 | 150,00m</div>
+                </div>
+            </div>
+            
+            <!-- Máximo -->
+            <div class="label-container">
+                <div class="label-title">MÁXIMO (14 chars)</div>
+                <div class="label-code">Barcode: BOB-PLA-999999</div>
+                <div class="etiqueta" id="bobina-max">
+                    <div class="linha1">BOB-PLA-999999</div>
+                    <div class="linha2"><svg id="barcode-bobina-max"></svg></div>
+                    <div class="linha3">Preta/Prata 190cm Cano/Cano 190gr</div>
+                    <div class="linha4">TEXTILOESTE | PLACA-MAXIMA-123 | 999,99m</div>
+                </div>
+            </div>
+            
+            <!-- Máximo CIA -->
+            <div class="label-container">
+                <div class="label-title">MÁXIMO CIA (14 chars)</div>
+                <div class="label-code">Barcode: BOB-CIA-999999</div>
+                <div class="etiqueta">
+                    <div class="linha1">BOB-CIA-999999</div>
+                    <div class="linha2"><svg id="barcode-bobina-cia"></svg></div>
+                    <div class="linha3">Branca/Branca 220cm Arame/Arame 200gr</div>
+                    <div class="linha4">PROPEX | XYZ-9999-LONGO | 500,00m</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== RETALHO ==================== -->
+    <div class="section">
+        <h2>2. RETALHO</h2>
+        <p style="margin-bottom: 15px; color: #666;">
+            Banco: <code>RET-{LOJA}-{000000}</code> (14 chars) | 
+            Barcode: <code>RET-{LOJA}-{N}</code> (8-14 chars)
+        </p>
+        <div class="labels-row">
+            <!-- Mínimo -->
+            <div class="label-container">
+                <div class="label-title">MÍNIMO (9 chars)</div>
+                <div class="label-code">Barcode: RET-PLA-1</div>
+                <div class="etiqueta">
+                    <div class="linha1">RET-PLA-000001</div>
+                    <div class="linha2"><svg id="barcode-retalho-min"></svg></div>
+                    <div class="linha3">Preta/Prata 190cm Cano/Cano 190gr</div>
+                    <div class="linha4">PROPEX | 35,50m</div>
+                </div>
+            </div>
+            
+            <!-- Máximo -->
+            <div class="label-container">
+                <div class="label-title">MÁXIMO (14 chars)</div>
+                <div class="label-code">Barcode: RET-PLA-999999</div>
+                <div class="etiqueta">
+                    <div class="linha1">RET-PLA-999999</div>
+                    <div class="linha2"><svg id="barcode-retalho-max"></svg></div>
+                    <div class="linha3">Preta/Prata 190cm Cano/Cano 190gr</div>
+                    <div class="linha4">TEXTILOESTE | 999,99m</div>
+                </div>
+            </div>
+            
+            <!-- Máximo CIA -->
+            <div class="label-container">
+                <div class="label-title">MÁXIMO CIA (14 chars)</div>
+                <div class="label-code">Barcode: RET-CIA-999999</div>
+                <div class="etiqueta">
+                    <div class="linha1">RET-CIA-999999</div>
+                    <div class="linha2"><svg id="barcode-retalho-cia"></svg></div>
+                    <div class="linha3">Branca/Branca 220cm Arame/Arame 200gr</div>
+                    <div class="linha4">PROPEX | 150,00m</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== CORTE ==================== -->
+    <div class="section">
+        <h2>3. CORTE</h2>
+        <p style="margin-bottom: 15px; color: #666;">
+            Banco: <code>COR-{LOJA}-{000}-{00}</code> (14 chars) | 
+            Barcode: <code>COR-{LOJA}-{N}-{N}</code> (10-14 chars)
+        </p>
+        <div class="labels-row">
+            <!-- Mínimo -->
+            <div class="label-container">
+                <div class="label-title">MÍNIMO (11 chars)</div>
+                <div class="label-code">Barcode: COR-PLA-1-1</div>
+                <div class="etiqueta">
+                    <div class="linha1">COR-PLA-001-01</div>
+                    <div class="linha2"><svg id="barcode-corte-min"></svg></div>
+                    <div class="linha3">Preta/Prata 190cm Cano/Cano 190gr</div>
+                    <div class="linha4">PROPEX | 25,00m</div>
+                </div>
+            </div>
+            
+            <!-- Máximo -->
+            <div class="label-container">
+                <div class="label-title">MÁXIMO (15 chars)</div>
+                <div class="label-code">Barcode: COR-PLA-999-99</div>
+                <div class="etiqueta">
+                    <div class="linha1">COR-PLA-999-99</div>
+                    <div class="linha2"><svg id="barcode-corte-max"></svg></div>
+                    <div class="linha3">Preta/Prata 190cm Cano/Cano 190gr</div>
+                    <div class="linha4">TEXTILOESTE | 999,99m</div>
+                </div>
+            </div>
+            
+            <!-- Máximo CIA -->
+            <div class="label-container">
+                <div class="label-title">MÁXIMO CIA (15 chars)</div>
+                <div class="label-code">Barcode: COR-CIA-999-99</div>
+                <div class="etiqueta">
+                    <div class="linha1">COR-CIA-999-99</div>
+                    <div class="linha2"><svg id="barcode-corte-cia"></svg></div>
+                    <div class="linha3">Branca/Branca 220cm Arame/Arame 200gr</div>
+                    <div class="linha4">PROPEX | 100,00m</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== LOCAÇÃO ==================== -->
+    <div class="section">
+        <h2>4. LOCAÇÃO</h2>
+        <p style="margin-bottom: 15px; color: #666;">
+            Banco/Display: <code>{0000}-{X}-{0000}</code> (11 chars) | 
+            Barcode: <code>LOC-{N}-{X}-{N}</code> (9-16 chars)
+        </p>
+        <div class="labels-row">
+            <!-- Mínimo -->
+            <div class="label-container">
+                <div class="label-title">MÍNIMO (9 chars)</div>
+                <div class="label-code">Barcode: LOC-1-A-1</div>
+                <div class="etiqueta etiqueta-locacao">
+                    <div class="linha1">0001-A-0001</div>
+                    <div class="linha2 alta"><svg id="barcode-locacao-min"></svg></div>
+                </div>
+            </div>
+            
+            <!-- Médio -->
+            <div class="label-container">
+                <div class="label-title">MÉDIO (13 chars)</div>
+                <div class="label-code">Barcode: LOC-150-B-999</div>
+                <div class="etiqueta etiqueta-locacao">
+                    <div class="linha1">0150-B-0999</div>
+                    <div class="linha2 alta"><svg id="barcode-locacao-med"></svg></div>
+                </div>
+            </div>
+            
+            <!-- Máximo -->
+            <div class="label-container">
+                <div class="label-title">MÁXIMO (16 chars)</div>
+                <div class="label-code">Barcode: LOC-9999-Z-9999</div>
+                <div class="etiqueta etiqueta-locacao">
+                    <div class="linha1">9999-Z-9999</div>
+                    <div class="linha2 alta"><svg id="barcode-locacao-max"></svg></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== COMPARAÇÃO ==================== -->
+    <div class="comparison">
+        <h3>📊 Tabela Comparativa de Caracteres</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Banco de Dados</th>
+                    <th>Chars BD</th>
+                    <th>Código de Barras (Min)</th>
+                    <th>Código de Barras (Max)</th>
+                    <th>Chars Barcode</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Bobina</strong></td>
+                    <td><code>BOB-PLA-000001</code></td>
+                    <td>14</td>
+                    <td><code>BOB-PLA-1</code></td>
+                    <td><code>BOB-PLA-999999</code></td>
+                    <td>9-14</td>
+                </tr>
+                <tr>
+                    <td><strong>Retalho</strong></td>
+                    <td><code>RET-PLA-000001</code></td>
+                    <td>14</td>
+                    <td><code>RET-PLA-1</code></td>
+                    <td><code>RET-PLA-999999</code></td>
+                    <td>9-14</td>
+                </tr>
+                <tr>
+                    <td><strong>Corte</strong></td>
+                    <td><code>COR-PLA-001-01</code></td>
+                    <td>14</td>
+                    <td><code>COR-PLA-1-1</code></td>
+                    <td><code>COR-PLA-999-99</code></td>
+                    <td>11-15</td>
+                </tr>
+                <tr>
+                    <td><strong>Locação</strong></td>
+                    <td><code>0001-A-0001</code></td>
+                    <td>11</td>
+                    <td><code>LOC-1-A-1</code></td>
+                    <td><code>LOC-9999-Z-9999</code></td>
+                    <td>9-16</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ==================== OPÇÕES DE ESCALA ==================== -->
+    <div class="scale-options">
+        <h3>🔧 Teste de Escala do Código de Barras</h3>
+        <p>Clique para alternar entre diferentes escalas de código de barras:</p>
+        <div class="scale-selector">
+            <button class="active" onclick="setScale(1)">Escala 1.0 (Atual)</button>
+            <button onclick="setScale(0.9)">Escala 0.9</button>
+            <button onclick="setScale(0.8)">Escala 0.8</button>
+            <button onclick="setScale(0.7)">Escala 0.7</button>
+        </div>
+        <p style="margin-top: 10px; font-size: 12px; color: #666;">
+            💡 <strong>Dica:</strong> Use Ctrl+P para imprimir uma página de teste e validar na impressora real.
+        </p>
+    </div>
+
+    <script>
+        // Escala atual
+        let currentScale = 1;
+        
+        // Configurações de códigos de barras
+        const barcodes = [
+            // Bobinas
+            { id: 'barcode-bobina-min', code: 'BOB-PLA-1' },
+            { id: 'barcode-bobina-max', code: 'BOB-PLA-999999' },
+            { id: 'barcode-bobina-cia', code: 'BOB-CIA-999999' },
+            // Retalhos
+            { id: 'barcode-retalho-min', code: 'RET-PLA-1' },
+            { id: 'barcode-retalho-max', code: 'RET-PLA-999999' },
+            { id: 'barcode-retalho-cia', code: 'RET-CIA-999999' },
+            // Cortes
+            { id: 'barcode-corte-min', code: 'COR-PLA-1-1' },
+            { id: 'barcode-corte-max', code: 'COR-PLA-999-99' },
+            { id: 'barcode-corte-cia', code: 'COR-CIA-999-99' },
+            // Locações
+            { id: 'barcode-locacao-min', code: 'LOC-1-A-1' },
+            { id: 'barcode-locacao-med', code: 'LOC-150-B-999' },
+            { id: 'barcode-locacao-max', code: 'LOC-9999-Z-9999' }
+        ];
+        
+        // Gerar todos os códigos de barras
+        function generateBarcodes(scale = 1) {
+            barcodes.forEach(bc => {
+                try {
+                    JsBarcode(`#${bc.id}`, bc.code, {
+                        format: 'CODE128',
+                        width: 1.5 * scale,  // Largura das barras
+                        height: 35,          // Altura em pixels
+                        displayValue: false, // Não mostrar texto
+                        margin: 0,
+                        background: 'transparent'
+                    });
+                } catch (e) {
+                    console.error(`Erro ao gerar barcode ${bc.id}:`, e);
+                }
+            });
+        }
+        
+        // Alterar escala
+        function setScale(scale) {
+            currentScale = scale;
+            generateBarcodes(scale);
+            
+            // Atualizar botões
+            document.querySelectorAll('.scale-selector button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            generateBarcodes(1);
+        });
+    </script>
+</body>
+</html>
