@@ -44,6 +44,32 @@ function normalizarCodigoBarras(codigo) {
     return codigo.toUpperCase();
 }
 
+/**
+ * Converte nome da loja para prefixo de 3 letras
+ * Cortinave → PLA
+ * BN → CIA
+ */
+function getLojaPrefixo(loja) {
+    if (!loja) return 'PLA';
+    
+    const lojaUpper = loja.toUpperCase();
+    
+    // Se já é um prefixo válido, retorna ele mesmo
+    if (lojaUpper === 'PLA' || lojaUpper === 'CIA') {
+        return lojaUpper;
+    }
+    
+    // Mapeamento de nomes para prefixos
+    const mapeamento = {
+        'CORTINAVE': 'PLA',
+        'PALOTINA': 'PLA',
+        'BN': 'CIA',
+        'CIANORTE': 'CIA'
+    };
+    
+    return mapeamento[lojaUpper] || 'PLA';
+}
+
 router.get('/bobina/:id', async (req, res) => {
     try {
         const bobinaId = req.params.id;
@@ -487,12 +513,12 @@ router.post('/validar-item', async (req, res) => {
         // Gerar código do corte no formato COR-{LOJA}-{PLANO}-{SEQUENCIAL}
         // Exemplo: COR-PLA-001-01 (1º corte do PDC 001)
         
-        // Buscar loja do plano
+        // Buscar loja do plano e converter para prefixo
         const [planoInfo] = await connection.query(
             'SELECT loja FROM planos_corte WHERE id = ?', 
             [planoCorteId]
         );
-        const loja = planoInfo.length > 0 ? planoInfo[0].loja : 'PLA';
+        const lojaPrefixo = getLojaPrefixo(planoInfo.length > 0 ? planoInfo[0].loja : null);
         
         // Buscar próximo sequencial dentro do plano (reinicia em cada PDC)
         const [ultimoCorte] = await connection.query(`
@@ -513,7 +539,7 @@ router.post('/validar-item', async (req, res) => {
         // Formato: COR-{LOJA}-{PLANO 3 dígitos}-{SEQUENCIAL 2 dígitos}
         const planoStr = String(planoCorteId).padStart(3, '0');
         const seqStr = String(sequencial).padStart(2, '0');
-        const codigoCorte = `COR-${loja}-${planoStr}-${seqStr}`;
+        const codigoCorte = `COR-${lojaPrefixo}-${planoStr}-${seqStr}`;
         
         // Criar registro em cortes_realizados
         const [corteResult] = await connection.query(`
@@ -779,9 +805,9 @@ router.post('/registrar-corte', upload.single('foto'), async (req, res) => {
         // Gera código do corte no formato COR-{LOJA}-{PLANO}-{SEQUENCIAL}
         // Exemplo: COR-PLA-001-01 (1º corte do PDC 001)
         
-        // Busca loja do PDC
+        // Busca loja do PDC e converte para prefixo
         const [pdcInfo] = await db.query('SELECT loja FROM planos_corte WHERE id = ?', [pdc_id]);
-        const loja = pdcInfo.length > 0 ? pdcInfo[0].loja : 'PLA';
+        const lojaPrefixo = getLojaPrefixo(pdcInfo.length > 0 ? pdcInfo[0].loja : null);
         
         // Buscar próximo sequencial dentro do plano (reinicia em cada PDC)
         const [ultimoCorte] = await db.query(
@@ -803,7 +829,7 @@ router.post('/registrar-corte', upload.single('foto'), async (req, res) => {
         // Formato: COR-{LOJA}-{PLANO 3 dígitos}-{SEQUENCIAL 2 dígitos}
         const planoStr = String(pdc_id).padStart(3, '0');
         const seqStr = String(sequencial).padStart(2, '0');
-        const codigo_corte = `COR-${loja}-${planoStr}-${seqStr}`;
+        const codigo_corte = `COR-${lojaPrefixo}-${planoStr}-${seqStr}`;
         
         // URL da foto
         let foto_url = null;
