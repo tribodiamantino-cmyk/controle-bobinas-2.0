@@ -558,21 +558,28 @@
 
         async function marcarImpressa(id) {
             try {
-                const response = await fetch(`${API_BASE}/impressao/${id}/impressa`, {
+                console.log('Marcando etiqueta como impressa:', id);
+                const url = `${API_BASE}/impressao/${id}/impressa`;
+                console.log('URL:', url);
+                
+                const response = await fetch(url, {
                     method: 'PUT'
                 });
+                
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Result:', result);
 
                 if (result.success) {
                     mostrarSucesso('Etiqueta marcada como impressa');
                     carregarFila();
                     carregarStats();
                 } else {
-                    throw new Error(result.error);
+                    throw new Error(result.error || 'Erro desconhecido');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                mostrarErro('Erro ao marcar etiqueta');
+                mostrarErro(error.message || 'Erro ao marcar etiqueta');
             }
         }
 
@@ -580,21 +587,28 @@
             if (!confirm('Cancelar esta etiqueta da fila?')) return;
 
             try {
-                const response = await fetch(`${API_BASE}/impressao/${id}/cancelar`, {
+                console.log('Cancelando etiqueta:', id);
+                const url = `${API_BASE}/impressao/${id}/cancelar`;
+                console.log('URL:', url);
+                
+                const response = await fetch(url, {
                     method: 'PUT'
                 });
+                
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Result:', result);
 
                 if (result.success) {
                     mostrarSucesso('Etiqueta cancelada');
                     carregarFila();
                     carregarStats();
                 } else {
-                    throw new Error(result.error);
+                    throw new Error(result.error || 'Erro desconhecido');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                mostrarErro('Erro ao cancelar etiqueta');
+                mostrarErro(error.message || 'Erro ao cancelar etiqueta');
             }
         }
 
