@@ -1,8 +1,8 @@
 # 📄 Relatório de Carregamento A4
 
 > **Documento de Especificação** - Controle de Bobinas 2.0  
-> **Versão:** 1.0 | **Data:** 18/12/2025  
-> **Status:** 📋 PLANEJAMENTO
+> **Versão:** 1.1 | **Data:** 18/12/2025  
+> **Status:** ✅ ESPECIFICADO
 
 ---
 
@@ -12,7 +12,16 @@ Gerar um relatório impresso em formato A4 ao finalizar um carregamento, contend
 1. Documentação da entrega
 2. Conferência pelo motorista/cliente
 3. Comprovante físico do carregamento
-4. Registro de fotos de contraprova (opcional)
+
+---
+
+## ✅ Decisões Tomadas
+
+| Decisão | Escolha | Motivo |
+|---------|---------|--------|
+| **Onde gerar PDF** | PC Local | Mais simples, sem Puppeteer no Railway |
+| **Incluir fotos** | Não | Relatório mais leve e rápido |
+| **Quantidade de vias** | 2 | 1 via motorista + 1 via arquivo loja |
 
 ---
 
@@ -21,60 +30,79 @@ Gerar um relatório impresso em formato A4 ao finalizar um carregamento, contend
 ### Estrutura Visual (A4 - 210x297mm)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │              CORTINAVE / BN                              │   │
-│  │          RELATÓRIO DE CARREGAMENTO                       │   │
-│  │              CAR-2025-00001                              │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  DADOS DO PLANO                                          │   │
-│  │  PDC: PDC-PLA-001       Cliente: GRANJA EXEMPLO          │   │
-│  │  Obra: Aviário 3        Data Criação: 15/12/2025         │   │
-│  │  Status: ENTREGUE       Data Entrega: 18/12/2025         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  LISTA DE CORTES                                         │   │
-│  ├─────────────────────────────────────────────────────────┤   │
-│  │  #  │ Código        │ Produto              │ Metragem   │   │
-│  ├─────────────────────────────────────────────────────────┤   │
-│  │  1  │ COR-PLA-1-1   │ Preta 190cm C/C 190gr│ 25,00m    │   │
-│  │  2  │ COR-PLA-1-2   │ Preta 190cm C/C 190gr│ 30,00m    │   │
-│  │  3  │ COR-PLA-1-3   │ Branca 200cm A/A 200g│ 15,00m    │   │
-│  │  ... │ ...          │ ...                   │ ...       │   │
-│  ├─────────────────────────────────────────────────────────┤   │
-│  │                            TOTAL GERAL:     │ 150,00m   │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  RESUMO POR PRODUTO                                      │   │
-│  ├─────────────────────────────────────────────────────────┤   │
-│  │  Produto                        │ Qtd Cortes │ Metragem │   │
-│  │  Preta 190cm Cano/Cano 190gr    │     5      │  75,00m  │   │
-│  │  Branca 200cm Arame/Arame 200gr │     3      │  45,00m  │   │
-│  │  Azul 180cm Cano/Arame 180gr    │     2      │  30,00m  │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  ASSINATURAS                                             │   │
-│  │                                                          │   │
-│  │  Responsável Corte: _____________________________        │   │
-│  │                                                          │   │
-│  │  Motorista: _____________________________________        │   │
-│  │                                                          │   │
-│  │  Recebido por: __________________________________        │   │
-│  │                                                          │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Impresso em: 18/12/2025 14:35    v2.6.0                │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────────┐ │
+│  │  CORTINAVE                      ROMANEIO DE CARREGAMENTO      │ │
+│  │  Palotina/PR                    CAR-2025-00001                │ │
+│  │                                 Data: 18/12/2025              │ │
+│  └───────────────────────────────────────────────────────────────┘ │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────────┐ │
+│  │  DADOS DO PLANO DE CORTE                                      │ │
+│  ├───────────────────────────────────────────────────────────────┤ │
+│  │  Código:     PDC-PLA-001                                      │ │
+│  │  Cliente:    GRANJA EXEMPLO LTDA                              │ │
+│  │  Obra:       Aviário 3 - Barracão Norte                       │ │
+│  │  Cidade:     Toledo/PR                                        │ │
+│  │  Cor:        Preta                                            │ │
+│  │  Medida:     190cm (Cano/Cano)                                │ │
+│  │  Gramatura:  190gr                                            │ │
+│  │  Metragem Solicitada: 150,00m                                 │ │
+│  │  Observações: Entregar pela manhã, ligar antes                │ │
+│  └───────────────────────────────────────────────────────────────┘ │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────────┐ │
+│  │  LISTA DE CORTES                              Via: MOTORISTA  │ │
+│  ├────┬─────────────┬────────────────────────┬──────────┬───────┤ │
+│  │ #  │ Código      │ Origem                 │ Metragem │  OK   │ │
+│  ├────┼─────────────┼────────────────────────┼──────────┼───────┤ │
+│  │ 1  │ COR-PLA-1-1 │ BOB-PLA-000123         │  25,00m  │  [ ]  │ │
+│  │    │             │ Obs: Ponta irregular   │          │       │ │
+│  ├────┼─────────────┼────────────────────────┼──────────┼───────┤ │
+│  │ 2  │ COR-PLA-1-2 │ BOB-PLA-000123         │  30,00m  │  [ ]  │ │
+│  │    │             │ Obs: -                 │          │       │ │
+│  ├────┼─────────────┼────────────────────────┼──────────┼───────┤ │
+│  │ 3  │ COR-PLA-1-3 │ RET-PLA-000045         │  15,00m  │  [ ]  │ │
+│  │    │             │ Obs: Emendado          │          │       │ │
+│  ├────┼─────────────┼────────────────────────┼──────────┼───────┤ │
+│  │ 4  │ COR-PLA-1-4 │ BOB-PLA-000125         │  40,00m  │  [ ]  │ │
+│  │    │             │ Obs: -                 │          │       │ │
+│  ├────┼─────────────┼────────────────────────┼──────────┼───────┤ │
+│  │ 5  │ COR-PLA-1-5 │ BOB-PLA-000125         │  40,00m  │  [ ]  │ │
+│  │    │             │ Obs: Última do rolo    │          │       │ │
+│  ├────┴─────────────┴────────────────────────┼──────────┼───────┤ │
+│  │                           TOTAL (5 itens) │ 150,00m  │       │ │
+│  └───────────────────────────────────────────┴──────────┴───────┘ │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────────┐ │
+│  │  CONFERÊNCIA E ASSINATURAS                                    │ │
+│  ├───────────────────────────────────────────────────────────────┤ │
+│  │                                                               │ │
+│  │  Expedidor: _________________________  Data: ___/___/______   │ │
+│  │                                                               │ │
+│  │  Motorista: _________________________  Placa: _____________   │ │
+│  │                                                               │ │
+│  │  ┌─────────────────────────────────────────────────────────┐ │ │
+│  │  │  Declaro ter recebido os materiais acima descritos em   │ │ │
+│  │  │  perfeitas condições de uso.                            │ │ │
+│  │  │                                                         │ │ │
+│  │  │  Recebido por: _______________________________________  │ │ │
+│  │  │  Data/Hora: ___________________________________________ │ │ │
+│  │  └─────────────────────────────────────────────────────────┘ │ │
+│  │                                                               │ │
+│  └───────────────────────────────────────────────────────────────┘ │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────────┐ │
+│  │  ||||||||||||||||||||||||||||       Impresso: 18/12/25 14:35 │ │
+│  │  CAR-2025-00001                                 Sistema v2.6 │ │
+│  └───────────────────────────────────────────────────────────────┘ │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
+
+### Via 1: MOTORISTA / Via 2: ARQUIVO LOJA
+*(Mesma estrutura, apenas indica no canto superior direito)*
 
 ---
 
@@ -84,44 +112,50 @@ Gerar um relatório impresso em formato A4 ao finalizar um carregamento, contend
 | Campo | Descrição | Fonte |
 |-------|-----------|-------|
 | Logo/Nome Empresa | CORTINAVE ou BN | `planos_corte.loja` |
-| Título | "RELATÓRIO DE CARREGAMENTO" | Fixo |
+| Cidade | Palotina/PR ou Cianorte/PR | Baseado na loja |
+| Título | "ROMANEIO DE CARREGAMENTO" | Fixo |
 | Código Carregamento | CAR-2025-00001 | `carregamentos.codigo` |
+| Data do Carregamento | 18/12/2025 | `carregamentos.data_conclusao` |
 
-### 2. Dados do Plano
+### 2. Dados do Plano de Corte
 | Campo | Descrição | Fonte |
 |-------|-----------|-------|
 | Código PDC | PDC-PLA-001 | `planos_corte.codigo_plano` |
 | Cliente | Nome do cliente | `planos_corte.cliente` |
 | Obra | Nome da obra/aviário | `planos_corte.obra` |
-| Data Criação | Data do plano | `planos_corte.data_criacao` |
-| Data Entrega | Data de finalização | `carregamentos.data_conclusao` |
-| Status | ENTREGUE | `planos_corte.status` |
+| Cidade | Cidade da entrega | `planos_corte.cidade` |
+| Cor | Cor do produto | `planos_corte.cor` |
+| Medida | Largura + bainha | `planos_corte.medida` + `planos_corte.bainha` |
+| Gramatura | Gramatura do tecido | `planos_corte.gramatura` |
+| Metragem Solicitada | Total do PDC | `planos_corte.metragem_total` |
+| Observações | Obs gerais do PDC | `planos_corte.observacoes` |
 
-### 3. Lista de Cortes
+### 3. Lista de Cortes (com checkbox OK)
 | Coluna | Descrição | Fonte |
 |--------|-----------|-------|
 | # | Número sequencial | Ordem na lista |
 | Código | Código do corte | `cortes_realizados.codigo_corte` |
-| Produto | Descrição curta | Composição de `cor + largura + bainha + gramatura` |
-| Origem | Bobina/Retalho | `cortes_realizados.codigo_origem` |
+| Origem | Bobina/Retalho de onde foi cortado | `cortes_realizados.codigo_origem` |
+| Obs | Observações específicas do corte | `cortes_realizados.observacoes` |
 | Metragem | Metros cortados | `cortes_realizados.metragem_cortada` |
+| OK | **Checkbox para conferência manual** | Campo em branco [ ] |
 
-### 4. Resumo por Produto
-Agrupamento da lista de cortes por produto com totalizadores.
-
-### 5. Totalizadores
+### 4. Totalizadores
 | Campo | Cálculo |
 |-------|---------|
-| Total de Cortes | COUNT de cortes_realizados |
+| Quantidade de Itens | COUNT de cortes_realizados |
 | Metragem Total | SUM de metragem_cortada |
 
-### 6. Área de Assinaturas
-Campos para assinatura manual:
-- Responsável pelo corte
-- Motorista
-- Recebido por (cliente)
+### 5. Área de Conferência e Assinaturas
+| Campo | Uso |
+|-------|-----|
+| Expedidor | Nome + assinatura de quem preparou |
+| Motorista | Nome + assinatura + placa do veículo |
+| Recebido por | Assinatura do cliente na entrega |
+| Data/Hora | Preenchido na entrega |
 
-### 7. Rodapé
+### 6. Rodapé
+- Código de barras do carregamento (para referência)
 - Data/hora de impressão
 - Versão do sistema
 
@@ -206,36 +240,60 @@ Finalizar Carregamento → API Railway → Gera PDF → Fila Impressão A4 → P
 
 ### Backend (Railway)
 
-#### Novo Endpoint: Gerar Relatório
+#### Endpoint: Dados do Relatório
 ```javascript
 GET /api/carregamento/:id/relatorio
 
 Response: {
     success: true,
     data: {
-        carregamento: { ... },
-        plano: { ... },
-        cortes: [ ... ],
-        resumo_produtos: [ ... ],
-        totais: { ... }
+        carregamento: {
+            id: 1,
+            codigo: "CAR-2025-00001",
+            data_inicio: "2025-12-18T10:00:00",
+            data_conclusao: "2025-12-18T14:30:00",
+            status: "finalizado"
+        },
+        plano: {
+            id: 1,
+            codigo_plano: "PDC-PLA-001",
+            cliente: "GRANJA EXEMPLO LTDA",
+            obra: "Aviário 3 - Barracão Norte",
+            cidade: "Toledo/PR",
+            cor: "Preta",
+            medida: "190cm",
+            bainha: "Cano/Cano",
+            gramatura: "190gr",
+            metragem_total: 150.00,
+            observacoes: "Entregar pela manhã",
+            loja: "Cortinave"
+        },
+        cortes: [
+            {
+                sequencial: 1,
+                codigo_corte: "COR-PLA-1-1",
+                codigo_origem: "BOB-PLA-000123",
+                metragem_cortada: 25.00,
+                observacoes: "Ponta irregular"
+            },
+            // ...
+        ],
+        totais: {
+            quantidade_cortes: 5,
+            metragem_total: 150.00
+        }
     }
 }
 ```
 
-#### Novo Endpoint: PDF do Relatório
-```javascript
-GET /api/carregamento/:id/relatorio/pdf
-
-Response: application/pdf (download)
-```
-
-#### Nova Tabela: fila_impressao_relatorios
+#### Fila de Impressão de Relatórios
 ```sql
 CREATE TABLE fila_impressao_relatorios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tipo ENUM('carregamento', 'inventario', 'producao') NOT NULL,
     entidade_id INT NOT NULL,
     loja ENUM('Cortinave', 'BN') NOT NULL,
+    copias INT DEFAULT 2,
     status ENUM('pendente', 'impresso', 'erro') DEFAULT 'pendente',
     tentativas INT DEFAULT 0,
     erro_msg TEXT,
@@ -244,23 +302,28 @@ CREATE TABLE fila_impressao_relatorios (
 );
 ```
 
-### Servidor Local (Node.js)
+### Servidor de Impressão Local (Node.js)
+
+> **PDF gerado localmente** - O servidor local recebe os dados JSON e gera o PDF com Puppeteer
 
 #### Estrutura de Pastas
 ```
 servidor-impressao/
 ├── package.json
-├── config.json           # Configurações (URL API, intervalo polling)
+├── config.json              # Configurações
 ├── src/
-│   ├── index.js          # Entry point
-│   ├── polling.js        # Consulta API
-│   ├── queue.js          # Gerenciamento de filas
+│   ├── index.js             # Entry point
+│   ├── polling.js           # Consulta API (5s)
+│   ├── queue.js             # Gerenciamento de filas
 │   ├── printers/
-│   │   ├── thermal.js    # Impressão etiquetas (Elgin L42)
-│   │   └── pdf.js        # Impressão A4 (qualquer impressora)
+│   │   ├── thermal.js       # Elgin L42 (etiquetas 60x30)
+│   │   └── pdf.js           # Impressora A4 (relatórios)
+│   ├── templates/
+│   │   └── romaneio.html    # Template HTML do relatório
 │   └── utils/
-│       └── logger.js     # Logs
-└── logs/                 # Arquivos de log
+│       ├── pdf-generator.js # HTML → PDF com Puppeteer
+│       └── logger.js        # Logs
+└── logs/
 ```
 
 #### Configuração (config.json)
@@ -278,54 +341,291 @@ servidor-impressao/
         },
         "pdf": {
             "name": "HP LaserJet",
-            "type": "network",
+            "type": "default",
             "copies": 2
         }
     }
 }
 ```
 
+#### Fluxo de Geração do PDF
+```
+1. Polling detecta relatório pendente
+2. Busca dados: GET /api/carregamento/:id/relatorio
+3. Carrega template HTML (romaneio.html)
+4. Substitui variáveis pelos dados reais
+5. Puppeteer renderiza HTML → PDF
+6. Envia PDF para impressora A4 (2 cópias)
+7. Marca como impresso na API
+```
+
 ---
 
-## 📦 Geração de PDF
+## 📦 Template HTML do Relatório
 
-### Opções de Biblioteca
-
-| Biblioteca | Prós | Contras |
-|------------|------|---------|
-| **PDFKit** | Leve, controle total | Código verboso |
-| **Puppeteer** | HTML → PDF fácil | Pesado (Chrome) |
-| **jsPDF** | Frontend/Backend | Menos recursos |
-| **pdf-lib** | Edição avançada | Complexo |
-
-**Recomendação:** **Puppeteer** (HTML → PDF com CSS)
-- Facilita criar layout bonito com HTML/CSS
-- Suporte a tabelas, quebra de página automática
-- Pode rodar no servidor Railway ou local
-
-### Exemplo de Template HTML
+### Template: romaneio.html
 ```html
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
+    <meta charset="UTF-8">
     <style>
-        @page { size: A4; margin: 15mm; }
-        body { font-family: Arial; font-size: 12pt; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .section { margin-bottom: 15px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #333; padding: 8px; }
-        th { background: #f0f0f0; }
-        .assinaturas { margin-top: 30px; }
-        .linha-assinatura { 
-            border-bottom: 1px solid #333; 
-            width: 300px; 
-            margin: 20px 0; 
+        @page { 
+            size: A4; 
+            margin: 12mm; 
+        }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        body { 
+            font-family: Arial, sans-serif; 
+            font-size: 11pt; 
+            line-height: 1.4;
+        }
+        
+        /* Cabeçalho */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            border: 2px solid #000;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+        }
+        .header-left { font-weight: bold; }
+        .header-left .empresa { font-size: 18pt; }
+        .header-left .cidade { font-size: 10pt; color: #666; }
+        .header-right { text-align: right; }
+        .header-right .titulo { font-size: 14pt; font-weight: bold; }
+        .header-right .codigo { font-size: 12pt; }
+        .header-right .data { font-size: 10pt; color: #666; }
+        
+        /* Seções */
+        .section {
+            border: 1px solid #000;
+            margin-bottom: 12px;
+        }
+        .section-title {
+            background: #e0e0e0;
+            padding: 5px 10px;
+            font-weight: bold;
+            border-bottom: 1px solid #000;
+        }
+        .section-content {
+            padding: 10px;
+        }
+        .section-content p {
+            margin-bottom: 5px;
+        }
+        .section-content .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 160px;
+        }
+        
+        /* Tabela de Cortes */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        th {
+            background: #e0e0e0;
+            font-weight: bold;
+        }
+        .col-seq { width: 5%; text-align: center; }
+        .col-codigo { width: 18%; }
+        .col-origem { width: 20%; }
+        .col-obs { width: 37%; font-size: 9pt; }
+        .col-metragem { width: 12%; text-align: right; }
+        .col-ok { width: 8%; text-align: center; }
+        .checkbox { 
+            width: 14px; 
+            height: 14px; 
+            border: 1px solid #000; 
+            display: inline-block; 
+        }
+        .obs-row { font-size: 9pt; color: #444; }
+        .total-row { font-weight: bold; background: #f5f5f5; }
+        
+        /* Via */
+        .via-indicator {
+            position: absolute;
+            top: 12mm;
+            right: 12mm;
+            font-size: 9pt;
+            color: #666;
+            border: 1px dashed #999;
+            padding: 2px 8px;
+        }
+        
+        /* Assinaturas */
+        .assinaturas {
+            margin-top: 15px;
+        }
+        .assinatura-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+        .assinatura-campo {
+            flex: 1;
+            margin-right: 20px;
+        }
+        .assinatura-campo:last-child {
+            margin-right: 0;
+        }
+        .linha-assinatura {
+            border-bottom: 1px solid #000;
+            margin-top: 30px;
+            margin-bottom: 3px;
+        }
+        .assinatura-label {
+            font-size: 9pt;
+        }
+        
+        /* Declaração */
+        .declaracao {
+            border: 1px solid #000;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 10pt;
+        }
+        
+        /* Rodapé */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #000;
+            padding: 8px;
+            margin-top: 15px;
+        }
+        .footer .barcode {
+            font-family: 'Libre Barcode 128', monospace;
+            font-size: 36pt;
+        }
+        .footer .info {
+            font-size: 9pt;
+            text-align: right;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <!-- Conteúdo dinâmico -->
+    <div class="via-indicator">Via: {{VIA}}</div>
+    
+    <div class="header">
+        <div class="header-left">
+            <div class="empresa">{{EMPRESA}}</div>
+            <div class="cidade">{{CIDADE_EMPRESA}}</div>
+        </div>
+        <div class="header-right">
+            <div class="titulo">ROMANEIO DE CARREGAMENTO</div>
+            <div class="codigo">{{CODIGO_CARREGAMENTO}}</div>
+            <div class="data">Data: {{DATA_CARREGAMENTO}}</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">DADOS DO PLANO DE CORTE</div>
+        <div class="section-content">
+            <p><span class="label">Código:</span> {{CODIGO_PDC}}</p>
+            <p><span class="label">Cliente:</span> {{CLIENTE}}</p>
+            <p><span class="label">Obra:</span> {{OBRA}}</p>
+            <p><span class="label">Cidade:</span> {{CIDADE_ENTREGA}}</p>
+            <p><span class="label">Cor:</span> {{COR}}</p>
+            <p><span class="label">Medida:</span> {{MEDIDA}} ({{BAINHA}})</p>
+            <p><span class="label">Gramatura:</span> {{GRAMATURA}}</p>
+            <p><span class="label">Metragem Solicitada:</span> {{METRAGEM_SOLICITADA}}m</p>
+            <p><span class="label">Observações:</span> {{OBSERVACOES_PDC}}</p>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">LISTA DE CORTES</div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-seq">#</th>
+                    <th class="col-codigo">Código</th>
+                    <th class="col-origem">Origem</th>
+                    <th class="col-obs">Observações</th>
+                    <th class="col-metragem">Metragem</th>
+                    <th class="col-ok">OK</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#CORTES}}
+                <tr>
+                    <td class="col-seq">{{SEQ}}</td>
+                    <td class="col-codigo">{{CODIGO_CORTE}}</td>
+                    <td class="col-origem">{{CODIGO_ORIGEM}}</td>
+                    <td class="col-obs">{{OBS_CORTE}}</td>
+                    <td class="col-metragem">{{METRAGEM}}m</td>
+                    <td class="col-ok"><span class="checkbox"></span></td>
+                </tr>
+                {{/CORTES}}
+                <tr class="total-row">
+                    <td colspan="4" style="text-align: right;">TOTAL ({{QTD_ITENS}} itens)</td>
+                    <td class="col-metragem">{{METRAGEM_TOTAL}}m</td>
+                    <td class="col-ok"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">CONFERÊNCIA E ASSINATURAS</div>
+        <div class="section-content assinaturas">
+            <div class="assinatura-row">
+                <div class="assinatura-campo">
+                    <div class="linha-assinatura"></div>
+                    <div class="assinatura-label">Expedidor</div>
+                </div>
+                <div class="assinatura-campo">
+                    <div class="linha-assinatura"></div>
+                    <div class="assinatura-label">Data</div>
+                </div>
+            </div>
+            <div class="assinatura-row">
+                <div class="assinatura-campo">
+                    <div class="linha-assinatura"></div>
+                    <div class="assinatura-label">Motorista</div>
+                </div>
+                <div class="assinatura-campo">
+                    <div class="linha-assinatura"></div>
+                    <div class="assinatura-label">Placa</div>
+                </div>
+            </div>
+            <div class="declaracao">
+                <strong>Declaro ter recebido os materiais acima descritos em perfeitas condições de uso.</strong>
+                <div class="assinatura-row" style="margin-top: 15px; margin-bottom: 0;">
+                    <div class="assinatura-campo">
+                        <div class="linha-assinatura"></div>
+                        <div class="assinatura-label">Recebido por</div>
+                    </div>
+                    <div class="assinatura-campo">
+                        <div class="linha-assinatura"></div>
+                        <div class="assinatura-label">Data/Hora</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <div class="barcode">{{CODIGO_BARRAS}}</div>
+        <div class="info">
+            Impresso: {{DATA_IMPRESSAO}}<br>
+            Sistema v{{VERSAO}}
+        </div>
+    </div>
 </body>
 </html>
 ```
@@ -334,63 +634,74 @@ servidor-impressao/
 
 ## 📅 Fases de Implementação
 
-### Fase 1: Endpoint de Dados (Backend)
+### Fase 1: Endpoint de Dados (Backend Railway)
 - [ ] Criar `GET /api/carregamento/:id/relatorio`
-- [ ] Retornar todos os dados necessários em JSON
+- [ ] Retornar todos os dados do carregamento + PDC + cortes
 - [ ] Testar com dados reais
 
-### Fase 2: Geração de PDF (Backend)
-- [ ] Instalar Puppeteer no Railway
-- [ ] Criar template HTML do relatório
-- [ ] Criar `GET /api/carregamento/:id/relatorio/pdf`
-- [ ] Testar download de PDF
+### Fase 2: Fila de Impressão (Backend Railway)
+- [ ] Criar migration para tabela `fila_impressao_relatorios`
+- [ ] Ao finalizar carregamento, adicionar à fila automaticamente
+- [ ] Endpoint `GET /api/impressao/relatorios/pendentes?loja=PLA`
+- [ ] Endpoint `POST /api/impressao/relatorios/:id/marcar-impresso`
 
-### Fase 3: Integração no Mobile
-- [ ] Botão "Imprimir Relatório" após finalizar carregamento
-- [ ] Opção 1: Download PDF no celular
-- [ ] Opção 2: Enviar para fila de impressão
-
-### Fase 4: Servidor de Impressão Local
-- [ ] Criar projeto Node.js separado
-- [ ] Implementar polling para relatórios
-- [ ] Integrar com impressora A4
+### Fase 3: Servidor de Impressão Local
+- [ ] Criar projeto Node.js separado (`servidor-impressao/`)
+- [ ] Implementar polling para buscar pendências
+- [ ] Criar template HTML do romaneio
+- [ ] Implementar geração de PDF com Puppeteer
+- [ ] Integrar com impressora A4 do sistema (2 cópias)
 - [ ] Testar impressão automática
 
-### Fase 5: Refinamentos
-- [ ] Adicionar fotos de contraprova (opcional)
-- [ ] Múltiplas cópias
-- [ ] Histórico de relatórios impressos
+### Fase 4: Integração Etiquetas (Migrar Sistema Atual)
+- [ ] Migrar fila de etiquetas para mesmo servidor
+- [ ] Unificar polling (etiquetas + relatórios)
+- [ ] Priorizar etiquetas sobre relatórios
 
 ---
 
-## ❓ Decisões Pendentes
+## ❓ Perguntas Pendentes
 
-1. **Onde gerar o PDF?**
-   - [ ] Railway (centralizado, mais pesado)
-   - [ ] Servidor local (descentralizado, mais leve)
+1. ~~Onde gerar o PDF?~~ **→ PC Local (decidido)**
+2. ~~Incluir fotos?~~ **→ Não (decidido)**
+3. ~~Quantas cópias?~~ **→ 2 vias (decidido)**
+4. Qual impressora A4 será usada? (nome/modelo para configurar)
+5. O PC local terá IP fixo na rede ou usará USB direto?
 
-2. **Incluir fotos de contraprova?**
-   - [ ] Sim, no relatório
-   - [ ] Não, apenas lista de cortes
-   - [ ] Opcional (checkbox)
+---
 
-3. **Modelo de impressora A4?**
-   - Definir junto com cliente (USB ou rede)
+## 📝 Notas Técnicas
 
-4. **Quantas cópias?**
-   - [ ] 1 (arquivo digital)
-   - [ ] 2 (empresa + cliente)
-   - [ ] 3 (empresa + motorista + cliente)
+### Dependências do Servidor Local
+```json
+{
+    "dependencies": {
+        "puppeteer": "^21.0.0",
+        "axios": "^1.6.0",
+        "node-schedule": "^2.1.0"
+    }
+}
+```
+
+### Impressão no Windows
+O servidor local usará o comando `print` do Windows ou biblioteca `pdf-to-printer`:
+```javascript
+const printer = require('pdf-to-printer');
+await printer.print(pdfPath, { 
+    printer: "HP LaserJet",
+    copies: 2
+});
+```
 
 ---
 
 ## 📝 Próximos Passos
 
-1. ✅ Criar este documento de especificação
-2. ⏳ Validar layout com usuário
+1. ✅ Criar documento de especificação
+2. ✅ Validar layout e decisões com usuário
 3. ⏳ Implementar endpoint de dados
-4. ⏳ Criar template HTML
-5. ⏳ Gerar PDF
+4. ⏳ Criar migration para fila de relatórios
+5. ⏳ Desenvolver servidor de impressão local
 6. ⏳ Testar com impressora real
 
 ---
