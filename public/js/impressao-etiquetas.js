@@ -120,9 +120,9 @@ const ImpressaoEtiquetas = {
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <div class="text-center mb-3">
+                            <div class="d-flex flex-column align-items-center mb-3">
                                 <p class="text-muted small mb-2">Preview (60x30mm ampliado 2x)</p>
-                                <div id="previewEtiquetaContainer" style="transform: scale(1.5); transform-origin: center; margin: 30px auto;">
+                                <div id="previewEtiquetaContainer" style="transform: scale(1.5); transform-origin: top center; min-height: 200px; display: flex; justify-content: center; align-items: center;">
                                     <!-- Etiqueta será renderizada aqui -->
                                 </div>
                             </div>
@@ -167,6 +167,7 @@ const ImpressaoEtiquetas = {
                     align-items: center;
                     padding: 4px;
                     box-sizing: border-box;
+                    margin: 0 auto;
                 }
                 #previewEtiquetaContainer .etiqueta-codigo {
                     font-family: 'Courier New', monospace;
