@@ -27,8 +27,22 @@
 | **Conexão** | USB (via servidor de impressão no PC) |
 | **Tamanho da Etiqueta** | 60mm x 30mm |
 | **Código de Barras** | Code 128 |
+| **Escala do Código** | 0.8 (80% do tamanho padrão) |
 | **Altura do Código** | 10mm (padrão) / 15mm (locação) |
 | **Margens** | Sem margens (conteúdo centralizado) |
+
+### Escala do Código de Barras
+
+A escala foi ajustada para **0.8 (80%)** para garantir que códigos longos caibam na etiqueta 60x30mm.
+
+| Código Máximo | Caracteres | Escala |
+|---------------|------------|--------|
+| `BOB-PLA-999999` | 14 | 0.8 |
+| `RET-CIA-999999` | 14 | 0.8 |
+| `COR-PLA-999-99` | 15 | 0.8 |
+| `LOC-9999-Z-9999` | 16 | 0.8 |
+
+**Constante no código:** `ImpressaoEtiquetas.BARCODE_WIDTH = 1.6` (equivale a `width: 2 * 0.8`)
 
 ### Arquitetura de Impressão
 
@@ -38,7 +52,8 @@ App Mobile → API Railway → PC Local (polling 5s) → Elgin L42 (USB)
 
 ### Preview Visual
 
-Arquivo: `public/preview-etiquetas.html`
+- Arquivo de teste: `public/teste-escala-etiquetas.html`
+- Preview geral: `public/preview-etiquetas.html`
 
 ---
 

@@ -475,9 +475,9 @@
         <h3>🔧 Teste de Escala do Código de Barras</h3>
         <p>Clique para alternar entre diferentes escalas de código de barras:</p>
         <div class="scale-selector">
-            <button class="active" onclick="setScale(1)">Escala 1.0 (Atual)</button>
+            <button onclick="setScale(1)">Escala 1.0</button>
             <button onclick="setScale(0.9)">Escala 0.9</button>
-            <button onclick="setScale(0.8)">Escala 0.8</button>
+            <button class="active" onclick="setScale(0.8)">Escala 0.8 (Padrão)</button>
             <button onclick="setScale(0.7)">Escala 0.7</button>
         </div>
         <p style="margin-top: 10px; font-size: 12px; color: #666;">
@@ -539,9 +539,9 @@
             event.target.classList.add('active');
         }
         
-        // Inicializar
+        // Inicializar com escala 0.8 (padrão)
         document.addEventListener('DOMContentLoaded', () => {
-            generateBarcodes(1);
+            generateBarcodes(0.8);
         });
     </script>
 </body>

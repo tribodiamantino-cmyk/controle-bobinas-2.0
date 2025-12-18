@@ -20,6 +20,13 @@ const ImpressaoEtiquetas = {
      * Ativar: ImpressaoEtiquetas.MODO_TESTE = true
      */
     MODO_TESTE: false,
+    
+    /**
+     * ESCALA DO CÓDIGO DE BARRAS
+     * Valor padrão: 1.6 (equivale a width: 2 * 0.8)
+     * Ajustado para caber códigos longos na etiqueta 60x30mm
+     */
+    BARCODE_WIDTH: 1.6,
 
     /**
      * Adicionar etiqueta à fila (sem modal)
@@ -242,7 +249,7 @@ const ImpressaoEtiquetas = {
             if (typeof JsBarcode !== 'undefined') {
                 JsBarcode('#modalBarcode', dados.linha2_barcode, {
                     format: "CODE128",
-                    width: 1.5,
+                    width: ImpressaoEtiquetas.BARCODE_WIDTH * 0.75, // Preview menor
                     height: isLocacao ? 40 : 30,
                     displayValue: false,
                     margin: 0
@@ -315,7 +322,7 @@ const ImpressaoEtiquetas = {
                 <script>
                     JsBarcode('#bc', '${dados.linha2_barcode}', {
                         format: "CODE128",
-                        width: 2,
+                        width: ${this.BARCODE_WIDTH},
                         height: ${isLocacao ? 40 : 28},
                         displayValue: false,
                         margin: 0
@@ -450,7 +457,7 @@ const ImpressaoEtiquetas = {
                     for (let i = 0; i < ${quantidade}; i++) {
                         JsBarcode('.bc-' + i, '${dados.linha2_barcode}', {
                             format: "CODE128",
-                            width: 2,
+                            width: ${this.BARCODE_WIDTH},
                             height: ${isLocacao ? 40 : 28},
                             displayValue: false,
                             margin: 0
@@ -700,7 +707,7 @@ const ImpressaoEtiquetas = {
                         const grande = svg.classList.contains('grande');
                         JsBarcode(svg, code, {
                             format: "CODE128",
-                            width: 2,
+                            width: ${this.BARCODE_WIDTH},
                             height: grande ? 40 : 28,
                             displayValue: false,
                             margin: 0

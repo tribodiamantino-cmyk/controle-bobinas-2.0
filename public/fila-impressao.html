@@ -414,6 +414,9 @@
         function renderizarEtiquetaPreview(dados) {
             const isLocacao = dados.tipo === 'locacao';
             
+            // Escala do código de barras (0.8 = 80% do tamanho original)
+            const BARCODE_WIDTH = 1.6; // 2 * 0.8
+            
             // Criar ID único para o barcode
             const barcodeId = 'bc-' + Math.random().toString(36).substr(2, 9);
 
@@ -422,7 +425,7 @@
                 if (svg) {
                     JsBarcode(svg, dados.linha2_barcode, {
                         format: "CODE128",
-                        width: 1.5,
+                        width: BARCODE_WIDTH * 0.75, // Preview menor
                         height: isLocacao ? 40 : 30,
                         displayValue: false,
                         margin: 0
@@ -530,7 +533,7 @@
             setTimeout(() => {
                 JsBarcode('#previewBarcode', dados.linha2_barcode, {
                     format: "CODE128",
-                    width: 2,
+                    width: 1.6, // Escala 0.8 (2 * 0.8)
                     height: isLocacao ? 56 : 38,
                     displayValue: false,
                     margin: 0
@@ -664,7 +667,7 @@
                             const grande = svg.classList.contains('grande');
                             JsBarcode(svg, code, {
                                 format: "CODE128",
-                                width: 2,
+                                width: 1.6, // Escala 0.8 (2 * 0.8)
                                 height: grande ? 40 : 28,
                                 displayValue: false,
                                 margin: 0
