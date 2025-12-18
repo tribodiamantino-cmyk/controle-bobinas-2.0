@@ -244,8 +244,13 @@ function criarCardPlano(plano) {
         `;
     }
     
+    // Para finalizados e entregues, abrir modal de cortes realizados
+    const onClickHandler = (plano.status === 'finalizado' || plano.status === 'entregue') 
+        ? `abrirModalCortesRealizados(${plano.id})`
+        : `abrirDetalhesPlano(${plano.id})`;
+    
     return `
-        <div class="${classeCard}" onclick="abrirDetalhesPlano(${plano.id})">
+        <div class="${classeCard}" onclick="${onClickHandler}">
             <div class="plano-card-header">
                 <div class="plano-codigo">${plano.codigo_plano}</div>
                 ${badgeAlocacao}
