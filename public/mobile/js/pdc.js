@@ -445,19 +445,52 @@ class PDCModule {
 
     /**
      * Renderiza formulário de corte
+     * Recria o HTML completo pois pode ter sido substituído por tela de sucesso
      */
     renderCorteForm() {
         this.mostrarView('corteView');
 
+        // Restaura HTML original do formulário (pode ter sido substituído)
+        const container = document.querySelector('#corteView .card-body');
+        container.innerHTML = `
+            <h4 class="mb-4">✂️ Registrar Corte</h4>
+
+            <!-- Origem -->
+            <div class="info-section">
+                <h5><i class="bi bi-box"></i> Origem</h5>
+                <p id="corteOrigemCodigo" class="text-large"></p>
+            </div>
+
+            <!-- Metragem -->
+            <div class="info-section">
+                <h5><i class="bi bi-rulers"></i> Metragem a Cortar</h5>
+                <div class="text-center">
+                    <span id="corteMetragem" class="text-xlarge text-primary"></span>
+                </div>
+            </div>
+
+            <!-- Foto -->
+            <div class="info-section">
+                <h5><i class="bi bi-camera"></i> Foto do Medidor *</h5>
+                <div class="foto-preview" id="fotoPreview">
+                    <div class="foto-placeholder">
+                        <i class="bi bi-camera"></i>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-lg w-100 mt-3" onclick="pdc.tirarFoto()">
+                    <i class="bi bi-camera-fill"></i> TIRAR FOTO
+                </button>
+            </div>
+
+            <!-- Botão Confirmar -->
+            <button id="btnConfirmarCorte" class="btn btn-success btn-lg w-100 mt-4" onclick="pdc.confirmarCorte()" disabled>
+                <i class="bi bi-check-circle"></i> CONFIRMAR CORTE
+            </button>
+        `;
+
+        // Preenche dados do corte atual
         document.getElementById('corteOrigemCodigo').textContent = this.origemAtual.codigo;
         document.getElementById('corteMetragem').textContent = Utils.formatarMetragem(this.corteAtual.metragem);
-
-        // Reseta foto
-        const preview = document.getElementById('fotoPreview');
-        preview.innerHTML = '<div class="foto-placeholder"><i class="bi bi-camera"></i></div>';
-        
-        // Desabilita botão confirmar
-        document.getElementById('btnConfirmarCorte').disabled = true;
     }
 
     /**
@@ -525,9 +558,12 @@ class PDCModule {
             // Limpa foto
             this.camera.limparUltimaFoto();
 
-            // Mostra sucesso e vai para próximo corte
-            // A locação será pedida apenas quando TODOS os cortes da origem terminarem
-            this.mostrarSucessoCorte(corteRegistrado);
+            // Verifica se é o último corte desta origem
+            const cortesPendentesAntes = (this.origemAtual.cortes || []).filter(c => c.status !== 'concluido');
+            const isUltimoCorte = cortesPendentesAntes.length <= 1;
+            
+            // Mostra feedback apropriado
+            this.mostrarSucessoCorte(corteRegistrado, isUltimoCorte);
             setTimeout(() => {
                 this.voltarParaCortes();
             }, 2000);
@@ -674,10 +710,24 @@ class PDCModule {
     }
 
     /**
-     * Mostra feedback de sucesso do corte (quando origem esgotada)
+     * Mostra feedback de sucesso do corte
+     * @param {object} corte - dados do corte registrado
+     * @param {boolean} isUltimoCorte - se é o último corte desta origem
      */
-    mostrarSucessoCorte(corte) {
+    mostrarSucessoCorte(corte, isUltimoCorte = false) {
         const container = document.querySelector('#corteView .card-body');
+        
+        // Mensagem diferente se é último corte ou não
+        const mensagemExtra = isUltimoCorte 
+            ? `<div class="alert alert-info mt-3">
+                    <i class="bi bi-check-all"></i>
+                    <strong>Todos os cortes desta origem concluídos!</strong>
+               </div>`
+            : `<div class="alert alert-secondary mt-3">
+                    <i class="bi bi-arrow-right"></i>
+                    <strong>Indo para próximo corte...</strong>
+               </div>`;
+        
         container.innerHTML = `
             <div class="text-center py-4">
                 <div class="icon-xl text-success mb-3">
@@ -687,13 +737,10 @@ class PDCModule {
                 <p class="text-large mb-3">${corte.codigo_corte}</p>
                 <p class="text-muted">${Utils.formatarMetragem(corte.metragem_cortada)}</p>
                 
-                <div class="alert alert-secondary mt-3">
-                    <i class="bi bi-box-seam"></i>
-                    <strong>Origem esgotada</strong>
-                </div>
+                ${mensagemExtra}
 
                 <button class="btn btn-primary mt-3" onclick="pdc.voltarParaCortes()">
-                    PRÓXIMO CORTE
+                    CONTINUAR
                 </button>
             </div>
         `;
