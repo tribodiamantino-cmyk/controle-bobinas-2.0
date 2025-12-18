@@ -571,15 +571,56 @@ class PDCModule {
     }
 
     /**
-     * Volta para lista de cortes (recarrega dados)
+     * Volta para lista de cortes (recarrega dados da origem atual)
      */
     async voltarParaCortes() {
-        // Recarrega origem para atualizar status dos cortes
-        await this.abrirPDC(this.pdcAtual.id);
-        
-        // Encontra a origem atual na lista atualizada
-        // (simulação - em produção buscaria do servidor)
-        this.renderCortes();
+        try {
+            Utils.mostrarLoading('Atualizando cortes...');
+            
+            // Recarrega dados do PDC para obter origens atualizadas
+            const response = await API.getPDCOrigens(this.pdcAtual.id);
+            const origens = response.origens || [];
+            
+            // Encontra a origem atual na lista atualizada
+            const origemAtualizada = origens.find(o => 
+                o.id === this.origemAtual.id && o.tipo === this.origemAtual.tipo
+            );
+            
+            Utils.esconderLoading();
+            
+            if (origemAtualizada) {
+                // Atualiza a origem atual com os novos dados
+                this.origemAtual = origemAtualizada;
+                
+                // Verifica se ainda há cortes pendentes nesta origem
+                const cortesPendentes = (origemAtualizada.cortes || []).filter(c => c.status !== 'concluido');
+                
+                if (cortesPendentes.length > 0) {
+                    // Ainda há cortes - mostra lista de cortes (já validada)
+                    this.mostrarView('cortesView');
+                    document.getElementById('validarOrigemSection').style.display = 'none';
+                    document.getElementById('cortesSection').style.display = 'block';
+                    this.renderListaCortes();
+                } else {
+                    // Todos os cortes da origem foram concluídos
+                    Utils.mostrarSucesso('Todos os cortes desta origem foram concluídos!');
+                    
+                    // Volta para lista de origens (com dados atualizados)
+                    this.pdcAtual = response.pdc;
+                    this.renderOrigens(origens);
+                }
+            } else {
+                // Origem não encontrada (improvável) - volta para origens
+                this.pdcAtual = response.pdc;
+                this.renderOrigens(origens);
+            }
+            
+        } catch (error) {
+            console.error('Erro ao voltar para cortes:', error);
+            Utils.esconderLoading();
+            // Fallback: volta para origens
+            await this.abrirPDC(this.pdcAtual.id);
+        }
     }
 
     /**
