@@ -3,13 +3,16 @@ const path = require('path');
 const sharp = require('sharp');
 const fs = require('fs').promises;
 
+// Diretório de uploads (compatível com Railway Volume montado em /app/uploads)
+const UPLOAD_BASE_DIR = process.env.UPLOAD_DIR || './uploads';
+const FOTOS_MEDIDOR_DIR = path.join(UPLOAD_BASE_DIR, 'fotos-medidor');
+
 // Configuração do storage do multer
 const storage = multer.diskStorage({
     destination: async (req, file, cb) => {
-        const uploadDir = './uploads/fotos-medidor/';
         try {
-            await fs.mkdir(uploadDir, { recursive: true });
-            cb(null, uploadDir);
+            await fs.mkdir(FOTOS_MEDIDOR_DIR, { recursive: true });
+            cb(null, FOTOS_MEDIDOR_DIR);
         } catch (error) {
             cb(error);
         }

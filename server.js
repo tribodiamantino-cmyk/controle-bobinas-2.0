@@ -179,8 +179,10 @@ app.use('/api/impressao', impressaoRoutes);
 app.use('/api/cortes', cortesRoutes);
 app.use('/api/historico', historicoRoutes);
 
-// Servir arquivos de upload
-app.use('/uploads', express.static('uploads'));
+// Servir arquivos de upload (compatível com Railway Volume)
+const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+app.use('/uploads', express.static(UPLOAD_DIR));
+console.log(`📁 Servindo uploads de: ${UPLOAD_DIR}`);
 
 // Tratamento de erro 404
 app.use((req, res) => {
